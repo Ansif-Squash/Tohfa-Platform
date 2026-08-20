@@ -1,0 +1,24 @@
+{
+  "name": "@tohfa/customer-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TOHFA customer app. React Native 0.74. Catalog, cart, wallet, orders.",
+  "scripts": {
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@tohfa/design-tokens": "workspace:*",
+    "@tohfa/shared-types": "workspace:*",
+    "react": "18.2.0",
+    "react-native": "0.74.5"
+  },
+  "devDependencies": {
+    "@react-native/babel-preset": "0.74.87",
+    "@react-native/metro-config": "0.74.87",
+    "@types/react": "^18.2.79",
+    "typescript": "^5.5.4"
+  }
+}

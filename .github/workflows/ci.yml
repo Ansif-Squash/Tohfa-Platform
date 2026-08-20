@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgres://tohfa:tohfa@localhost:5432/tohfa_test
+  REDIS_URL: redis://localhost:6379
+  JWT_SECRET: ci-only-secret-value-at-least-32-chars
+  PAYMENT_PROVIDER: mock
+  SMS_PROVIDER: mock
+  LOG_LEVEL: silent
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: tohfa
+          POSTGRES_PASSWORD: tohfa
+          POSTGRES_DB: tohfa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tohfa -d tohfa_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint OpenAPI spec
+        run: pnpm spec:lint
+
+      # Every x-permission, x-business-rules id and Problem error code in
+      # docs/openapi.yaml must resolve against rbac.json, rules.md and
+      # errors.ts. Runs next to spec:lint because it is the same class of
+      # failure: the contract claiming something the repo cannot back up.
+      - name: Spec drift check
+        run: pnpm spec:drift
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Migrate database
+        run: pnpm db:migrate
+
+      # Seeds create the roles and project docs/rbac.json into
+      # permissions/role_permissions (db/seed/002_permissions.js).
+      - name: Seed database
+        run: pnpm db:seed
+
+      # rbac:check compares the DB grant matrix against docs/rbac.json, so it
+      # must run AFTER migrate + seed have created and populated those tables.
+      - name: RBAC drift check
+        run: pnpm rbac:check
+
+      - name: E2E tests
+        run: pnpm test:e2e

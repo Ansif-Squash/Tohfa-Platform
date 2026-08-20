@@ -1,0 +1,4486 @@
+openapi: 3.1.0
+info:
+  title: TOHFA Platform API
+  version: 1.0.0
+  summary: Golden-thread API for the TOHFA farmer / customer / admin platform.
+  description: |
+    # TOHFA Platform API
+
+    This document is **the contract**. Every client — the Farmer mobile app, the Customer
+    mobile app, the Admin web/mobile app, and every internal service SDK — is generated
+    from this file. Nothing that is not described here is part of the v1 surface. If a
+    client needs a field, it is added here first, reviewed, and only then implemented.
+
+    The "golden thread" is the end-to-end path that carries value through the platform:
+
+    `farmer onboarding -> certification verification -> fair price ceiling -> produce
+    listing -> admin approval / counter-offer -> purchase order -> goods receipt +
+    quality check -> inventory batch -> channel allocation -> farm-anonymous catalog ->
+    cart -> wallet-first checkout -> order -> warehouse fulfilment + OTP -> invoice ->
+    farmer payout`
+
+    Every endpoint below is annotated with two vendor extensions:
+
+    * `x-permission` — the permission code from `docs/rbac.json` that the
+      gateway checks before the handler runs. `public` means the endpoint is
+      unauthenticated (it also carries `security: []`).
+    * `x-business-rules` — the client-locked business rules the handler enforces
+      server-side. Rules are never enforced only in the client.
+
+    ## Business rules
+
+    `docs/rules.md` is the authority for business rules: it holds the rule text, the
+    failure mode and the test contract for each ID. This document never renumbers or
+    restates a rule — it only cites the ID. `pnpm spec:drift` fails the build if an
+    `x-business-rules` entry here names an ID that `docs/rules.md` does not define.
+
+    The IDs cited below are the ones this contract touches; `docs/rules.md` also carries
+    rules that no v1 endpoint enforces yet.
+
+    | ID | Rule |
+    |----|------|
+    | BR-01 | Expired certificate blocks market listings |
+    | BR-02 | Unverified certificate blocks market listings; verification is manual |
+    | BR-03 | Four audits per year, one per quarter |
+    | BR-06 | Farm rating is 10 categories x 10 points |
+    | BR-07 | Listing price must not exceed the fair price ceiling |
+    | BR-08 | Fair price ceiling is set by Super Admin only |
+    | BR-09 | Retail price must be at or below the ceiling |
+    | BR-10 | Counter-offer response window is 24 hours |
+    | BR-11 | Counter-offers may be countered back at most 3 times |
+    | BR-12 | Reserve allocation is 70 / 10 / 10 / 10 |
+    | BR-14 | Farmer subscription is Rs 500/year with a free tier |
+    | BR-15 | Four sales channels |
+    | BR-16 | Customer view is farm-anonymous |
+    | BR-17 | Wallet-first checkout |
+    | BR-18 | Cash top-up credits the wallet server-side after the fiscal cash tag |
+    | BR-19 | Cash top-up is capped at Rs 10,000 per transaction |
+    | BR-20 | Handover requires a 4-digit OTP |
+    | BR-21 | Every order supports warehouse pickup |
+    | BR-22 | Cart items are locked for 24 hours |
+    | BR-24 | Warehouses hold consolidated inventory across all farmers |
+    | BR-25 | Each warehouse has its own Sub Warehouse Admin |
+    | BR-27 | Customers may pick up from any warehouse |
+    | BR-29 | Farmer Admin cannot act on their own listings |
+    | BR-30 | Sub Warehouse Admin is scoped to one warehouse |
+    | BR-31 | Payouts over Rs 10,000 require dual approval |
+    | BR-32 | OTP hardening: 6-digit, 60s resend, 3-attempt lockout |
+    | BR-33 | Aadhaar and mobile are locked fields |
+    | BR-35 | The audit trail is append-only |
+    | BR-36 | Own-data ownership for farmers and customers |
+    | BR-37 | Stock movements are ledger-first; adjustments need separate approval |
+
+    ## Conventions
+
+    * All money is a **decimal string** (see the `Money` schema) — never a JSON number.
+    * All timestamps are RFC 3339 UTC (`2026-08-18T06:30:00Z`).
+    * All list endpoints are cursor-paginated and return a `page` object.
+    * All errors are `application/problem+json` per RFC 9457 and carry a `correlationId`.
+    * Quantities are kilograms with 3 decimal places.
+  contact:
+    name: TOHFA Platform Engineering
+    email: platform@tohfa.in
+  license:
+    name: Proprietary
+    identifier: LicenseRef-TOHFA-Internal
+
+servers:
+  - url: http://localhost:3000/v1
+    description: Local development
+  - url: https://api-staging.tohfa.in/v1
+    description: Staging
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Registration, OTP, login, sessions.
+  - name: Farmer Onboarding
+    description: The 5-step farmer application and the admin review queue.
+  - name: Farmer Profile & Certifications
+    description: Farmer self-service profile and PGS/NPOP certification lifecycle.
+  - name: Pricing
+    description: Super-Admin fair price ceilings and admin retail prices.
+  - name: Marketing
+    description: Produce listings, admin approval queue, counter-offer rounds.
+  - name: Purchase
+    description: Purchase orders, goods receipts, quality checks.
+  - name: Inventory
+    description: Batches, append-only stock ledger, adjustments, channel allocation.
+  - name: Catalog
+    description: Farm-anonymous customer browse surface. See BR-16.
+  - name: Cart & Orders
+    description: Cart lock, wallet-first checkout, order tracking.
+  - name: Fulfilment
+    description: Warehouse-side packing, dispatch and OTP verification.
+  - name: Wallet
+    description: Customer wallet, Razorpay top-ups, cash top-ups at a warehouse.
+  - name: Payouts & Invoices
+    description: Farmer settlement with dual approval, and invoice retrieval.
+  - name: Platform
+    description: Notifications, audit log, health probes, upload signing.
+
+paths:
+  /auth/register/customer:
+    post:
+      tags: [Auth]
+      operationId: registerCustomer
+      summary: Self-register as a customer
+      description: |
+        Customers self-register and are activated instantly once their mobile OTP is
+        verified — no admin review. Farmers cannot use this endpoint; they submit an
+        application (see Farmer Onboarding).
+      security: []
+      x-permission: public
+      x-business-rules: [BR-32]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomerRegistrationRequest' }
+            example:
+              mobile: '+919876543210'
+              fullName: Priya Raman
+              email: priya@example.com
+              password: 'C0rrect-Horse-9'
+              preferredLocale: en
+              preferredWarehouseId: 3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01
+      responses:
+        '201':
+          description: Registration accepted; an OTP has been dispatched to the mobile number.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistrationAccepted' }
+              example:
+                userId: 8c0f0f6a-6f1a-4f1e-8d5a-2b7c9e0a1122
+                status: PENDING_OTP
+                otpExpiresAt: '2026-08-18T06:35:00Z'
+                resendAvailableAt: '2026-08-18T06:31:00Z'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/otp/send:
+    post:
+      tags: [Auth]
+      operationId: sendOtp
+      summary: Send a 6-digit OTP
+      description: 6-digit code, 60-second resend timer, 3-attempt lockout (BR-32).
+      security: []
+      x-permission: public
+      x-business-rules: [BR-32]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtpSendRequest' }
+            example: { mobile: '+919876543210', purpose: LOGIN }
+      responses:
+        '202':
+          description: OTP dispatched.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OtpChallenge' }
+              example:
+                challengeId: 0b2d0f2e-8b1c-4c1a-9f0a-9d3e6c1b2a30
+                expiresAt: '2026-08-18T06:35:00Z'
+                resendAvailableAt: '2026-08-18T06:31:00Z'
+                attemptsRemaining: 3
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/otp/verify:
+    post:
+      tags: [Auth]
+      operationId: verifyOtp
+      summary: Verify an OTP and mint a token pair
+      description: |
+        Exchanges the challenge id and the 6-digit code for an access/refresh token pair. A
+        wrong code decrements `attemptsRemaining`; the third failure locks the challenge and a
+        new one must be requested (BR-32).
+      security: []
+      x-permission: public
+      x-business-rules: [BR-32]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtpVerifyRequest' }
+            example:
+              challengeId: 0b2d0f2e-8b1c-4c1a-9f0a-9d3e6c1b2a30
+              code: '482915'
+      responses:
+        '200':
+          description: OTP accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Log in with mobile + password
+      description: |
+        An account may hold multiple admin roles. When more than one role is active the
+        response sets `requiresRoleSelection` and lists `availableRoles`; the client shows
+        the multi-role selector and repeats the call with `roleCode`.
+      security: []
+      x-permission: public
+      x-business-rules: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example:
+              mobile: '+919876543210'
+              password: 'C0rrect-Horse-9'
+              deviceId: 6f2a-android-pixel7
+              platform: android
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+              example:
+                accessToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4YzBmMGY2YSJ9.sig
+                refreshToken: 9c1d0b7a4f5e4a3c8d2b1e0f6a7b8c9d
+                tokenType: Bearer
+                expiresIn: 900
+                requiresRoleSelection: false
+                user:
+                  id: 8c0f0f6a-6f1a-4f1e-8d5a-2b7c9e0a1122
+                  fullName: Priya Raman
+                  userType: customer
+                  roles: []
+                  preferredLocale: en
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshToken
+      summary: Exchange a refresh token for a new token pair
+      description: |
+        Rotates the pair: the presented refresh token is invalidated as the new one is issued,
+        so a replayed refresh token is treated as theft and revokes the whole session family.
+      security: []
+      x-permission: public
+      x-business-rules: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: New token pair issued; the presented refresh token is rotated out.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Revoke the current session
+      description: |
+        Revokes the refresh token behind the current session. Access tokens already issued stay
+        valid until they expire, so clients must also drop their in-memory copy.
+      x-permission: auth.session.revoke_own
+      x-business-rules: []
+      responses:
+        '204': { description: Session revoked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      summary: Start a password reset via mobile OTP
+      description: |
+        Sends a password-reset OTP to the registered mobile number. The response is identical
+        whether or not the number is registered, so this cannot be used to enumerate accounts
+        (BR-32).
+      security: []
+      x-permission: public
+      x-business-rules: [BR-32]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile]
+              properties:
+                mobile: { $ref: '#/components/schemas/Mobile' }
+      responses:
+        '202':
+          description: If the mobile number exists, an OTP has been dispatched. Always 202 to avoid account enumeration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OtpChallenge' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      summary: Complete a password reset
+      description: |
+        Sets a new password once the reset OTP has been verified, and terminates every other
+        active session for that account (BR-32).
+      security: []
+      x-permission: public
+      x-business-rules: [BR-32]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challengeId, code, newPassword]
+              properties:
+                challengeId: { type: string, format: uuid }
+                code: { type: string, pattern: '^[0-9]{6}$' }
+                newPassword: { type: string, minLength: 10, maxLength: 128 }
+      responses:
+        '204': { description: Password reset; all existing sessions are revoked. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/sessions/{id}/terminate:
+    post:
+      tags: [Auth]
+      operationId: terminateSession
+      summary: Terminate another admin's session
+      description: Super Admin only. Terminating your own session is a logout, not this call.
+      x-permission: auth.session.terminate_other
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      responses:
+        '204': { description: Session terminated. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: getCurrentUser
+      summary: Current principal, roles and effective permissions
+      description: |
+        Returns the authenticated principal with its roles, warehouse or zone scope and
+        effective permission codes — the payload every client shell reads to decide what to
+        render.
+      x-permission: auth.principal.view_own
+      x-business-rules: []
+      responses:
+        '200':
+          description: The authenticated principal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CurrentUser' }
+              example:
+                id: 2a9f0d1b-7c3e-4a55-9f0b-1e2d3c4b5a60
+                fullName: Anand Kumar
+                mobile: '+919812345678'
+                userType: admin
+                preferredLocale: ta
+                roles:
+                  - code: SUB_WH_ADMIN
+                    warehouseId: 3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01
+                    warehouseName: Coonoor
+                permissions: [goods_receipt.create, order.verify_otp, wallet.cash_topup]
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /farmers/applications:
+    post:
+      tags: [Farmer Onboarding]
+      operationId: createFarmerApplication
+      summary: Create a draft farmer application
+      description: |
+        Creates the empty 5-step draft. Steps are then filled with
+        `PATCH /farmers/applications/{id}/steps/{step}` in any order and submitted as a
+        whole. A mobile number may hold at most one non-terminal application.
+      security: []
+      x-permission: public
+      x-business-rules: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile, fullName]
+              properties:
+                mobile: { $ref: '#/components/schemas/Mobile' }
+                fullName: { type: string, minLength: 2, maxLength: 120 }
+                preferredLocale: { $ref: '#/components/schemas/Locale' }
+            example: { mobile: '+919812345678', fullName: Murugan S, preferredLocale: ta }
+      responses:
+        '201':
+          description: Draft created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerApplication' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /farmers/applications/{id}/steps/{step}:
+    patch:
+      tags: [Farmer Onboarding]
+      operationId: updateFarmerApplicationStep
+      summary: Save one step of the 5-step application
+      description: |
+        `step` is 1..5 — 1 personal, 2 farm details, 3 location (GPS auto-capture with a
+        manual lat/lng fallback and the FMB polygon), 4 documents, 5 review. Each step is
+        validated independently on save; cross-step validation happens at submit.
+        Aadhaar and mobile become locked fields once the application is approved (BR-33).
+      x-permission: farmer.application.manage_own
+      x-business-rules: [BR-33]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: step
+          in: path
+          required: true
+          description: 1 personal, 2 farm, 3 location, 4 documents, 5 review.
+          schema: { type: integer, minimum: 1, maximum: 5 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmerApplicationStepPayload' }
+            example:
+              location:
+                gpsCaptured: true
+                latitude: 11.4102
+                longitude: 76.6950
+                fmbPolygon:
+                  type: Polygon
+                  coordinates: [[[76.6948, 11.4100], [76.6953, 11.4100], [76.6953, 11.4105], [76.6948, 11.4105], [76.6948, 11.4100]]]
+                village: Ithalar
+                taluk: Ooty
+                district: Nilgiris
+      responses:
+        '200':
+          description: Step saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerApplication' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /farmers/applications/{id}/submit:
+    post:
+      tags: [Farmer Onboarding]
+      operationId: submitFarmerApplication
+      summary: Submit the application for review
+      description: |
+        Validates all 5 steps together and moves the application to `DOCS_REVIEW`.
+        Mandatory documents are ID proof and farm documents; certification is optional at
+        this stage but listings stay blocked until a certificate is verified (BR-02).
+        Review SLA is 3-5 working days — an operational target, not a rules.md business rule.
+      x-permission: farmer.application.submit_own
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      responses:
+        '200':
+          description: Submitted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerApplication' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /farmers/applications/{id}/status:
+    get:
+      tags: [Farmer Onboarding]
+      operationId: getFarmerApplicationStatus
+      summary: Application status timeline
+      description: Returns the fixed timeline Submitted -> Docs Review -> Farm Verification -> Audit -> Approved.
+      x-permission: farmer.application.view_own
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Status timeline.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplicationStatusTimeline' }
+              example:
+                applicationId: 5d2c1b0a-9e8f-4d3c-8b7a-6f5e4d3c2b1a
+                status: FARM_VERIFICATION
+                submittedAt: '2026-08-12T04:10:00Z'
+                expectedDecisionBy: '2026-08-19T04:10:00Z'
+                steps:
+                  - status: SUBMITTED
+                    reachedAt: '2026-08-12T04:10:00Z'
+                    note: null
+                  - status: DOCS_REVIEW
+                    reachedAt: '2026-08-13T09:22:00Z'
+                    note: ID proof accepted
+                  - status: FARM_VERIFICATION
+                    reachedAt: '2026-08-15T05:40:00Z'
+                    note: Field visit scheduled
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/farmer-applications:
+    get:
+      tags: [Farmer Onboarding]
+      operationId: listFarmerApplications
+      summary: Admin review queue
+      description: Super Admin and TOHFA Admin get full access; a Farmer Admin sees the queue read-only.
+      x-permission: farmer.application.list_pending
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ApplicationStatus' }
+        - name: zoneId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: submittedAfter
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Paged applications.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/FarmerApplicationSummary' }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/farmer-applications/{id}:
+    get:
+      tags: [Farmer Onboarding]
+      operationId: getFarmerApplication
+      summary: Full application detail for review
+      description: |
+        Returns all five steps of one application with its uploaded documents and review
+        history, for an admin deciding on it.
+      x-permission: farmer.application.view
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Application detail including documents and FMB geometry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerApplication' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/farmer-applications/{id}/approve:
+    post:
+      tags: [Farmer Onboarding]
+      operationId: approveFarmerApplication
+      summary: Approve an application
+      description: Issues the TOHFA farmer ID (`TOHFA-F-YYYY-XXXX`) and activates the farmer account. Super Admin / TOHFA Admin only.
+      x-permission: farmer.application.approve
+      x-business-rules: [BR-33]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                zoneId: { type: string, format: uuid }
+                note: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Approved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerApplication' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/farmer-applications/{id}/reject:
+    post:
+      tags: [Farmer Onboarding]
+      operationId: rejectFarmerApplication
+      summary: Reject an application
+      description: |
+        Rejects the application with a reason shown to the applicant. Rejection is terminal: the
+        applicant starts a new application rather than editing this one.
+      x-permission: farmer.application.reject
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reasonCode, reason]
+              properties:
+                reasonCode:
+                  type: string
+                  enum: [DOCUMENTS_INVALID, LAND_NOT_VERIFIED, DUPLICATE_APPLICANT, OUTSIDE_SERVICE_AREA, OTHER]
+                reason: { type: string, minLength: 5, maxLength: 500 }
+            example: { reasonCode: LAND_NOT_VERIFIED, reason: Survey number does not match the FMB polygon. }
+      responses:
+        '200':
+          description: Rejected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerApplication' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/farmer-applications/{id}/request-info:
+    post:
+      tags: [Farmer Onboarding]
+      operationId: requestFarmerApplicationInfo
+      summary: Ask the applicant for more information
+      description: Moves the application back to the applicant and pauses the 3-5 working day SLA clock.
+      x-permission: farmer.application.request_info
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string, minLength: 5, maxLength: 1000 }
+                requiredSteps:
+                  type: array
+                  items: { type: integer, minimum: 1, maximum: 5 }
+            example: { message: Please re-upload the ID proof, the scan is unreadable., requiredSteps: [4] }
+      responses:
+        '200':
+          description: Information requested.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerApplication' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /farmers/me:
+    get:
+      tags: [Farmer Profile & Certifications]
+      operationId: getMyFarmerProfile
+      summary: Own farmer profile
+      description: |
+        Returns the caller's own farmer profile, farms and zone assignment. A farmer can never
+        read another farmer's profile through this route (BR-36).
+      x-permission: farmer.profile.view_own
+      x-business-rules: [BR-36]
+      responses:
+        '200':
+          description: Farmer profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    patch:
+      tags: [Farmer Profile & Certifications]
+      operationId: updateMyFarmerProfile
+      summary: Update own farmer profile
+      description: |
+        Aadhaar and mobile are locked (BR-33). Sending either field returns 422 with
+        `INVALID_STATE_TRANSITION`; changing them requires an admin-driven re-verification.
+      x-permission: farmer.profile.edit_own
+      x-business-rules: [BR-33]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmerProfileUpdate' }
+            example:
+              fullName: Murugan Selvam
+              farmingExperienceYears: 18
+              address: 12/3 Ithalar Post, Ooty
+              preferredLocale: ta
+      responses:
+        '200':
+          description: Updated profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmerProfile' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /farmers/me/certifications:
+    get:
+      tags: [Farmer Profile & Certifications]
+      operationId: listMyCertifications
+      summary: Own PGS / NPOP certifications
+      description: |
+        Lists the caller's own PGS/NPOP certification records with verification state and expiry
+        countdown (BR-36).
+      x-permission: certification.manage_own
+      x-business-rules: [BR-36]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paged certifications with expiry countdown.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Certification' }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+              example:
+                items:
+                  - id: c1a2b3c4-d5e6-4f70-8899-aabbccddeeff
+                    certType: PGS
+                    certNumber: PGS-TN-2025-00871
+                    issuingBody: PGS Organic India Council
+                    issuedOn: '2025-04-01'
+                    expiresOn: '2026-03-31'
+                    verificationStatus: VERIFIED
+                    daysToExpiry: -140
+                    blocksListings: true
+                page: { nextCursor: null, hasMore: false }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    post:
+      tags: [Farmer Profile & Certifications]
+      operationId: createCertification
+      summary: Manually enter a certification and attach its document
+      description: |
+        The farmer keys in the certificate details and attaches a document previously
+        uploaded through `POST /uploads/sign`. The record starts `UNVERIFIED`, which
+        blocks market listings until an admin verifies it (BR-02).
+      x-permission: certification.manage_own
+      x-business-rules: [BR-02]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CertificationCreate' }
+            example:
+              certType: NPOP
+              certNumber: NPOP/TN/2026/44120
+              issuingBody: Indian Organic Certification Agency
+              issuedOn: '2026-04-01'
+              expiresOn: '2027-03-31'
+              documentUrl: https://cdn.tohfa.in/docs/8f1c/npop-2026.pdf
+      responses:
+        '201':
+          description: Certification recorded, pending admin verification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Certification' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/certifications/{id}/verify:
+    post:
+      tags: [Farmer Profile & Certifications]
+      operationId: verifyCertification
+      summary: Mark a certification verified
+      description: |
+        The admin checks the certificate against the issuing body's portal and records the
+        outcome manually. Verifying lifts the listing block, unless the certificate is
+        already expired (BR-01 still applies).
+      x-permission: certification.mark_verified
+      x-business-rules: [BR-01, BR-02]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                portalReference: { type: string, maxLength: 120 }
+                note: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Verified.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Certification' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/certifications/{id}/unverify:
+    post:
+      tags: [Farmer Profile & Certifications]
+      operationId: unverifyCertification
+      summary: Revoke verification and block listings
+      description: Immediately re-blocks the farmer's market listings (BR-02) and withdraws any listing still pending approval.
+      x-permission: certification.mark_verified
+      x-business-rules: [BR-02]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        '200':
+          description: Verification revoked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Certification' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /fair-prices:
+    get:
+      tags: [Pricing]
+      operationId: listFairPrices
+      summary: Effective fair price ceilings
+      description: Visible to every authenticated role. Farmers use this to bound the price on a new listing (BR-07).
+      x-permission: pricing.fair_price.view
+      x-business-rules: [BR-07, BR-08]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: cropId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: grade
+          in: query
+          schema: { $ref: '#/components/schemas/Grade' }
+        - name: effectiveOn
+          in: query
+          description: Defaults to today.
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Paged ceilings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/FairPrice' }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+              example:
+                items:
+                  - id: aa11bb22-cc33-4d44-8e55-9f6677889900
+                    cropId: 11112222-3333-4444-5555-666677778888
+                    cropName: Carrot
+                    grade: GRADE_1
+                    ceilingPrice: '48.00'
+                    frequency: WEEKLY
+                    effectiveFrom: '2026-08-17'
+                    effectiveTo: null
+                page: { nextCursor: null, hasMore: false }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    post:
+      tags: [Pricing]
+      operationId: createFairPrice
+      summary: Set a fair price ceiling (Super Admin only)
+      description: |
+        BR-08 — only the Super Admin sets ceilings. Windows for a given crop+grade may not
+        overlap; posting a new window closes the open one on the day before
+        `effectiveFrom`. Every write is retained, so the history endpoint is free.
+      x-permission: pricing.fair_price.set
+      x-business-rules: [BR-08]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FairPriceCreate' }
+            example:
+              cropId: 11112222-3333-4444-5555-666677778888
+              grade: GRADE_1
+              ceilingPrice: '52.00'
+              frequency: WEEKLY
+              effectiveFrom: '2026-08-24'
+              notes: Monsoon supply dip
+      responses:
+        '201':
+          description: Ceiling set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FairPrice' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /fair-prices/bulk:
+    post:
+      tags: [Pricing]
+      operationId: bulkUpsertFairPrices
+      summary: Bulk price update (Super Admin only)
+      description: All-or-nothing. If any row fails validation the whole batch is rejected and reported per index in `Problem.errors`.
+      x-permission: pricing.fair_price.bulk_update
+      x-business-rules: [BR-08]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items: { $ref: '#/components/schemas/FairPriceCreate' }
+      responses:
+        '200':
+          description: Batch applied.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applied, items]
+                properties:
+                  applied: { type: integer }
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/FairPrice' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /fair-prices/history:
+    get:
+      tags: [Pricing]
+      operationId: getFairPriceHistory
+      summary: Price history for a crop + grade
+      description: |
+        Returns every ceiling window recorded for one crop and grade, newest first, so a
+        disputed listing price can be checked against the ceiling that was in force on the day
+        (BR-08).
+      x-permission: pricing.fair_price.view
+      x-business-rules: [BR-08]
+      parameters:
+        - name: cropId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: grade
+          in: query
+          schema: { $ref: '#/components/schemas/Grade' }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Historic ceilings, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/FairPrice' }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /retail-prices:
+    get:
+      tags: [Pricing]
+      operationId: listRetailPrices
+      summary: Customer-facing retail prices
+      description: |
+        Returns the customer-facing retail prices in force, each of which is at or below the
+        fair price ceiling for its crop and grade (BR-09).
+      x-permission: pricing.retail_price.view
+      x-business-rules: [BR-09]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: cropId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: grade
+          in: query
+          schema: { $ref: '#/components/schemas/Grade' }
+      responses:
+        '200':
+          description: Paged retail prices.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/RetailPrice' }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    post:
+      tags: [Pricing]
+      operationId: createRetailPrice
+      summary: Set a retail price (Super Admin / TOHFA Admin)
+      description: |
+        BR-09 — the retail price must not exceed the fair price ceiling in force for the
+        crop and grade on `effectiveFrom`. Violations return 422 `PRICE_ABOVE_CEILING`.
+      x-permission: pricing.retail_price.set
+      x-business-rules: [BR-09]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetailPriceCreate' }
+            example:
+              cropId: 11112222-3333-4444-5555-666677778888
+              grade: GRADE_1
+              price: '69.00'
+              markupPct: 32.7
+              gstInclusive: true
+              effectiveFrom: '2026-08-19'
+      responses:
+        '201':
+          description: Retail price set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetailPrice' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422':
+          description: Price above the fair price ceiling.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/price-above-ceiling
+                title: Retail price exceeds the fair price ceiling
+                status: 422
+                detail: Ceiling for Carrot GRADE_1 effective 2026-08-19 is INR 48.00.
+                code: PRICE_ABOVE_CEILING
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K0
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /listings:
+    post:
+      tags: [Marketing]
+      operationId: createListing
+      summary: Create a produce listing
+      description: |
+        Server-side gates, in order: expired certificate (BR-01, `CERT_EXPIRED`),
+        unverified certificate (BR-02, `CERT_UNVERIFIED`), free-tier listing quota
+        (BR-14, `FREE_TIER_LIMIT`), and price ceiling (BR-07, `PRICE_ABOVE_CEILING`).
+        A `REJECT` grade may not be listed.
+      x-permission: listing.create_own
+      x-business-rules: [BR-01, BR-02, BR-07, BR-14]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ListingCreate' }
+            example:
+              farmId: 7c3e1a2b-4d5f-4a6b-8c9d-0e1f2a3b4c5d
+              cropId: 11112222-3333-4444-5555-666677778888
+              grade: GRADE_1
+              quantityKg: '250.000'
+              askingPricePerKg: '46.50'
+              availableFrom: '2026-08-21'
+              photos: [https://cdn.tohfa.in/listings/9a8b/1.jpg]
+      responses:
+        '201':
+          description: Listing created and queued for admin approval.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Listing' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Listings blocked by certificate state.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/cert-expired
+                title: Certification expired
+                status: 403
+                detail: NPOP certificate NPOP/TN/2025/11902 expired on 2026-03-31.
+                code: CERT_EXPIRED
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K1
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    get:
+      tags: [Marketing]
+      operationId: listMyListings
+      summary: Own listings
+      description: |
+        Lists the caller's own listings across every status, newest first (BR-36).
+      x-permission: listing.view_own
+      x-business-rules: [BR-36]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ListingStatus' }
+      responses:
+        '200':
+          description: Paged listings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Listing' }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /listings/{id}:
+    patch:
+      tags: [Marketing]
+      operationId: updateListing
+      summary: Edit a pending listing
+      description: Only a listing in `PENDING_APPROVAL` may be edited; anything else returns 409 `LISTING_NOT_PENDING`.
+      x-permission: listing.update_own
+      x-business-rules: [BR-07]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ListingUpdate' }
+            example: { quantityKg: '180.000', askingPricePerKg: '45.00' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Listing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /listings/{id}/withdraw:
+    post:
+      tags: [Marketing]
+      operationId: withdrawListing
+      summary: Withdraw own listing
+      description: |
+        Withdraws the caller's own listing while it is still pending approval; an approved
+        listing cannot be withdrawn and returns 409.
+      x-permission: listing.withdraw_own
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      responses:
+        '200':
+          description: Withdrawn.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Listing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/listings:
+    get:
+      tags: [Marketing]
+      operationId: listPendingListings
+      summary: Admin approval queue
+      description: |
+        A Farmer Admin sees the queue with their own listings flagged
+        `routedAway: true` — those rows are read-only for them (BR-29).
+      x-permission: listing.queue.view_pending
+      x-business-rules: [BR-29]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ListingStatus' }
+        - name: cropId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: zoneId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Paged queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminListing' }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/listings/{id}/approve:
+    post:
+      tags: [Marketing]
+      operationId: approveListing
+      summary: Approve a listing and raise the purchase order
+      description: |
+        Approval accepts the listing at its asking price (or at the accepted counter-offer
+        price) and issues a purchase order to the destination warehouse. A Farmer Admin
+        approving their own listing is refused with 403 `SELF_APPROVAL_FORBIDDEN`; the
+        listing is auto-routed to another admin (BR-29).
+      x-permission: listing.approve
+      x-business-rules: [BR-07, BR-29]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [warehouseId]
+              properties:
+                warehouseId: { type: string, format: uuid }
+                expectedDeliveryDate: { type: string, format: date }
+                note: { type: string, maxLength: 500 }
+            example:
+              warehouseId: 3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01
+              expectedDeliveryDate: '2026-08-22'
+      responses:
+        '200':
+          description: Approved; the purchase order reference is returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [listing, purchaseOrder]
+                properties:
+                  listing: { $ref: '#/components/schemas/Listing' }
+                  purchaseOrder: { $ref: '#/components/schemas/PurchaseOrder' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Self-approval refused.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/self-approval-forbidden
+                title: Self-approval is not permitted
+                status: 403
+                detail: A Farmer Admin cannot approve their own listing; it has been routed to another admin.
+                code: SELF_APPROVAL_FORBIDDEN
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K2
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/listings/{id}/reject:
+    post:
+      tags: [Marketing]
+      operationId: rejectListing
+      summary: Reject a listing
+      description: |
+        Rejects a pending listing with a reason the farmer sees. A Farmer Admin may not reject
+        their own listing — it is auto-routed to another admin (BR-29).
+      x-permission: listing.reject
+      x-business-rules: [BR-29]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reasonCode, reason]
+              properties:
+                reasonCode:
+                  type: string
+                  enum: [QUALITY_CONCERN, PRICE_UNACCEPTABLE, NO_DEMAND, CERT_ISSUE, DUPLICATE, OTHER]
+                reason: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        '200':
+          description: Rejected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Listing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/listings/{id}/counter-offers:
+    post:
+      tags: [Marketing]
+      operationId: createCounterOffer
+      summary: Send a counter-offer to the farmer
+      description: |
+        The worked example from the requirements: the farmer lists Grade 1 at INR 100/kg,
+        the admin counters INR 75/kg for 75 kg. The farmer has 24 hours to respond
+        (BR-10) and the pair may exchange at most 3 rounds (BR-11). A Farmer Admin may
+        not counter their own listing (BR-29).
+      x-permission: listing.counter_offer.send
+      x-business-rules: [BR-07, BR-10, BR-11, BR-29]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CounterOfferCreate' }
+            example:
+              pricePerKg: '75.00'
+              quantityKg: '75.000'
+              message: Grade 1 demand is soft this week; we can take 75 kg at this price.
+      responses:
+        '201':
+          description: Counter-offer sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CounterOffer' }
+              example:
+                id: e5f6a7b8-c9d0-4e1f-8a2b-3c4d5e6f7a8b
+                listingId: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d
+                round: 1
+                offeredBy: ADMIN
+                pricePerKg: '75.00'
+                quantityKg: '75.000'
+                status: PENDING
+                expiresAt: '2026-08-19T06:30:00Z'
+                message: Grade 1 demand is soft this week; we can take 75 kg at this price.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: All 3 counter rounds have been used.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/counter-rounds-exhausted
+                title: Counter rounds exhausted
+                status: 409
+                detail: This listing has already been countered 3 times; approve or reject it.
+                code: COUNTER_LIMIT_REACHED
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K3
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /listings/{id}/counter-offers/{offerId}/accept:
+    post:
+      tags: [Marketing]
+      operationId: acceptCounterOffer
+      summary: Farmer accepts the counter-offer
+      description: Accepting fixes the final price and quantity and moves the listing to `ACCEPTED`. Past `expiresAt` this returns 409 `COUNTER_OFFER_EXPIRED` (BR-10).
+      x-permission: listing.counter_offer.respond
+      x-business-rules: [BR-10]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/OfferIdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      responses:
+        '200':
+          description: Accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Listing' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /listings/{id}/counter-offers/{offerId}/reject:
+    post:
+      tags: [Marketing]
+      operationId: rejectCounterOffer
+      summary: Farmer rejects the counter-offer
+      description: |
+        The farmer declines the counter-offer. The round closes and the listing returns to the
+        admin queue for a further decision (BR-10).
+      x-permission: listing.counter_offer.respond
+      x-business-rules: [BR-10]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/OfferIdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Rejected; the listing returns to the admin queue for a final decision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CounterOffer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /listings/{id}/counter-offers/{offerId}/counter:
+    post:
+      tags: [Marketing]
+      operationId: counterBackCounterOffer
+      summary: Farmer counters back
+      description: Opens round N+1. Refused with 409 `COUNTER_LIMIT_REACHED` once round 3 has closed (BR-11).
+      x-permission: listing.counter_offer.respond
+      x-business-rules: [BR-07, BR-10, BR-11]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/OfferIdParam'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CounterOfferCreate' }
+            example: { pricePerKg: '85.00', quantityKg: '100.000', message: I can do 100 kg at 85. }
+      responses:
+        '201':
+          description: Counter round opened.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CounterOffer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/purchase-orders:
+    get:
+      tags: [Purchase]
+      operationId: listPurchaseOrders
+      summary: Purchase orders raised to farmers
+      description: Sub Warehouse Admins see only their own warehouse (BR-30).
+      x-permission: purchase.order.view
+      x-business-rules: [BR-30]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/PurchaseOrderStatus' } }
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Paged purchase orders.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/PurchaseOrder' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/purchase-orders/{id}:
+    get:
+      tags: [Purchase]
+      operationId: getPurchaseOrder
+      summary: Purchase order detail with receipts
+      description: |
+        Returns one purchase order with its goods receipts and settlement state. A Sub Warehouse
+        Admin sees only orders for its own warehouse (BR-30).
+      x-permission: purchase.order.view
+      x-business-rules: [BR-30]
+      parameters: [{ $ref: '#/components/parameters/IdParam' }]
+      responses:
+        '200':
+          description: Purchase order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PurchaseOrderDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/goods-receipts:
+    post:
+      tags: [Purchase]
+      operationId: createGoodsReceipt
+      summary: Receive goods against a purchase order
+      description: |
+        Warehouse-side intake. `acceptedQtyKg + rejectedQtyKg` must not exceed
+        `grossQtyKg`. The receipt is created in `AWAITING_QC`; stock only enters the
+        ledger once the quality check passes. Scoped to the caller's warehouse (BR-30).
+      x-permission: inventory.goods_receipt.record
+      x-business-rules: [BR-30, BR-37]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKeyHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoodsReceiptCreate' }
+            example:
+              purchaseOrderId: 6b5a4c3d-2e1f-4a09-8b7c-6d5e4f3a2b1c
+              warehouseId: 3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01
+              grossQtyKg: '250.000'
+              vehicleNumber: TN43AB1234
+              photos: [https://cdn.tohfa.in/grn/2026/aug/2b1c-1.jpg]
+      responses:
+        '201':
+          description: Goods receipt note created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GoodsReceipt' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/goods-receipts/{id}/quality-check:
+    post:
+      tags: [Purchase]
+      operationId: recordQualityCheck
+      summary: Record the 5-point quality check
+      description: |
+        The assigned grade may differ from the listed grade, which triggers a price
+        adjustment. On `ACCEPTED` or `PARTIALLY_ACCEPTED` an inventory batch is created
+        and a `RECEIPT` row is appended to the stock ledger (BR-37). A `REJECT` grade is
+        never sellable.
+      x-permission: inventory.quality_check.perform
+      x-business-rules: [BR-30, BR-37]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QualityCheckCreate' }
+            example:
+              assignedGrade: GRADE_2
+              outcome: PARTIALLY_ACCEPTED
+              acceptedQtyKg: '220.000'
+              rejectedQtyKg: '30.000'
+              moisturePct: 12.4
+              visualScore: 7
+              defectNotes: Minor surface bruising on 30 kg.
+              priceAdjustment: '-4.00'
+              storageLocation: A-04-R2
+      responses:
+        '201':
+          description: Quality check recorded; batch created when stock was accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [qualityCheck]
+                properties:
+                  qualityCheck: { $ref: '#/components/schemas/QualityCheck' }
+                  batch: { $ref: '#/components/schemas/Batch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/goods-receipts/{id}/counter-offer:
+    post:
+      tags: [Purchase]
+      operationId: createGoodsReceiptCounterOffer
+      summary: Counter-offer to the farmer on a quality shortfall
+      description: Offers a revised price for the delivered lot when the quality check downgrades it. The farmer has 24 hours to respond (BR-10).
+      x-permission: inventory.quality.counter_offer
+      x-business-rules: [BR-10, BR-11]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CounterOfferCreate' }
+      responses:
+        '201':
+          description: Counter-offer sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CounterOffer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/batches:
+    get:
+      tags: [Inventory]
+      operationId: listBatches
+      summary: Inventory batches
+      description: Consolidated across farmers per warehouse. `sourceFarmerId` is present here for traceability and is never exposed on the customer surface (BR-16).
+      x-permission: inventory.batch.view
+      x-business-rules: [BR-16, BR-24, BR-30]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: cropId, in: query, schema: { type: string, format: uuid } }
+        - { name: grade, in: query, schema: { $ref: '#/components/schemas/Grade' } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/BatchStatus' } }
+      responses:
+        '200':
+          description: Paged batches.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Batch' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/batches/{id}:
+    get:
+      tags: [Inventory]
+      operationId: getBatch
+      summary: Batch detail with full traceability
+      description: |
+        Returns one batch with its source receipt, originating farmer and ledger movements. This
+        traceability payload is admin-only and is never projected onto a customer response
+        (BR-16).
+      x-permission: inventory.batch.view
+      x-business-rules: [BR-16, BR-24, BR-30]
+      parameters: [{ $ref: '#/components/parameters/IdParam' }]
+      responses:
+        '200':
+          description: Batch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Batch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/stock-ledger:
+    get:
+      tags: [Inventory]
+      operationId: getStockLedger
+      summary: Append-only stock ledger
+      description: The ledger is the source of truth for stock; batch quantities are derived from it (BR-37). Rows are never updated or deleted.
+      x-permission: inventory.stock_ledger.view_own
+      x-business-rules: [BR-30, BR-37]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: batchId, in: query, schema: { type: string, format: uuid } }
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: txnType, in: query, schema: { $ref: '#/components/schemas/StockTxnType' } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Paged ledger rows, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/StockLedgerEntry' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/stock-adjustments:
+    post:
+      tags: [Inventory]
+      operationId: createStockAdjustment
+      summary: Adjust stock on a batch
+      description: |
+        Appends a signed `ADJUSTMENT` row to the ledger; the batch balance is recomputed,
+        never edited in place (BR-37). A Sub Warehouse Admin may only adjust batches in
+        their own warehouse (BR-30) and their adjustments require approval.
+      x-permission: inventory.stock_adjustment.create
+      x-business-rules: [BR-30, BR-37]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKeyHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StockAdjustmentCreate' }
+            example:
+              batchId: 4d3c2b1a-0f9e-4d8c-8b7a-6f5e4d3c2b1a
+              adjustmentType: SHRINKAGE
+              qtyDeltaKg: '-2.500'
+              reason: Moisture loss over 3 days in cold store.
+      responses:
+        '201':
+          description: Adjustment recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StockAdjustment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/allocations:
+    get:
+      tags: [Inventory]
+      operationId: listAllocations
+      summary: Channel allocation dashboard
+      description: The 70/10/10/10 split of available stock across ONLINE, LIVE_MARKET, RESERVE and BUFFER (BR-12).
+      x-permission: allocation.dashboard.view
+      x-business-rules: [BR-12]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: allocationDate, in: query, schema: { type: string, format: date } }
+        - { name: channel, in: query, schema: { $ref: '#/components/schemas/AllocationChannel' } }
+      responses:
+        '200':
+          description: Paged allocations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Allocation' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+              example:
+                items:
+                  - id: 1f2e3d4c-5b6a-4798-8807-9a0b1c2d3e4f
+                    warehouseId: 3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01
+                    cropId: 11112222-3333-4444-5555-666677778888
+                    grade: GRADE_1
+                    allocationDate: '2026-08-18'
+                    channel: ONLINE
+                    allocatedQtyKg: '154.000'
+                    consumedQtyKg: '61.500'
+                    computedBy: AUTO
+                page: { nextCursor: null, hasMore: false }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/allocation-config:
+    patch:
+      tags: [Inventory]
+      operationId: updateAllocationConfig
+      summary: Set channel percentages (Super Admin only)
+      description: Percentages must sum to exactly 100 or the request is rejected with 422 (BR-12).
+      x-permission: allocation.channel_percentage.set
+      x-business-rules: [BR-12]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKeyHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AllocationConfigUpdate' }
+            example:
+              effectiveFrom: '2026-09-01'
+              channels:
+                - { channel: ONLINE, percentage: 70 }
+                - { channel: LIVE_MARKET, percentage: 10 }
+                - { channel: RESERVE, percentage: 10 }
+                - { channel: BUFFER, percentage: 10 }
+      responses:
+        '200':
+          description: Configuration saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AllocationConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /catalog/home:
+    get:
+      tags: [Catalog]
+      operationId: getCatalogHome
+      summary: Customer home surface
+      description: Banners, categories and featured products. Farm-anonymous (BR-16).
+      security: []
+      x-permission: public
+      x-business-rules: [BR-16]
+      parameters:
+        - { name: warehouseId, in: query, description: Narrows availability to one warehouse., schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Home payload.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogHome' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /catalog/categories:
+    get:
+      tags: [Catalog]
+      operationId: listCategories
+      summary: Product categories
+      description: |
+        Returns the product category tree that drives the customer browse surface.
+      security: []
+      x-permission: public
+      x-business-rules: [BR-16]
+      responses:
+        '200':
+          description: Categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Category' } }
+              example:
+                items:
+                  - { id: 22223333-4444-5555-6666-777788889999, name: Vegetables, slug: vegetables, imageUrl: https://cdn.tohfa.in/cat/veg.jpg, sortOrder: 1 }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /catalog/products:
+    get:
+      tags: [Catalog]
+      operationId: listProducts
+      summary: Browse products
+      description: Farm-anonymous listing of what is sellable now. REJECT grade never appears.
+      security: []
+      x-permission: public
+      x-business-rules: [BR-16]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: categoryId, in: query, schema: { type: string, format: uuid } }
+        - { name: grade, in: query, schema: { $ref: '#/components/schemas/Grade' } }
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: sort, in: query, schema: { type: string, enum: [PRICE_ASC, PRICE_DESC, NAME_ASC, NEWEST], default: NAME_ASC } }
+      responses:
+        '200':
+          description: Paged products.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Product' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+              example:
+                items:
+                  - id: 11112222-3333-4444-5555-666677778888
+                    name: Carrot
+                    categoryId: 22223333-4444-5555-6666-777788889999
+                    grade: GRADE_1
+                    pricePerKg: '69.00'
+                    availableQty: '154.000'
+                    unit: kg
+                    photos: [https://cdn.tohfa.in/products/carrot-g1.jpg]
+                    certificationBadges: [PGS, NPOP]
+                    warehouseIds: [3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01]
+                page: { nextCursor: eyJpZCI6IjExMTEyMjIyIn0, hasMore: true }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /catalog/products/{id}:
+    get:
+      tags: [Catalog]
+      operationId: getProduct
+      summary: Product detail
+      description: |
+        Returns one product with its grade, certification badges and current retail price. Farm-
+        anonymous: no farmer, farm, GPS or FMB field is present (BR-16).
+      security: []
+      x-permission: public
+      x-business-rules: [BR-16]
+      parameters: [{ $ref: '#/components/parameters/IdParam' }]
+      responses:
+        '200':
+          description: Product. Farm-anonymous — see the schema description.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /catalog/search:
+    get:
+      tags: [Catalog]
+      operationId: searchCatalog
+      summary: Search products
+      description: |
+        Full-text search across the sellable catalog. Farm name and location are neither
+        searchable nor returned (BR-16).
+      security: []
+      x-permission: public
+      x-business-rules: [BR-16]
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 80 } }
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paged search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Product' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /cart:
+    get:
+      tags: [Cart & Orders]
+      operationId: getCart
+      summary: Current cart
+      description: Items are reserved for 24 hours once the cart is locked (BR-22); `lockExpiresAt` is the deadline.
+      x-permission: cart.view_own
+      x-business-rules: [BR-22]
+      responses:
+        '200':
+          description: Cart.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    put:
+      tags: [Cart & Orders]
+      operationId: replaceCart
+      summary: Replace the whole cart
+      description: Re-reserves stock for every line and restarts the 24-hour lock (BR-22).
+      x-permission: cart.manage_own
+      x-business-rules: [BR-22]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CartReplace' }
+            example:
+              warehouseId: 3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01
+              items:
+                - { productId: 11112222-3333-4444-5555-666677778888, grade: GRADE_1, qtyKg: '2.000' }
+      responses:
+        '200':
+          description: Cart replaced.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    delete:
+      tags: [Cart & Orders]
+      operationId: clearCart
+      summary: Empty the cart and release reservations
+      description: |
+        Empties the cart and immediately releases every stock reservation it was holding
+        (BR-22).
+      x-permission: cart.manage_own
+      x-business-rules: [BR-22]
+      responses:
+        '204': { description: Cart cleared; reserved stock released back to the ledger. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /cart/items:
+    post:
+      tags: [Cart & Orders]
+      operationId: addCartItem
+      summary: Add or increment a cart line
+      description: |
+        Reserves stock from the ONLINE allocation bucket. Insufficient sellable stock
+        returns 409 `STOCK_UNAVAILABLE`; exceeding the online allocation for the day
+        returns 409 `INSUFFICIENT_ALLOCATION` (BR-12).
+      x-permission: cart.manage_own
+      x-business-rules: [BR-12, BR-22]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CartItemCreate' }
+            example: { productId: 11112222-3333-4444-5555-666677778888, grade: GRADE_1, qtyKg: '1.500' }
+      responses:
+        '201':
+          description: Line added; the updated cart is returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Stock or allocation unavailable.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/stock-unavailable
+                title: Requested quantity is unavailable
+                status: 409
+                detail: Only 0.750 kg of Carrot GRADE_1 remains at Coonoor today.
+                code: STOCK_UNAVAILABLE
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K4
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /orders:
+    post:
+      tags: [Cart & Orders]
+      operationId: checkout
+      summary: Place an order (wallet-first checkout)
+      description: |
+        Converts the locked cart into an order. Wallet is the primary payment method
+        (BR-17); an insufficient balance returns 422 `WALLET_INSUFFICIENT` with
+        the shortfall so the client can prompt a top-up. An expired cart lock returns 409
+        `CART_LOCK_EXPIRED` (BR-22). Every order supports warehouse pickup (BR-21); the delivery half of the model is
+        unresolved — see `docs/rules.md` open contradiction 3. Money-moving — `Idempotency-Key` required; a replay never writes a second wallet debit (BR-17).
+      x-permission: order.place
+      x-business-rules: [BR-17, BR-21, BR-22]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKeyHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CheckoutRequest' }
+            example:
+              fulfillmentType: HOME_DELIVERY
+              warehouseId: 3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01
+              deliveryAddressId: 8a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d
+              deliveryDate: '2026-08-20'
+              deliverySlot: MORNING_8_12
+              paymentMethod: WALLET
+      responses:
+        '201':
+          description: Order confirmed; the wallet has been debited and the delivery OTP issued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422':
+          description: Wallet balance insufficient.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/insufficient-wallet-balance
+                title: Wallet balance is insufficient
+                status: 422
+                detail: Order total is INR 412.50 and the wallet holds INR 180.00.
+                code: WALLET_INSUFFICIENT
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K5
+        '500': { $ref: '#/components/responses/ServerError' }
+    get:
+      tags: [Cart & Orders]
+      operationId: listOrders
+      summary: Own order history
+      description: |
+        Lists the caller's own orders, newest first. There is no cross-customer visibility in
+        either direction (BR-36).
+      x-permission: order.view_own
+      x-business-rules: [BR-36]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/OrderStatus' } }
+      responses:
+        '200':
+          description: Paged orders, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/OrderSummary' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /orders/{id}:
+    get:
+      tags: [Cart & Orders]
+      operationId: getOrder
+      summary: Order detail
+      description: Line items carry the grade and certification badges only — never the source farm (BR-16).
+      x-permission: order.view_own
+      x-business-rules: [BR-16, BR-36]
+      parameters: [{ $ref: '#/components/parameters/IdParam' }]
+      responses:
+        '200':
+          description: Order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /orders/{id}/tracking:
+    get:
+      tags: [Cart & Orders]
+      operationId: getOrderTracking
+      summary: Order tracking timeline
+      description: Confirmed -> Packed -> Dispatched -> Out for delivery -> Delivered. Poll this, or subscribe to `/orders/{id}/events` for pushes.
+      x-permission: order.view_own
+      x-business-rules: [BR-21, BR-36]
+      parameters: [{ $ref: '#/components/parameters/IdParam' }]
+      responses:
+        '200':
+          description: Tracking timeline.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderTracking' }
+              example:
+                orderId: 5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c1d
+                status: OUT_FOR_DELIVERY
+                otpRequired: true
+                estimatedArrival: '2026-08-20T05:30:00Z'
+                events:
+                  - { status: CONFIRMED, at: '2026-08-18T06:31:00Z', note: null }
+                  - { status: PACKED, at: '2026-08-19T02:10:00Z', note: Packed at Coonoor }
+                  - { status: DISPATCHED, at: '2026-08-20T01:05:00Z', note: TN43AB1234 }
+                  - { status: OUT_FOR_DELIVERY, at: '2026-08-20T04:40:00Z', note: null }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /orders/{id}/events:
+    get:
+      tags: [Cart & Orders]
+      operationId: streamOrderEvents
+      summary: Live order events (SSE)
+      description: |
+        Server-Sent Events stream. Each event is `event: order.status` with a JSON
+        `OrderTrackingEvent` payload; a `: keepalive` comment is emitted every 20 seconds.
+        The stream closes once the order reaches `DELIVERED` or `CANCELLED`. Clients
+        resume with the standard `Last-Event-ID` header.
+      x-permission: order.view_own
+      x-business-rules: [BR-36]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { name: Last-Event-ID, in: header, required: false, schema: { type: string } }
+      responses:
+        '200':
+          description: Event stream opened.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE frames; the `data:` field of each frame is an `OrderTrackingEvent` JSON object.
+              example: |
+                event: order.status
+                id: 42
+                data: {"status":"PACKED","at":"2026-08-19T02:10:00Z","note":"Packed at Coonoor"}
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /orders/{id}/reorder:
+    post:
+      tags: [Cart & Orders]
+      operationId: reorder
+      summary: One-tap reorder
+      description: Rebuilds the cart from a past order, skipping anything unavailable today; skipped lines are reported in `unavailable`.
+      x-permission: order.reorder_own
+      x-business-rules: [BR-12, BR-22]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      responses:
+        '200':
+          description: Cart rebuilt.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cart, unavailable]
+                properties:
+                  cart: { $ref: '#/components/schemas/Cart' }
+                  unavailable:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        productId: { type: string, format: uuid }
+                        name: { type: string }
+                        reason: { type: string, enum: [OUT_OF_STOCK, DELISTED, INSUFFICIENT_ALLOCATION] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/orders:
+    get:
+      tags: [Fulfilment]
+      operationId: listAdminOrders
+      summary: Warehouse order queue
+      description: A Sub Warehouse Admin sees only orders assigned to their warehouse; a cross-warehouse filter returns 403 `WAREHOUSE_SCOPE_VIOLATION` (BR-30).
+      x-permission: order.list.view_all
+      x-business-rules: [BR-30]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/OrderStatus' } }
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: channel, in: query, schema: { $ref: '#/components/schemas/SalesChannel' } }
+        - { name: deliveryDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Paged orders.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/OrderSummary' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Warehouse scope violation.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/warehouse-scope-violation
+                title: Warehouse scope violation
+                status: 403
+                detail: You are assigned to Coonoor and may not query Gudalur.
+                code: WAREHOUSE_SCOPE_VIOLATION
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K6
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/orders/{id}/assign-warehouse:
+    post:
+      tags: [Fulfilment]
+      operationId: assignOrderWarehouse
+      summary: Assign or reassign an order to a warehouse
+      description: |
+        Assigns or reassigns the fulfilling warehouse for an order — a customer may collect from
+        any of the four warehouses (BR-27). A Sub Warehouse Admin cannot assign orders to its
+        own warehouse.
+      x-permission: order.warehouse.assign
+      x-business-rules: [BR-21, BR-27]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [warehouseId]
+              properties:
+                warehouseId: { type: string, format: uuid }
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200':
+          description: Assigned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/orders/{id}/pack:
+    post:
+      tags: [Fulfilment]
+      operationId: packOrder
+      summary: Mark the order packed
+      description: Consumes the reserved batches FEFO and appends `SALE` rows to the stock ledger (BR-37). Only valid from `CONFIRMED`.
+      x-permission: order.mark_packed
+      x-business-rules: [BR-30, BR-37]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                packedLines:
+                  type: array
+                  items:
+                    type: object
+                    required: [orderItemId, fulfilledQtyKg]
+                    properties:
+                      orderItemId: { type: string, format: uuid }
+                      fulfilledQtyKg: { $ref: '#/components/schemas/Quantity' }
+      responses:
+        '200':
+          description: Packed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The order is not in a state that allows packing.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/invalid-state-transition
+                title: Invalid state transition
+                status: 409
+                detail: Cannot pack an order in status DISPATCHED.
+                code: INVALID_STATE_TRANSITION
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K7
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/orders/{id}/dispatch:
+    post:
+      tags: [Fulfilment]
+      operationId: dispatchOrder
+      summary: Dispatch a packed order
+      description: |
+        Transitions a packed order to `OUT_FOR_DELIVERY`. Track 1 fulfils every order by
+        warehouse pickup (BR-21), so this path is specified but not enabled — see
+        `docs/rules.md` open contradiction 3.
+      x-permission: order.dispatch
+      x-business-rules: [BR-21]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicleNumber: { type: string, maxLength: 20 }
+                deliveryPartnerId: { type: string, format: uuid }
+                expectedArrival: { type: string, format: date-time }
+            example: { vehicleNumber: TN43AB1234, expectedArrival: '2026-08-20T05:30:00Z' }
+      responses:
+        '200':
+          description: Dispatched.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/orders/{id}/verify-otp:
+    post:
+      tags: [Fulfilment]
+      operationId: verifyOrderOtp
+      summary: Verify the 4-digit handover OTP
+      description: |
+        Used for both doorstep delivery and warehouse pickup (BR-20, BR-21). Success moves
+        the order to `DELIVERED` and releases the settlement due to the farmer. Three
+        wrong codes lock the OTP and require it to be reissued.
+      x-permission: order.pickup_otp.verify
+      x-business-rules: [BR-20, BR-21, BR-30]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp]
+              properties:
+                otp: { type: string, pattern: '^[0-9]{4}$' }
+                podPhotoUrl: { type: string, format: uri }
+            example: { otp: '4821' }
+      responses:
+        '200':
+          description: Verified; the order is delivered.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: The OTP did not match.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/invalid-otp
+                title: Invalid OTP
+                status: 422
+                detail: 2 attempts remaining before this OTP is locked.
+                code: OTP_INVALID
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K8
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /wallets/me:
+    get:
+      tags: [Wallet]
+      operationId: getMyWallet
+      summary: Own wallet balance
+      description: The balance is derived from the append-only ledger, never edited directly.
+      x-permission: wallet.own.view
+      x-business-rules: [BR-36]
+      responses:
+        '200':
+          description: Wallet.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Wallet' }
+              example:
+                id: c3d4e5f6-a7b8-4901-8234-56789abcdef0
+                ownerType: CUSTOMER
+                balance: '1820.50'
+                currency: INR
+                status: ACTIVE
+                updatedAt: '2026-08-18T06:31:00Z'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /wallets/me/transactions:
+    get:
+      tags: [Wallet]
+      operationId: listMyWalletTransactions
+      summary: Own wallet ledger
+      description: |
+        Returns the caller's own append-only wallet ledger, newest first. Balances are derived
+        from these rows and are never edited in place (BR-36).
+      x-permission: wallet.own.view
+      x-business-rules: [BR-36]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/WalletTransactionType' } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Paged ledger rows, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/WalletTransaction' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /wallets/me/topups:
+    post:
+      tags: [Wallet]
+      operationId: createTopup
+      summary: Start a digital top-up (Razorpay)
+      description: |
+        Creates a Razorpay order and returns the parameters the mobile SDK needs. The
+        wallet is **not** credited here — it is credited when the signed
+        `payment.captured` webhook arrives. Money-moving, so `Idempotency-Key`
+        is required.
+      x-permission: wallet.topup.digital
+      x-business-rules: []
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKeyHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, mode]
+              properties:
+                amount: { $ref: '#/components/schemas/Money' }
+                mode: { type: string, enum: [UPI, CARD, NETBANKING] }
+            example: { amount: '1000.00', mode: UPI }
+      responses:
+        '201':
+          description: Gateway order created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TopupIntent' }
+              example:
+                topupId: d4e5f6a7-b8c9-4012-8345-6789abcdef01
+                gateway: RAZORPAY
+                gatewayOrderId: order_QhX2mK9pLr4tZa
+                amount: '1000.00'
+                currency: INR
+                status: PENDING
+                razorpayKeyId: rzp_test_1DP5mmOlF5G5ag
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /webhooks/razorpay:
+    post:
+      tags: [Wallet]
+      operationId: razorpayWebhook
+      summary: Razorpay webhook receiver
+      description: |
+        Public but authenticated by HMAC — the raw body is verified against
+        `X-Razorpay-Signature` before parsing. Events are deduplicated on the Razorpay
+        event id, so redelivery is safe. An invalid signature returns 401.
+      security: []
+      x-permission: public
+      x-business-rules: []
+      parameters:
+        - { name: X-Razorpay-Signature, in: header, required: true, schema: { type: string } }
+        - { name: X-Razorpay-Event-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event, payload]
+              properties:
+                event: { type: string, examples: [payment.captured, payment.failed, payout.processed] }
+                created_at: { type: integer }
+                payload: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Accepted (also returned for a duplicate event id).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: { type: boolean }
+                  duplicate: { type: boolean }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/wallets/{customerId}/cash-topup:
+    post:
+      tags: [Wallet]
+      operationId: createCashTopup
+      summary: Process a cash top-up at a warehouse
+      description: |
+        The customer hands cash to the warehouse admin, who records the fiscal cash tag.
+        The wallet is credited server-side and an SMS is sent (BR-18). The cap is
+        INR 10,000 per transaction — above it the call fails 422
+        `CASH_LIMIT_EXCEEDED`. Only admins assigned to that warehouse may process it
+        (BR-30).
+      x-permission: wallet.cash_topup.process
+      x-business-rules: [BR-18, BR-19, BR-30]
+      parameters:
+        - { name: customerId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CashTopupCreate' }
+            example:
+              amount: '5000.00'
+              warehouseId: 3f1b7c2e-2a44-4f0e-9b1a-6b0d2f0f1a01
+              fiscalCashTag: OOTY-2026-08-18-0042
+              remarks: Cash received at counter 2.
+      responses:
+        '201':
+          description: Wallet credited; the ledger row is returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WalletTransaction' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Cap exceeded.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/cash-topup-cap-exceeded
+                title: Cash top-up cap exceeded
+                status: 422
+                detail: Cash top-up is capped at INR 10,000.00 per transaction.
+                code: CASH_LIMIT_EXCEEDED
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9K9
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/payout-dues:
+    get:
+      tags: [Payouts & Invoices]
+      operationId: listPayoutDues
+      summary: Farmer payout dues, aged
+      description: Dues arise once goods are accepted at quality check. Ageing buckets are 7 / 15 / 30 days.
+      x-permission: payout.dues.view
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: farmerId, in: query, schema: { type: string, format: uuid } }
+        - { name: ageBucket, in: query, schema: { type: string, enum: [D0_7, D8_15, D16_30, D30_PLUS] } }
+      responses:
+        '200':
+          description: Paged dues.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, totals]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/PayoutDue' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+                  totals:
+                    type: object
+                    properties:
+                      totalDue: { $ref: '#/components/schemas/Money' }
+                      farmerCount: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/payouts:
+    post:
+      tags: [Payouts & Invoices]
+      operationId: createPayout
+      summary: Initiate a farmer payout
+      description: |
+        Payouts up to INR 10,000 are released on a single approval. Above that the payout
+        is created in `PENDING_APPROVAL` and needs a second, Super Admin approval
+        (BR-31); attempting to release it directly returns 403 `DUAL_APPROVAL_REQUIRED`.
+        Money-moving — `Idempotency-Key` required.
+      x-permission: payout.farmer.initiate
+      x-business-rules: [BR-31]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKeyHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PayoutCreate' }
+            example:
+              farmerId: 9f8e7d6c-5b4a-4392-8180-7f6e5d4c3b2a
+              amount: '18400.00'
+              mode: IMPS
+              bankAccountId: 2b3c4d5e-6f70-4812-8934-5a6b7c8d9e0f
+              dueIds: [7a6b5c4d-3e2f-4108-8927-6b5a4c3d2e1f]
+      responses:
+        '201':
+          description: Payout created. `requiresDualApproval` tells the client whether a second approval is outstanding.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payout' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/payouts/{id}/approve:
+    post:
+      tags: [Payouts & Invoices]
+      operationId: approvePayout
+      summary: Approve a payout
+      description: |
+        The initiator may never be an approver (BR-31, 403 `SAME_ACTOR_APPROVAL`), and
+        the two approvers must be different people. For amounts above INR 10,000 the
+        second approver must hold the Super Admin role (BR-31). Once both approvals are
+        in, the payout is submitted to RazorpayX.
+      x-permission: payout.approve_above_10k
+      x-business-rules: [BR-31]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { $ref: '#/components/parameters/IdempotencyKeyHeader' }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Approval recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payout' }
+              example:
+                id: 3c4d5e6f-7081-4923-8a45-6b7c8d9e0f12
+                payoutNumber: PO-2026-000871
+                farmerId: 9f8e7d6c-5b4a-4392-8180-7f6e5d4c3b2a
+                amount: '18400.00'
+                mode: IMPS
+                status: APPROVED
+                requiresDualApproval: true
+                initiatedBy: 2a9f0d1b-7c3e-4a55-9f0b-1e2d3c4b5a60
+                approvedBy: [6c5d4e3f-2a19-4087-8b76-5c4d3e2f1a09, 4d3c2b1a-0f9e-4d8c-9b7a-6e5d4c3b2a19]
+                approvedAt: '2026-08-18T07:02:00Z'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Self-approval of a payout is refused.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://api.tohfa.in/problems/self-approval-of-payout
+                title: Self-approval of a payout is not permitted
+                status: 403
+                detail: You initiated payout PO-2026-000871; a different approver is required.
+                code: SAME_ACTOR_APPROVAL
+                correlationId: 01J9F1B2C3D4E5F6G7H8J9KA
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /invoices:
+    get:
+      tags: [Payouts & Invoices]
+      operationId: listInvoices
+      summary: Own invoices
+      description: Farmers see purchase invoices, customers see sale invoices, admins see everything in scope. GST invoices exist only for B2B and Horeca, which are out of scope in Track 1 (BR-15).
+      x-permission: invoice.view_own
+      x-business-rules: [BR-16, BR-36]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/InvoiceType' } }
+        - { name: fromDate, in: query, schema: { type: string, format: date } }
+        - { name: toDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Paged invoices.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Invoice' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /invoices/{id}:
+    get:
+      tags: [Payouts & Invoices]
+      operationId: getInvoice
+      summary: Invoice detail with lines
+      description: |
+        Returns one invoice with its line items. A farmer or customer sees only their own, and a
+        customer invoice names TOHFA as the seller, never the farm (BR-16, BR-36).
+      x-permission: invoice.view_own
+      x-business-rules: [BR-16, BR-36]
+      parameters: [{ $ref: '#/components/parameters/IdParam' }]
+      responses:
+        '200':
+          description: Invoice.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /invoices/{id}/download:
+    get:
+      tags: [Payouts & Invoices]
+      operationId: downloadInvoice
+      summary: Download the invoice PDF
+      description: Returns the PDF inline, or a 302 to a short-lived signed CDN URL when `redirect=true`.
+      x-permission: invoice.view_own
+      x-business-rules: [BR-16, BR-36]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { name: redirect, in: query, schema: { type: boolean, default: false } }
+      responses:
+        '200':
+          description: The invoice PDF.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '302':
+          description: Redirect to a signed URL valid for 5 minutes.
+          headers:
+            Location: { schema: { type: string, format: uri } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /notifications:
+    get:
+      tags: [Platform]
+      operationId: listNotifications
+      summary: Own notifications
+      description: |
+        Lists the caller's own notifications, unread first.
+      x-permission: notification.own.view
+      x-business-rules: []
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: unreadOnly, in: query, schema: { type: boolean, default: false } }
+      responses:
+        '200':
+          description: Paged notifications.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, unreadCount]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+                  unreadCount: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /notifications/{id}/read:
+    post:
+      tags: [Platform]
+      operationId: markNotificationRead
+      summary: Mark a notification read
+      description: |
+        Marks one of the caller's own notifications as read. Repeating the call is a no-op, not
+        an error.
+      x-permission: notification.own.mark_read
+      x-business-rules: []
+      parameters: [{ $ref: '#/components/parameters/IdParam' }]
+      responses:
+        '200':
+          description: Marked read.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Notification' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/audit-log:
+    get:
+      tags: [Platform]
+      operationId: getAuditLog
+      summary: Immutable system audit log
+      description: |
+        Every privileged action is recorded here. Warehouse admins see only entries scoped
+        to their own warehouse (BR-30). Entries are append-only and are never redacted.
+      x-permission: auditlog.view
+      x-business-rules: [BR-30, BR-35]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: actorId, in: query, schema: { type: string, format: uuid } }
+        - { name: action, in: query, schema: { type: string, examples: [payout.approve, listing.approve] } }
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: entityId, in: query, schema: { type: string, format: uuid } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Paged audit entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/AuditLogEntry' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /healthz:
+    get:
+      tags: [Platform]
+      operationId: healthz
+      summary: Liveness probe
+      description: |
+        Liveness only: returns 200 while the process is running. It deliberately touches no
+        dependency, so a Postgres or Redis outage never restarts the container.
+      security: []
+      x-permission: public
+      x-business-rules: []
+      responses:
+        '200':
+          description: The process is alive.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  version: { type: string }
+              example: { status: ok, version: 1.0.0 }
+
+  /readyz:
+    get:
+      tags: [Platform]
+      operationId: readyz
+      summary: Readiness probe
+      description: Reports the health of every downstream dependency. Returns 503 while any required dependency is down.
+      security: []
+      x-permission: public
+      x-business-rules: []
+      responses:
+        '200':
+          description: Ready to serve traffic.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Readiness' }
+              example:
+                status: ready
+                checks:
+                  - { name: postgres, status: up, latencyMs: 3 }
+                  - { name: redis, status: up, latencyMs: 1 }
+                  - { name: razorpay, status: up, latencyMs: 118 }
+                  - { name: blob-storage, status: up, latencyMs: 42 }
+        '503':
+          description: Not ready.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Readiness' }
+
+  /uploads/sign:
+    post:
+      tags: [Platform]
+      operationId: signUpload
+      summary: Get a signed URL for a direct upload
+      description: |
+        Clients upload documents, certificates, produce photos and pod photos directly to
+        blob storage using the returned pre-signed URL, then send the resulting `fileUrl`
+        to the relevant endpoint. Large files may be uploaded in resumable chunks.
+      x-permission: upload.signed_url.create
+      x-business-rules: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purpose, contentType, sizeBytes]
+              properties:
+                purpose:
+                  type: string
+                  enum: [FARMER_DOCUMENT, CERTIFICATE, LISTING_PHOTO, GRN_PHOTO, QC_PHOTO, POD_PHOTO, PROFILE_PHOTO, ISSUE_PHOTO]
+                contentType: { type: string, examples: [image/jpeg, application/pdf] }
+                sizeBytes: { type: integer, minimum: 1, maximum: 26214400 }
+                fileName: { type: string, maxLength: 200 }
+            example: { purpose: CERTIFICATE, contentType: application/pdf, sizeBytes: 481203, fileName: npop-2026.pdf }
+      responses:
+        '201':
+          description: Signed upload target.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploadUrl, fileUrl, method, expiresAt]
+                properties:
+                  uploadUrl: { type: string, format: uri }
+                  fileUrl: { type: string, format: uri, description: The durable URL to send back to the API once the upload completes. }
+                  method: { type: string, enum: [PUT, POST] }
+                  headers: { type: object, additionalProperties: { type: string } }
+                  expiresAt: { type: string, format: date-time }
+                  resumable: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Short-lived RS256 access token from `/auth/login`, `/auth/otp/verify` or
+        `/auth/refresh`. Claims: `sub` (user id), `typ` (farmer|customer|admin),
+        `roles[]`, `wh` (assigned warehouse id, for Sub Warehouse Admins), `exp`.
+        Role and warehouse claims are advisory for the client only — the server always
+        re-resolves permissions from `rbac.json` per request.
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    OfferIdParam:
+      name: offerId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CursorParam:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor from the previous page's `page.nextCursor`. Omit for the first page.
+      schema: { type: string, maxLength: 512 }
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      description: Page size.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Client-generated UUIDv4, unique per logical operation. Required on every
+        money-moving or otherwise non-repeatable POST. Replaying the same key
+        with an identical body returns the original response; replaying it with a
+        different body returns 409 `IDEMPOTENCY_KEY_REUSED`. Keys are retained 24 hours.
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Malformed request.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://api.tohfa.in/problems/bad-request
+            title: Malformed request
+            status: 400
+            detail: Request body is not valid JSON.
+            code: BAD_REQUEST
+            correlationId: 01J9F1B2C3D4E5F6G7H8J9KB
+    Unauthorized:
+      description: Missing, expired or invalid credentials.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://api.tohfa.in/problems/unauthorized
+            title: Authentication required
+            status: 401
+            detail: The access token has expired.
+            code: UNAUTHENTICATED
+            correlationId: 01J9F1B2C3D4E5F6G7H8J9KC
+    Forbidden:
+      description: Authenticated but not permitted — RBAC or warehouse scope.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://api.tohfa.in/problems/forbidden
+            title: Permission denied
+            status: 403
+            detail: Your role does not hold listing.approve.
+            code: FORBIDDEN
+            correlationId: 01J9F1B2C3D4E5F6G7H8J9KD
+    NotFound:
+      description: No such resource, or it is outside your scope.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://api.tohfa.in/problems/not-found
+            title: Resource not found
+            status: 404
+            detail: No listing with id 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d.
+            code: NOT_FOUND
+            correlationId: 01J9F1B2C3D4E5F6G7H8J9KE
+    Conflict:
+      description: The resource is not in a state that allows this operation.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://api.tohfa.in/problems/invalid-state-transition
+            title: Invalid state transition
+            status: 409
+            detail: The listing is already approved.
+            code: INVALID_STATE_TRANSITION
+            correlationId: 01J9F1B2C3D4E5F6G7H8J9KF
+    UnprocessableEntity:
+      description: Well-formed but semantically invalid — field validation or a business rule.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://api.tohfa.in/problems/validation-failed
+            title: Validation failed
+            status: 422
+            detail: 2 fields failed validation.
+            code: VALIDATION_FAILED
+            correlationId: 01J9F1B2C3D4E5F6G7H8J9KG
+            errors:
+              - { field: askingPricePerKg, code: PRICE_ABOVE_CEILING, message: Must not exceed 48.00. }
+              - { field: quantityKg, code: MIN, message: Must be at least 1.000 kg. }
+    TooManyRequests:
+      description: Rate limited.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://api.tohfa.in/problems/rate-limited
+            title: Too many requests
+            status: 429
+            detail: OTP resend is limited to one per 60 seconds.
+            code: RATE_LIMITED
+            correlationId: 01J9F1B2C3D4E5F6G7H8J9KH
+    ServerError:
+      description: Unexpected server error. Quote the correlationId to support.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://api.tohfa.in/problems/internal-error
+            title: Internal server error
+            status: 500
+            detail: An unexpected error occurred.
+            code: INTERNAL
+            correlationId: 01J9F1B2C3D4E5F6G7H8J9KJ
+
+  schemas:
+    Problem:
+      type: object
+      description: |
+        RFC 9457 problem detail. Every non-2xx response in this API uses this shape with
+        media type `application/problem+json`.
+
+        `code` is the stable, machine-readable discriminator — clients switch on it, never
+        on `title` or `detail`, which are human-facing and may be reworded or localized.
+
+        Generic codes (the transport-level half of `ProblemCode` in
+        `packages/shared-types/src/errors.ts`): `BAD_REQUEST`, `VALIDATION_FAILED`,
+        `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`,
+        `INTERNAL`.
+
+        Domain codes — every one of these exists in the `ErrorCode` union in
+        `packages/shared-types/src/errors.ts`, and `pnpm spec:drift` fails the build if
+        this list and that file disagree:
+
+        * `CERT_EXPIRED` — the farmer's certificate has expired; listings are blocked (BR-01).
+        * `CERT_UNVERIFIED` — the certificate has not been verified by an admin (BR-02).
+        * `PRICE_ABOVE_CEILING` — a listing price exceeds the fair price ceiling (BR-07).
+        * `RETAIL_ABOVE_CEILING` — a retail price exceeds the fair price ceiling (BR-09).
+        * `FREE_TIER_LIMIT` — the free-tier listing quota is exhausted; a subscription is required (BR-14).
+        * `LISTING_NOT_PENDING` — the listing is no longer editable or actionable.
+        * `COUNTER_LIMIT_REACHED` — all 3 counter rounds have been used (BR-11).
+        * `COUNTER_OFFER_EXPIRED` — the 24-hour counter-offer window has closed (BR-10).
+        * `SELF_APPROVAL_FORBIDDEN` — an actor may not approve their own submission (BR-29, BR-37).
+        * `WAREHOUSE_SCOPE_VIOLATION` — a Sub Warehouse Admin reached outside their warehouse (BR-30).
+        * `WAREHOUSE_REQUIRED` — a warehouse-scoped role was created without a warehouse (BR-25).
+        * `WALLET_INSUFFICIENT` — wallet-first checkout needs a top-up (BR-17).
+        * `CASH_LIMIT_EXCEEDED` — cash top-up above INR 10,000 (BR-19).
+        * `FISCAL_TAG_REQUIRED` — a cash top-up arrived without its fiscal cash tag (BR-18).
+        * `DUAL_APPROVAL_REQUIRED` — a payout above INR 10,000 needs a second approval (BR-31).
+        * `SAME_ACTOR_APPROVAL` — the initiator may not also approve (BR-31).
+        * `STOCK_UNAVAILABLE` — not enough sellable stock for the requested quantity.
+        * `INSUFFICIENT_ALLOCATION` — the channel's allocated quantity is used up (BR-12).
+        * `ALLOCATION_SUM_INVALID` — the channel percentages do not sum to 100 (BR-12).
+        * `CART_LOCK_EXPIRED` — the 24-hour cart reservation lapsed (BR-22).
+        * `OTP_INVALID` — the supplied OTP did not match (BR-20, BR-32).
+        * `OTP_EXPIRED` — the OTP challenge is past its validity window (BR-32).
+        * `OTP_LOCKED` — three failed attempts; a new challenge is required (BR-32).
+        * `OTP_RESEND_TOO_SOON` — a resend was requested inside the 60-second window (BR-32).
+        * `AUDIT_QUARTER_TAKEN` — that farmer already has an audit in this quarter (BR-03).
+        * `SCORE_OUT_OF_RANGE` — a rating or audit category score is out of range (BR-06).
+        * `FIELD_LOCKED` — Aadhaar or mobile may only be changed by a Super Admin (BR-33).
+        * `INVALID_STATE_TRANSITION` — the entity is not in a state that permits this operation.
+        * `IDEMPOTENCY_KEY_REUSED` — the key was reused with a different payload.
+      required: [type, title, status, code, correlationId]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A URI identifying the problem type; dereferences to human documentation.
+          examples: [https://api.tohfa.in/problems/price-above-ceiling]
+        title:
+          type: string
+          description: Short, human-readable summary. Stable per `type`, but not machine-parsed.
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+          description: Repeats the HTTP status code.
+        detail:
+          type: [string, 'null']
+          description: Human-readable explanation specific to this occurrence.
+        instance:
+          type: [string, 'null']
+          format: uri-reference
+          description: URI reference identifying the specific occurrence.
+        code:
+          type: string
+          pattern: '^[A-Z][A-Z0-9_]*$'
+          description: Machine-readable error code in SCREAMING_SNAKE_CASE. Switch on this.
+          examples: [PRICE_ABOVE_CEILING, CART_LOCK_EXPIRED]
+        correlationId:
+          type: string
+          description: Request correlation id, echoed in logs and traces. Always quote this to support.
+          examples: ['01J9F1B2C3D4E5F6G7H8J9K0']
+        errors:
+          type: array
+          description: Per-field validation failures. Present on 422, and on 400 for structural errors.
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field:
+                type: string
+                description: JSON pointer-ish path to the offending field, e.g. `items[2].qtyKg`.
+              code: { type: string, pattern: '^[A-Z][A-Z0-9_]*$' }
+              message: { type: string }
+
+    PageMeta:
+      type: object
+      description: Cursor pagination envelope. Cursors are opaque and must not be parsed or constructed by clients.
+      required: [nextCursor, hasMore]
+      properties:
+        nextCursor:
+          type: [string, 'null']
+          description: Pass back as `cursor` to fetch the next page; null on the last page.
+        hasMore: { type: boolean }
+
+    Money:
+      type: string
+      pattern: '^-?[0-9]{1,10}(\.[0-9]{1,2})?$'
+      description: |
+        A monetary amount in INR as a **decimal string**, e.g. `"1820.50"`.
+
+        Money is a string, never a JSON number, because IEEE-754 doubles cannot represent
+        decimal fractions exactly: JavaScript clients silently turn `0.1 + 0.2` into
+        `0.30000000000000004`, and a wallet ledger that must reconcile to the paisa
+        cannot tolerate that. Serialising as a string preserves the exact value the
+        server computed with `NUMERIC(12,2)` and forces clients to use a decimal library
+        rather than accidental float arithmetic. Negative values are permitted only on
+        ledger rows, where they denote a debit.
+      examples: ['1820.50', '-412.00', '0.00']
+
+    Quantity:
+      type: string
+      pattern: '^-?[0-9]{1,9}(\.[0-9]{1,3})?$'
+      description: A weight in kilograms as a decimal string with up to 3 decimal places. String for the same reason as `Money`.
+      examples: ['250.000', '1.500']
+
+    Mobile:
+      type: string
+      pattern: '^\+91[6-9][0-9]{9}$'
+      description: Indian mobile number in E.164.
+      examples: ['+919876543210']
+
+    Locale:
+      type: string
+      enum: [en, ta]
+      default: en
+      description: English (primary) or Tamil.
+
+    Grade:
+      type: string
+      enum: [GRADE_1, GRADE_2, GRADE_3, REJECT]
+      description: Produce grade. `REJECT` is never sellable and never appears on the customer surface.
+
+    CertificationType:
+      type: string
+      enum: [PGS, NPOP]
+      description: PGS Organic or NPOP. These are the only two certifications TOHFA recognises.
+
+    OrderStatus:
+      type: string
+      enum: [CONFIRMED, PACKED, DISPATCHED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED]
+
+    CounterOfferStatus:
+      type: string
+      enum: [PENDING, ACCEPTED, REJECTED, COUNTERED, EXPIRED]
+      description: A `PENDING` offer becomes `EXPIRED` automatically 24 hours after creation (BR-10).
+
+    ApplicationStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, DOCS_REVIEW, FARM_VERIFICATION, AUDIT, INFO_REQUESTED, APPROVED, REJECTED]
+      description: The fixed farmer application timeline.
+
+    ListingStatus:
+      type: string
+      enum: [DRAFT, PENDING_APPROVAL, COUNTER_OFFERED, ACCEPTED, REJECTED, WITHDRAWN, EXPIRED, FULFILLED]
+
+    PurchaseOrderStatus:
+      type: string
+      enum: [ISSUED, PARTIALLY_RECEIVED, RECEIVED, CANCELLED]
+
+    BatchStatus:
+      type: string
+      enum: [ACTIVE, DEPLETED, EXPIRED, WRITTEN_OFF]
+
+    StockTxnType:
+      type: string
+      enum: [RECEIPT, SALE, TRANSFER_OUT, TRANSFER_IN, ADJUSTMENT, WASTAGE, RETURN_IN, RESERVATION, RELEASE]
+
+    WalletTransactionType:
+      type: string
+      enum: [TOPUP_CASH, TOPUP_DIGITAL, ORDER_DEBIT, REFUND_CREDIT, PAYOUT_DEBIT, SALE_CREDIT, SUBSCRIPTION_DEBIT, ADJUSTMENT, CASHBACK]
+
+    AllocationChannel:
+      type: string
+      enum: [ONLINE, LIVE_MARKET, RESERVE, BUFFER]
+      description: |
+        The four allocation buckets of BR-12 — ONLINE 70%, LIVE_MARKET 10%,
+        RESERVE 10% (marriages and functions), BUFFER 10%. B2B and Horeca draw from
+        BUFFER and RESERVE; they are sales channels, not allocation buckets.
+
+    SalesChannel:
+      type: string
+      enum: [ONLINE, MARKET, HORECA, B2B]
+
+    InvoiceType:
+      type: string
+      enum: [SALE_RETAIL, SALE_B2B, PURCHASE_FARMER, PAYOUT, SUBSCRIPTION]
+
+    PayoutStatus:
+      type: string
+      enum: [REQUESTED, PENDING_APPROVAL, APPROVED, PROCESSING, PAID, FAILED, REVERSED]
+
+    FulfillmentType:
+      type: string
+      enum: [HOME_DELIVERY, WAREHOUSE_PICKUP]
+      description: Every order supports warehouse pickup (BR-21); delivery is contested — see `docs/rules.md` open contradiction 3.
+
+    DeliverySlot:
+      type: string
+      enum: [MORNING_8_12, AFTERNOON_12_4, EVENING_4_8]
+
+    PaymentMethod:
+      type: string
+      enum: [WALLET, UPI, CARD, NETBANKING, COD]
+      description: Wallet is the primary method (BR-17). COD availability is configuration-gated.
+
+    CustomerRegistrationRequest:
+      type: object
+      required: [mobile, fullName, password]
+      properties:
+        mobile: { $ref: '#/components/schemas/Mobile' }
+        fullName: { type: string, minLength: 2, maxLength: 120 }
+        email: { type: [string, 'null'], format: email }
+        password: { type: string, minLength: 10, maxLength: 128 }
+        preferredLocale: { $ref: '#/components/schemas/Locale' }
+        preferredWarehouseId: { type: [string, 'null'], format: uuid }
+
+    RegistrationAccepted:
+      type: object
+      required: [userId, status, otpExpiresAt]
+      properties:
+        userId: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING_OTP] }
+        otpExpiresAt: { type: string, format: date-time }
+        resendAvailableAt: { type: string, format: date-time }
+
+    OtpSendRequest:
+      type: object
+      required: [mobile, purpose]
+      properties:
+        mobile: { $ref: '#/components/schemas/Mobile' }
+        purpose: { type: string, enum: [REGISTRATION, LOGIN, PASSWORD_RESET] }
+
+    OtpChallenge:
+      type: object
+      required: [challengeId, expiresAt, attemptsRemaining]
+      properties:
+        challengeId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+        resendAvailableAt: { type: string, format: date-time, description: 60 seconds after dispatch (BR-32). }
+        attemptsRemaining: { type: integer, maximum: 3, description: Lockout at 0 (BR-32). }
+
+    OtpVerifyRequest:
+      type: object
+      required: [challengeId, code]
+      properties:
+        challengeId: { type: string, format: uuid }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+        deviceId: { type: string, maxLength: 120 }
+        platform: { type: string, enum: [ios, android, web] }
+
+    LoginRequest:
+      type: object
+      required: [mobile, password]
+      properties:
+        mobile: { $ref: '#/components/schemas/Mobile' }
+        password: { type: string, minLength: 1, maxLength: 128 }
+        roleCode:
+          type: string
+          description: Required on the second call when the account holds multiple admin roles.
+          enum: [SUPER_ADMIN, TOHFA_ADMIN, FARMER_ADMIN, MAIN_WH_ADMIN, SUB_WH_ADMIN]
+        deviceId: { type: string, maxLength: 120 }
+        platform: { type: string, enum: [ios, android, web] }
+        rememberDevice: { type: boolean, default: false }
+
+    TokenPair:
+      type: object
+      required: [accessToken, refreshToken, tokenType, expiresIn]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        tokenType: { type: string, enum: [Bearer] }
+        expiresIn: { type: integer, description: Access token lifetime in seconds. }
+        requiresRoleSelection: { type: boolean, default: false }
+        availableRoles:
+          type: array
+          items: { $ref: '#/components/schemas/RoleAssignment' }
+        user: { $ref: '#/components/schemas/CurrentUser' }
+
+    RoleAssignment:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          enum: [SUPER_ADMIN, TOHFA_ADMIN, FARMER_ADMIN, MAIN_WH_ADMIN, SUB_WH_ADMIN]
+        warehouseId: { type: [string, 'null'], format: uuid, description: Set, and required, for SUB_WH_ADMIN (BR-30). }
+        warehouseName: { type: [string, 'null'] }
+        zoneId: { type: [string, 'null'], format: uuid, description: Scopes a Farmer Admin's own-zone rating edits. }
+
+    CurrentUser:
+      type: object
+      required: [id, fullName, userType]
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        mobile: { $ref: '#/components/schemas/Mobile' }
+        email: { type: [string, 'null'], format: email }
+        userType: { type: string, enum: [farmer, customer, admin, delivery_partner] }
+        preferredLocale: { $ref: '#/components/schemas/Locale' }
+        roles: { type: array, items: { $ref: '#/components/schemas/RoleAssignment' } }
+        permissions:
+          type: array
+          description: Resolved permission codes from rbac.json. Advisory for UI gating only; the server re-checks every request.
+          items: { type: string }
+
+    FarmerApplicationStepPayload:
+      type: object
+      description: |
+        Exactly one of the five step objects, matching the `step` path parameter:
+        1 `personal`, 2 `farm`, 3 `location`, 4 `documents`, 5 `review`.
+      properties:
+        personal:
+          type: object
+          properties:
+            fullName: { type: string, maxLength: 120 }
+            dob: { type: string, format: date }
+            gender: { type: string, enum: [MALE, FEMALE, OTHER] }
+            farmingExperienceYears: { type: integer, minimum: 0, maximum: 90 }
+            address: { type: string, maxLength: 300 }
+            aadhaarNumber:
+              type: string
+              pattern: '^[0-9]{12}$'
+              writeOnly: true
+              description: Write-only. Tokenized on receipt; only the last 4 digits are ever returned (BR-33).
+        farm:
+          type: object
+          properties:
+            name: { type: string, maxLength: 120 }
+            surveyNumber: { type: string, maxLength: 60 }
+            areaAcres: { type: number, minimum: 0.01 }
+            waterSources: { type: array, items: { type: string } }
+            tdsPpm: { type: integer, minimum: 0 }
+            crops: { type: array, items: { type: string, format: uuid } }
+        location:
+          type: object
+          properties:
+            gpsCaptured: { type: boolean, description: False when the farmer fell back to manual lat/lng entry. }
+            latitude: { type: number, minimum: -90, maximum: 90 }
+            longitude: { type: number, minimum: -180, maximum: 180 }
+            fmbPolygon:
+              type: object
+              description: GeoJSON Polygon of the Farm Map Boundary drawn on the map.
+              properties:
+                type: { type: string, enum: [Polygon] }
+                coordinates:
+                  type: array
+                  items: { type: array, items: { type: array, items: { type: number }, minItems: 2, maxItems: 2 } }
+            village: { type: string }
+            taluk: { type: string }
+            district: { type: string }
+        documents:
+          type: object
+          properties:
+            idProofUrl: { type: string, format: uri, description: Mandatory. }
+            farmDocUrl: { type: string, format: uri, description: Mandatory. }
+            certificateUrl: { type: [string, 'null'], format: uri, description: Optional at application time. }
+        review:
+          type: object
+          properties:
+            declarationAccepted: { type: boolean }
+            signatureUrl: { type: [string, 'null'], format: uri }
+
+    FarmerApplication:
+      type: object
+      required: [id, status, mobile, fullName, completedSteps, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ApplicationStatus' }
+        mobile: { $ref: '#/components/schemas/Mobile' }
+        fullName: { type: string }
+        tohfaFarmerId: { type: [string, 'null'], description: Issued on approval, format TOHFA-F-YYYY-XXXX. }
+        completedSteps: { type: array, items: { type: integer, minimum: 1, maximum: 5 } }
+        data: { $ref: '#/components/schemas/FarmerApplicationStepPayload' }
+        zoneId: { type: [string, 'null'], format: uuid }
+        submittedAt: { type: [string, 'null'], format: date-time }
+        decidedAt: { type: [string, 'null'], format: date-time }
+        decidedBy: { type: [string, 'null'], format: uuid }
+        rejectionReason: { type: [string, 'null'] }
+        infoRequest: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+
+    FarmerApplicationSummary:
+      type: object
+      required: [id, status, fullName, submittedAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ApplicationStatus' }
+        fullName: { type: string }
+        village: { type: [string, 'null'] }
+        zoneId: { type: [string, 'null'], format: uuid }
+        areaAcres: { type: [number, 'null'] }
+        submittedAt: { type: [string, 'null'], format: date-time }
+        slaDueAt: { type: [string, 'null'], format: date-time, description: 3-5 working days from submission. }
+        documentsComplete: { type: boolean }
+
+    ApplicationStatusTimeline:
+      type: object
+      required: [applicationId, status, steps]
+      properties:
+        applicationId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ApplicationStatus' }
+        submittedAt: { type: [string, 'null'], format: date-time }
+        expectedDecisionBy: { type: [string, 'null'], format: date-time }
+        steps:
+          type: array
+          items:
+            type: object
+            required: [status, reachedAt]
+            properties:
+              status: { $ref: '#/components/schemas/ApplicationStatus' }
+              reachedAt: { type: string, format: date-time }
+              note: { type: [string, 'null'] }
+
+    FarmerProfile:
+      type: object
+      required: [id, tohfaFarmerId, fullName, mobile, kycStatus]
+      properties:
+        id: { type: string, format: uuid }
+        tohfaFarmerId: { type: string, examples: [TOHFA-F-2026-0114] }
+        fullName: { type: string }
+        mobile:
+          allOf: [{ $ref: '#/components/schemas/Mobile' }]
+          readOnly: true
+          description: Locked field (BR-33).
+        aadhaarLast4:
+          type: [string, 'null']
+          pattern: '^[0-9]{4}$'
+          readOnly: true
+          description: Locked field; the full number is never returned (BR-33).
+        dob: { type: [string, 'null'], format: date }
+        gender: { type: [string, 'null'], enum: [MALE, FEMALE, OTHER, null] }
+        farmingExperienceYears: { type: [integer, 'null'] }
+        address: { type: [string, 'null'] }
+        zoneId: { type: [string, 'null'], format: uuid }
+        kycStatus: { type: string, enum: [PENDING, VERIFIED, REJECTED] }
+        overallRating: { type: [number, 'null'], description: Farm rating, 10 categories x 10 points. }
+        ratingTier: { type: [string, 'null'], enum: [POOR, MODERATE, GOOD, EXCELLENT, null] }
+        subscriptionTier: { type: string, enum: [FREE, PAID] }
+        subscriptionValidTo: { type: [string, 'null'], format: date }
+        isMarketBlocked: { type: boolean, description: True while a certificate is expired or unverified (BR-01, BR-02). }
+        marketBlockReason: { type: [string, 'null'] }
+        preferredLocale: { $ref: '#/components/schemas/Locale' }
+
+    FarmerProfileUpdate:
+      type: object
+      description: Aadhaar and mobile are deliberately absent — they are locked (BR-33).
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 120 }
+        dob: { type: string, format: date }
+        gender: { type: string, enum: [MALE, FEMALE, OTHER] }
+        farmingExperienceYears: { type: integer, minimum: 0, maximum: 90 }
+        address: { type: string, maxLength: 300 }
+        preferredLocale: { $ref: '#/components/schemas/Locale' }
+      additionalProperties: false
+
+    Certification:
+      type: object
+      required: [id, certType, certNumber, expiresOn, verificationStatus, blocksListings]
+      properties:
+        id: { type: string, format: uuid }
+        certType: { $ref: '#/components/schemas/CertificationType' }
+        certNumber: { type: string, maxLength: 80 }
+        issuingBody: { type: string, maxLength: 160 }
+        issuedOn: { type: string, format: date }
+        expiresOn: { type: string, format: date }
+        documentUrl: { type: [string, 'null'], format: uri }
+        verificationStatus: { type: string, enum: [UNVERIFIED, VERIFIED, REJECTED] }
+        verifiedAt: { type: [string, 'null'], format: date-time }
+        verifiedBy: { type: [string, 'null'], format: uuid }
+        daysToExpiry: { type: integer, description: Negative once expired. Drives the farmer-app countdown. }
+        blocksListings: { type: boolean, description: True when expired (BR-01) or unverified (BR-02). }
+
+    CertificationCreate:
+      type: object
+      required: [certType, certNumber, issuingBody, issuedOn, expiresOn]
+      properties:
+        certType: { $ref: '#/components/schemas/CertificationType' }
+        certNumber: { type: string, maxLength: 80 }
+        issuingBody: { type: string, maxLength: 160 }
+        issuedOn: { type: string, format: date }
+        expiresOn: { type: string, format: date }
+        documentUrl: { type: string, format: uri }
+
+    FairPrice:
+      type: object
+      required: [id, cropId, grade, ceilingPrice, effectiveFrom]
+      properties:
+        id: { type: string, format: uuid }
+        cropId: { type: string, format: uuid }
+        cropName: { type: string }
+        grade: { $ref: '#/components/schemas/Grade' }
+        ceilingPrice: { $ref: '#/components/schemas/Money' }
+        frequency: { type: string, enum: [DAILY, WEEKLY] }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: [string, 'null'], format: date, description: Null while the window is open. }
+        setBy: { type: [string, 'null'], format: uuid }
+        notes: { type: [string, 'null'] }
+
+    FairPriceCreate:
+      type: object
+      required: [cropId, grade, ceilingPrice, effectiveFrom]
+      properties:
+        cropId: { type: string, format: uuid }
+        grade: { $ref: '#/components/schemas/Grade' }
+        ceilingPrice: { $ref: '#/components/schemas/Money' }
+        frequency: { type: string, enum: [DAILY, WEEKLY], default: WEEKLY }
+        effectiveFrom: { type: string, format: date }
+        notes: { type: string, maxLength: 300 }
+
+    RetailPrice:
+      type: object
+      required: [id, cropId, grade, price, effectiveFrom]
+      properties:
+        id: { type: string, format: uuid }
+        cropId: { type: string, format: uuid }
+        cropName: { type: string }
+        grade: { $ref: '#/components/schemas/Grade' }
+        price: { $ref: '#/components/schemas/Money' }
+        ceilingPrice: { $ref: '#/components/schemas/Money' }
+        markupPct: { type: [number, 'null'] }
+        gstInclusive: { type: boolean }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: [string, 'null'], format: date }
+
+    RetailPriceCreate:
+      type: object
+      required: [cropId, grade, price, effectiveFrom]
+      properties:
+        cropId: { type: string, format: uuid }
+        grade: { $ref: '#/components/schemas/Grade' }
+        price: { $ref: '#/components/schemas/Money' }
+        markupPct: { type: number, minimum: 0, maximum: 200 }
+        gstInclusive: { type: boolean, default: true }
+        effectiveFrom: { type: string, format: date }
+
+    Listing:
+      type: object
+      required: [id, cropId, grade, quantityKg, askingPricePerKg, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        farmerId: { type: string, format: uuid }
+        farmId: { type: [string, 'null'], format: uuid }
+        cropId: { type: string, format: uuid }
+        cropName: { type: string }
+        grade: { $ref: '#/components/schemas/Grade' }
+        quantityKg: { $ref: '#/components/schemas/Quantity' }
+        askingPricePerKg: { $ref: '#/components/schemas/Money' }
+        ceilingPricePerKg: { $ref: '#/components/schemas/Money' }
+        finalPricePerKg: { type: [string, 'null'], description: Set once a counter-offer is accepted or the listing is approved. }
+        finalQuantityKg: { type: [string, 'null'] }
+        availableFrom: { type: [string, 'null'], format: date }
+        photos: { type: array, items: { type: string, format: uri } }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+        counterRoundsUsed: { type: integer, minimum: 0, maximum: 3, description: BR-11. }
+        activeCounterOffer: { $ref: '#/components/schemas/CounterOffer' }
+        rejectionReason: { type: [string, 'null'] }
+        purchaseOrderId: { type: [string, 'null'], format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    ListingCreate:
+      type: object
+      required: [cropId, grade, quantityKg, askingPricePerKg]
+      properties:
+        farmId: { type: string, format: uuid }
+        cropId: { type: string, format: uuid }
+        grade: { $ref: '#/components/schemas/Grade', description: 'REJECT is not accepted here.' }
+        quantityKg: { $ref: '#/components/schemas/Quantity' }
+        askingPricePerKg: { $ref: '#/components/schemas/Money' }
+        availableFrom: { type: string, format: date }
+        photos: { type: array, maxItems: 5, items: { type: string, format: uri } }
+
+    ListingUpdate:
+      type: object
+      properties:
+        quantityKg: { $ref: '#/components/schemas/Quantity' }
+        askingPricePerKg: { $ref: '#/components/schemas/Money' }
+        availableFrom: { type: string, format: date }
+        photos: { type: array, maxItems: 5, items: { type: string, format: uri } }
+      additionalProperties: false
+
+    AdminListing:
+      allOf:
+        - $ref: '#/components/schemas/Listing'
+        - type: object
+          properties:
+            farmerName: { type: string }
+            tohfaFarmerId: { type: string }
+            zoneId: { type: [string, 'null'], format: uuid }
+            farmerRating: { type: [number, 'null'] }
+            routedAway:
+              type: boolean
+              description: True when the viewing Farmer Admin owns this listing; it is read-only for them and routed to another admin (BR-29).
+
+    CounterOffer:
+      type: object
+      required: [id, round, offeredBy, pricePerKg, quantityKg, status, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: [string, 'null'], format: uuid }
+        goodsReceiptId: { type: [string, 'null'], format: uuid }
+        round: { type: integer, minimum: 1, maximum: 3 }
+        offeredBy: { type: string, enum: [ADMIN, FARMER] }
+        offeredByUserId: { type: [string, 'null'], format: uuid }
+        pricePerKg: { $ref: '#/components/schemas/Money' }
+        quantityKg: { $ref: '#/components/schemas/Quantity' }
+        message: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/CounterOfferStatus' }
+        expiresAt: { type: string, format: date-time, description: Created plus 24 hours (BR-10). }
+        respondedAt: { type: [string, 'null'], format: date-time }
+
+    CounterOfferCreate:
+      type: object
+      required: [pricePerKg, quantityKg]
+      properties:
+        pricePerKg: { $ref: '#/components/schemas/Money' }
+        quantityKg: { $ref: '#/components/schemas/Quantity' }
+        message: { type: string, maxLength: 500 }
+
+    PurchaseOrder:
+      type: object
+      required: [id, poNumber, farmerId, warehouseId, quantityKg, pricePerKg, totalAmount, status]
+      properties:
+        id: { type: string, format: uuid }
+        poNumber: { type: string, examples: [PO-2026-004412] }
+        farmerId: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        cropId: { type: string, format: uuid }
+        grade: { $ref: '#/components/schemas/Grade' }
+        quantityKg: { $ref: '#/components/schemas/Quantity' }
+        pricePerKg: { $ref: '#/components/schemas/Money' }
+        totalAmount: { $ref: '#/components/schemas/Money' }
+        status: { $ref: '#/components/schemas/PurchaseOrderStatus' }
+        expectedDeliveryDate: { type: [string, 'null'], format: date }
+        issuedAt: { type: string, format: date-time }
+
+    PurchaseOrderDetail:
+      allOf:
+        - $ref: '#/components/schemas/PurchaseOrder'
+        - type: object
+          properties:
+            farmerName: { type: string }
+            tohfaFarmerId: { type: string }
+            receivedQtyKg: { $ref: '#/components/schemas/Quantity' }
+            goodsReceipts: { type: array, items: { $ref: '#/components/schemas/GoodsReceipt' } }
+
+    GoodsReceiptCreate:
+      type: object
+      required: [purchaseOrderId, warehouseId, grossQtyKg]
+      properties:
+        purchaseOrderId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        grossQtyKg: { $ref: '#/components/schemas/Quantity' }
+        vehicleNumber: { type: string, maxLength: 20 }
+        photos: { type: array, maxItems: 5, items: { type: string, format: uri } }
+        remarks: { type: string, maxLength: 500 }
+
+    GoodsReceipt:
+      type: object
+      required: [id, grnNumber, purchaseOrderId, warehouseId, grossQtyKg, status, receivedAt]
+      properties:
+        id: { type: string, format: uuid }
+        grnNumber: { type: string, examples: [GRN-2026-008812] }
+        purchaseOrderId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        grossQtyKg: { $ref: '#/components/schemas/Quantity' }
+        acceptedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        rejectedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        rejectionReason: { type: [string, 'null'] }
+        vehicleNumber: { type: [string, 'null'] }
+        photos: { type: array, items: { type: string, format: uri } }
+        status: { type: string, enum: [AWAITING_QC, ACCEPTED, PARTIALLY_ACCEPTED, REJECTED, COUNTER_OFFERED] }
+        receivedBy: { type: string, format: uuid }
+        receivedAt: { type: string, format: date-time }
+
+    QualityCheckCreate:
+      type: object
+      required: [assignedGrade, outcome, acceptedQtyKg]
+      properties:
+        assignedGrade: { $ref: '#/components/schemas/Grade' }
+        outcome: { type: string, enum: [ACCEPTED, PARTIALLY_ACCEPTED, REJECTED] }
+        acceptedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        rejectedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        moisturePct: { type: number, minimum: 0, maximum: 100 }
+        visualScore: { type: integer, minimum: 0, maximum: 10 }
+        defectNotes: { type: string, maxLength: 500 }
+        photos: { type: array, maxItems: 5, items: { type: string, format: uri } }
+        priceAdjustment: { $ref: '#/components/schemas/Money', description: 'Signed per-kg adjustment when the assigned grade differs from the listed grade.' }
+        storageLocation: { type: string, maxLength: 40 }
+        expiryOn: { type: string, format: date }
+
+    QualityCheck:
+      type: object
+      required: [id, goodsReceiptId, assignedGrade, outcome, checkedAt]
+      properties:
+        id: { type: string, format: uuid }
+        goodsReceiptId: { type: string, format: uuid }
+        assignedGrade: { $ref: '#/components/schemas/Grade' }
+        outcome: { type: string, enum: [ACCEPTED, PARTIALLY_ACCEPTED, REJECTED] }
+        acceptedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        rejectedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        moisturePct: { type: [number, 'null'] }
+        visualScore: { type: [integer, 'null'] }
+        defectNotes: { type: [string, 'null'] }
+        photos: { type: array, items: { type: string, format: uri } }
+        priceAdjustment: { $ref: '#/components/schemas/Money' }
+        checkedBy: { type: string, format: uuid }
+        checkedAt: { type: string, format: date-time }
+
+    Batch:
+      type: object
+      description: An inventory batch. `sourceFarmerId` exists for traceability and is admin-only; it must never be projected onto a customer response (BR-16).
+      required: [id, batchCode, warehouseId, cropId, grade, qtyAvailableKg, status]
+      properties:
+        id: { type: string, format: uuid }
+        batchCode: { type: string, examples: [OOT-CAR-G1-20260818-01] }
+        warehouseId: { type: string, format: uuid }
+        cropId: { type: string, format: uuid }
+        cropName: { type: string }
+        grade: { $ref: '#/components/schemas/Grade' }
+        goodsReceiptId: { type: [string, 'null'], format: uuid }
+        sourceFarmerId: { type: [string, 'null'], format: uuid }
+        qtyReceivedKg: { $ref: '#/components/schemas/Quantity' }
+        qtyAvailableKg: { $ref: '#/components/schemas/Quantity' }
+        qtyReservedKg: { $ref: '#/components/schemas/Quantity' }
+        costPerKg: { $ref: '#/components/schemas/Money' }
+        storageLocation: { type: [string, 'null'] }
+        receivedOn: { type: string, format: date }
+        expiryOn: { type: [string, 'null'], format: date }
+        status: { $ref: '#/components/schemas/BatchStatus' }
+
+    StockLedgerEntry:
+      type: object
+      description: An append-only ledger row. Rows are immutable; corrections are new rows (BR-37).
+      required: [id, batchId, warehouseId, txnType, qtyDeltaKg, balanceAfterKg, performedAt]
+      properties:
+        id: { type: string, format: uuid }
+        batchId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        txnType: { $ref: '#/components/schemas/StockTxnType' }
+        qtyDeltaKg: { $ref: '#/components/schemas/Quantity', description: 'Signed: negative for outflows.' }
+        balanceAfterKg: { $ref: '#/components/schemas/Quantity' }
+        refType: { type: [string, 'null'], examples: [order_item, stock_adjustment] }
+        refId: { type: [string, 'null'], format: uuid }
+        performedBy: { type: [string, 'null'], format: uuid }
+        performedAt: { type: string, format: date-time }
+        remarks: { type: [string, 'null'] }
+
+    StockAdjustmentCreate:
+      type: object
+      required: [batchId, adjustmentType, qtyDeltaKg, reason]
+      properties:
+        batchId: { type: string, format: uuid }
+        adjustmentType: { type: string, enum: [DAMAGE, SHRINKAGE, COUNT_CORRECTION, EXPIRY] }
+        qtyDeltaKg: { $ref: '#/components/schemas/Quantity' }
+        reason: { type: string, minLength: 5, maxLength: 500 }
+
+    StockAdjustment:
+      type: object
+      required: [id, batchId, adjustmentType, qtyDeltaKg, status, adjustedAt]
+      properties:
+        id: { type: string, format: uuid }
+        batchId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        adjustmentType: { type: string, enum: [DAMAGE, SHRINKAGE, COUNT_CORRECTION, EXPIRY] }
+        qtyDeltaKg: { $ref: '#/components/schemas/Quantity' }
+        reason: { type: string }
+        status: { type: string, enum: [PENDING_APPROVAL, APPROVED, REJECTED] }
+        ledgerEntryId: { type: [string, 'null'], format: uuid }
+        adjustedBy: { type: string, format: uuid }
+        approvedBy: { type: [string, 'null'], format: uuid }
+        adjustedAt: { type: string, format: date-time }
+
+    Allocation:
+      type: object
+      required: [id, warehouseId, cropId, grade, allocationDate, channel, allocatedQtyKg]
+      properties:
+        id: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        cropId: { type: string, format: uuid }
+        grade: { $ref: '#/components/schemas/Grade' }
+        allocationDate: { type: string, format: date }
+        channel: { $ref: '#/components/schemas/AllocationChannel' }
+        allocatedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        consumedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        computedBy: { type: string, enum: [AUTO, MANUAL] }
+        overriddenBy: { type: [string, 'null'], format: uuid }
+
+    AllocationConfigUpdate:
+      type: object
+      required: [effectiveFrom, channels]
+      properties:
+        effectiveFrom: { type: string, format: date }
+        channels:
+          type: array
+          minItems: 4
+          maxItems: 4
+          description: All four channels must be present and the percentages must sum to exactly 100 (BR-12).
+          items:
+            type: object
+            required: [channel, percentage]
+            properties:
+              channel: { $ref: '#/components/schemas/AllocationChannel' }
+              percentage: { type: number, minimum: 0, maximum: 100 }
+
+    AllocationConfig:
+      type: object
+      required: [effectiveFrom, channels]
+      properties:
+        effectiveFrom: { type: string, format: date }
+        channels:
+          type: array
+          items:
+            type: object
+            properties:
+              channel: { $ref: '#/components/schemas/AllocationChannel' }
+              percentage: { type: number }
+        setBy: { type: string, format: uuid }
+        setAt: { type: string, format: date-time }
+
+    Category:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        imageUrl: { type: [string, 'null'], format: uri }
+        sortOrder: { type: integer }
+        productCount: { type: integer }
+
+    Product:
+      type: object
+      description: |
+        FARM-ANONYMOUS. This schema is an allow-list. Never add farmerId, farmName,
+        farmLocation, gps, or fmb fields. See BR-16.
+
+        Customers see grade, certification badges and TOHFA branding only. Traceability
+        back to the source farm lives on `Batch`, which is admin-only. `additionalProperties`
+        is false so a serializer leak fails contract tests instead of shipping.
+      required: [id, name, categoryId, grade, pricePerKg, availableQty, unit]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        categoryId: { type: string, format: uuid }
+        grade: { $ref: '#/components/schemas/Grade' }
+        pricePerKg: { $ref: '#/components/schemas/Money' }
+        availableQty: { $ref: '#/components/schemas/Quantity' }
+        unit: { type: string, enum: [kg] }
+        photos: { type: array, items: { type: string, format: uri } }
+        certificationBadges: { type: array, items: { $ref: '#/components/schemas/CertificationType' } }
+        warehouseIds:
+          type: array
+          description: Warehouses where this product can be collected or dispatched from. Warehouse identity is TOHFA's, not the farm's, so it is safe to expose.
+          items: { type: string, format: uuid }
+
+    CatalogHome:
+      type: object
+      required: [categories, featured]
+      properties:
+        banners:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              imageUrl: { type: string, format: uri }
+              deeplink: { type: [string, 'null'] }
+        categories: { type: array, items: { $ref: '#/components/schemas/Category' } }
+        featured: { type: array, items: { $ref: '#/components/schemas/Product' } }
+        nearestWarehouseId: { type: [string, 'null'], format: uuid }
+
+    Cart:
+      type: object
+      required: [id, items, subtotal, status]
+      properties:
+        id: { type: string, format: uuid }
+        warehouseId: { type: [string, 'null'], format: uuid }
+        status: { type: string, enum: [ACTIVE, LOCKED, CONVERTED, EXPIRED] }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, productId, name, grade, qtyKg, unitPrice, lineTotal]
+            properties:
+              id: { type: string, format: uuid }
+              productId: { type: string, format: uuid }
+              name: { type: string }
+              grade: { $ref: '#/components/schemas/Grade' }
+              qtyKg: { $ref: '#/components/schemas/Quantity' }
+              unitPrice: { $ref: '#/components/schemas/Money' }
+              lineTotal: { $ref: '#/components/schemas/Money' }
+              certificationBadges: { type: array, items: { $ref: '#/components/schemas/CertificationType' } }
+        subtotal: { $ref: '#/components/schemas/Money' }
+        lockedAt: { type: [string, 'null'], format: date-time }
+        lockExpiresAt: { type: [string, 'null'], format: date-time, description: Locked plus 24 hours (BR-22). }
+
+    CartReplace:
+      type: object
+      required: [items]
+      properties:
+        warehouseId: { type: string, format: uuid }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItemCreate' }
+
+    CartItemCreate:
+      type: object
+      required: [productId, qtyKg]
+      properties:
+        productId: { type: string, format: uuid }
+        grade: { $ref: '#/components/schemas/Grade' }
+        qtyKg: { $ref: '#/components/schemas/Quantity' }
+
+    CheckoutRequest:
+      type: object
+      required: [fulfillmentType, warehouseId, paymentMethod]
+      properties:
+        fulfillmentType: { $ref: '#/components/schemas/FulfillmentType' }
+        warehouseId: { type: string, format: uuid }
+        deliveryAddressId: { type: [string, 'null'], format: uuid, description: Required when fulfillmentType is HOME_DELIVERY. }
+        deliveryDate: { type: string, format: date }
+        deliverySlot: { $ref: '#/components/schemas/DeliverySlot' }
+        paymentMethod: { $ref: '#/components/schemas/PaymentMethod' }
+        notes: { type: string, maxLength: 300 }
+
+    OrderSummary:
+      type: object
+      required: [id, orderNumber, status, totalAmount, placedAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderNumber: { type: string, examples: [TOH-2026-0084412] }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        channel: { $ref: '#/components/schemas/SalesChannel' }
+        fulfillmentType: { $ref: '#/components/schemas/FulfillmentType' }
+        warehouseId: { type: string, format: uuid }
+        itemCount: { type: integer }
+        totalAmount: { $ref: '#/components/schemas/Money' }
+        paymentStatus: { type: string, enum: [PENDING, PAID, PARTIALLY_PAID, REFUNDED, FAILED] }
+        deliveryDate: { type: [string, 'null'], format: date }
+        placedAt: { type: string, format: date-time }
+
+    Order:
+      allOf:
+        - $ref: '#/components/schemas/OrderSummary'
+        - type: object
+          required: [items, subtotal]
+          properties:
+            items:
+              type: array
+              description: Line items are farm-anonymous for customers (BR-16).
+              items:
+                type: object
+                required: [id, productId, name, grade, qtyKg, unitPrice, lineTotal]
+                properties:
+                  id: { type: string, format: uuid }
+                  productId: { type: string, format: uuid }
+                  name: { type: string }
+                  grade: { $ref: '#/components/schemas/Grade' }
+                  qtyKg: { $ref: '#/components/schemas/Quantity' }
+                  fulfilledQtyKg: { $ref: '#/components/schemas/Quantity' }
+                  unitPrice: { $ref: '#/components/schemas/Money' }
+                  gstRate: { type: number }
+                  gstAmount: { $ref: '#/components/schemas/Money' }
+                  lineTotal: { $ref: '#/components/schemas/Money' }
+            subtotal: { $ref: '#/components/schemas/Money' }
+            deliveryCharge: { $ref: '#/components/schemas/Money' }
+            discount: { $ref: '#/components/schemas/Money' }
+            gstAmount: { $ref: '#/components/schemas/Money' }
+            paymentMethod: { $ref: '#/components/schemas/PaymentMethod' }
+            deliverySlot: { $ref: '#/components/schemas/DeliverySlot' }
+            deliveryAddressId: { type: [string, 'null'], format: uuid }
+            otpRequired: { type: boolean, description: 4-digit handover OTP (BR-20). The code itself is never returned by the API. }
+            invoiceId: { type: [string, 'null'], format: uuid }
+            cancellationReason: { type: [string, 'null'] }
+            deliveredAt: { type: [string, 'null'], format: date-time }
+
+    OrderTrackingEvent:
+      type: object
+      required: [status, at]
+      properties:
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        at: { type: string, format: date-time }
+        note: { type: [string, 'null'] }
+
+    OrderTracking:
+      type: object
+      required: [orderId, status, events]
+      properties:
+        orderId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        otpRequired: { type: boolean }
+        estimatedArrival: { type: [string, 'null'], format: date-time }
+        events: { type: array, items: { $ref: '#/components/schemas/OrderTrackingEvent' } }
+
+    Wallet:
+      type: object
+      required: [id, ownerType, balance, currency, status]
+      properties:
+        id: { type: string, format: uuid }
+        ownerType: { type: string, enum: [CUSTOMER, FARMER] }
+        balance: { $ref: '#/components/schemas/Money', description: 'Derived from the ledger; never written directly.' }
+        currency: { type: string, enum: [INR] }
+        status: { type: string, enum: [ACTIVE, FROZEN] }
+        updatedAt: { type: string, format: date-time }
+
+    WalletTransaction:
+      type: object
+      required: [id, walletId, txnType, amount, balanceAfter, performedAt]
+      properties:
+        id: { type: string, format: uuid }
+        walletId: { type: string, format: uuid }
+        txnType: { $ref: '#/components/schemas/WalletTransactionType' }
+        amount: { $ref: '#/components/schemas/Money', description: 'Signed: negative for debits.' }
+        balanceAfter: { $ref: '#/components/schemas/Money' }
+        refType: { type: [string, 'null'], examples: [order, topup, payout] }
+        refId: { type: [string, 'null'], format: uuid }
+        fiscalCashTag: { type: [string, 'null'], description: Present on cash top-ups (BR-18). }
+        warehouseId: { type: [string, 'null'], format: uuid }
+        performedBy: { type: [string, 'null'], format: uuid }
+        performedAt: { type: string, format: date-time }
+        remarks: { type: [string, 'null'] }
+
+    TopupIntent:
+      type: object
+      required: [topupId, gateway, gatewayOrderId, amount, currency, status]
+      properties:
+        topupId: { type: string, format: uuid }
+        gateway: { type: string, enum: [RAZORPAY] }
+        gatewayOrderId: { type: string }
+        amount: { $ref: '#/components/schemas/Money' }
+        currency: { type: string, enum: [INR] }
+        status: { type: string, enum: [PENDING, SUCCESS, FAILED] }
+        razorpayKeyId: { type: string, description: Publishable key for the client SDK. }
+
+    CashTopupCreate:
+      type: object
+      required: [amount, warehouseId, fiscalCashTag]
+      properties:
+        amount: { $ref: '#/components/schemas/Money', description: 'Maximum INR 10,000.00 per transaction (BR-19).' }
+        warehouseId: { type: string, format: uuid }
+        fiscalCashTag: { type: string, minLength: 3, maxLength: 60 }
+        remarks: { type: string, maxLength: 300 }
+
+    PayoutDue:
+      type: object
+      required: [id, farmerId, amountDue, ageDays]
+      properties:
+        id: { type: string, format: uuid }
+        farmerId: { type: string, format: uuid }
+        tohfaFarmerId: { type: string }
+        farmerName: { type: string }
+        purchaseOrderId: { type: string, format: uuid }
+        goodsReceiptId: { type: [string, 'null'], format: uuid }
+        amountDue: { $ref: '#/components/schemas/Money' }
+        dueSince: { type: string, format: date }
+        ageDays: { type: integer }
+        ageBucket: { type: string, enum: [D0_7, D8_15, D16_30, D30_PLUS] }
+
+    PayoutCreate:
+      type: object
+      required: [farmerId, amount, mode]
+      properties:
+        farmerId: { type: string, format: uuid }
+        amount: { $ref: '#/components/schemas/Money' }
+        mode: { type: string, enum: [UPI, IMPS, NEFT] }
+        bankAccountId: { type: string, format: uuid }
+        dueIds: { type: array, items: { type: string, format: uuid } }
+        remarks: { type: string, maxLength: 300 }
+
+    Payout:
+      type: object
+      required: [id, payoutNumber, farmerId, amount, status, requiresDualApproval]
+      properties:
+        id: { type: string, format: uuid }
+        payoutNumber: { type: string, examples: [PO-2026-000871] }
+        farmerId: { type: string, format: uuid }
+        amount: { $ref: '#/components/schemas/Money' }
+        mode: { type: string, enum: [UPI, IMPS, NEFT] }
+        status: { $ref: '#/components/schemas/PayoutStatus' }
+        requiresDualApproval: { type: boolean, description: True when the amount exceeds INR 10,000 (BR-31). }
+        initiatedBy: { type: string, format: uuid }
+        approvedBy:
+          type: array
+          description: Distinct approver user ids. Never contains `initiatedBy` (BR-31).
+          items: { type: string, format: uuid }
+        approvedAt: { type: [string, 'null'], format: date-time }
+        gatewayPayoutId: { type: [string, 'null'] }
+        failureReason: { type: [string, 'null'] }
+        paidAt: { type: [string, 'null'], format: date-time }
+
+    Invoice:
+      type: object
+      required: [id, invoiceNumber, invoiceType, issueDate, totalAmount, status]
+      properties:
+        id: { type: string, format: uuid }
+        invoiceNumber: { type: string, examples: ['TOH/2026-27/R/004412'] }
+        invoiceType: { $ref: '#/components/schemas/InvoiceType' }
+        orderId: { type: [string, 'null'], format: uuid }
+        purchaseOrderId: { type: [string, 'null'], format: uuid }
+        issueDate: { type: string, format: date }
+        taxableAmount: { $ref: '#/components/schemas/Money' }
+        totalAmount: { $ref: '#/components/schemas/Money' }
+        gstApplicable: { type: boolean, description: True only for B2B and Horeca (BR-15). }
+        status: { type: string, enum: [DRAFT, ISSUED, CANCELLED, CREDIT_NOTED] }
+        pdfUrl: { type: [string, 'null'], format: uri }
+
+    InvoiceDetail:
+      allOf:
+        - $ref: '#/components/schemas/Invoice'
+        - type: object
+          properties:
+            placeOfSupply: { type: [string, 'null'] }
+            cgst: { $ref: '#/components/schemas/Money' }
+            sgst: { $ref: '#/components/schemas/Money' }
+            igst: { $ref: '#/components/schemas/Money' }
+            gstInclusive: { type: boolean }
+            lines:
+              type: array
+              items:
+                type: object
+                properties:
+                  description: { type: string }
+                  hsnCode: { type: [string, 'null'] }
+                  qty: { $ref: '#/components/schemas/Quantity' }
+                  unitPrice: { $ref: '#/components/schemas/Money' }
+                  gstRate: { type: number }
+                  taxable: { $ref: '#/components/schemas/Money' }
+                  tax: { $ref: '#/components/schemas/Money' }
+                  total: { $ref: '#/components/schemas/Money' }
+
+    Notification:
+      type: object
+      required: [id, title, body, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        channel: { type: string, enum: [PUSH, SMS, EMAIL, IN_APP] }
+        title: { type: string }
+        body: { type: string }
+        locale: { $ref: '#/components/schemas/Locale' }
+        data: { type: object, additionalProperties: true, description: Deep-link payload. }
+        readAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    AuditLogEntry:
+      type: object
+      required: [id, actorId, action, entityType, at]
+      properties:
+        id: { type: string, format: uuid }
+        actorId: { type: string, format: uuid }
+        actorRole: { type: string }
+        action: { type: string, examples: [payout.approve] }
+        entityType: { type: string, examples: [payout] }
+        entityId: { type: [string, 'null'], format: uuid }
+        warehouseId: { type: [string, 'null'], format: uuid }
+        before: { type: [object, 'null'], additionalProperties: true }
+        after: { type: [object, 'null'], additionalProperties: true }
+        correlationId: { type: string }
+        ip: { type: [string, 'null'] }
+        at: { type: string, format: date-time }
+
+    Readiness:
+      type: object
+      required: [status, checks]
+      properties:
+        status: { type: string, enum: [ready, degraded, not_ready] }
+        checks:
+          type: array
+          items:
+            type: object
+            required: [name, status]
+            properties:
+              name: { type: string }
+              status: { type: string, enum: [up, down] }
+              latencyMs: { type: integer }
+              error: { type: [string, 'null'] }

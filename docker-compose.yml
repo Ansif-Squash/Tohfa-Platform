@@ -1,0 +1,43 @@
+services:
+  postgres:
+    platform: linux/amd64
+    # PostGIS image so warehouse/zone geo queries work without a second setup step.
+    image: postgis/postgis:16-3.4-alpine
+    container_name: tohfa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tohfa
+      POSTGRES_PASSWORD: tohfa
+      POSTGRES_DB: tohfa
+      # Deterministic collation so ORDER BY matches across dev machines and CI.
+      POSTGRES_INITDB_ARGS: '--locale=C --encoding=UTF8'
+    ports:
+      - '5432:5432'
+    volumes:
+      - tohfa-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tohfa -d tohfa']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: tohfa-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - tohfa-redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  tohfa-pgdata:
+  tohfa-redisdata:

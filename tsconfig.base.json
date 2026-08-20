@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    /* Strictness. These are deliberately maximal: the platform handles money,
+       stock and payouts, so a silent undefined is a production incident. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+
+    "baseUrl": ".",
+    /* Paths point at BUILT declarations, not source. Combined with project
+       references this lets `tsc -b` build the graph in order without tripping
+       the "file is not under rootDir" rule. Vitest aliases these back to source
+       (see apps/api/vitest.config.ts) so tests need no prior build. */
+    "paths": {
+      "@tohfa/shared-types": ["./packages/shared-types/dist/index.d.ts"],
+      "@tohfa/shared-types/*": ["./packages/shared-types/dist/*"],
+      "@tohfa/design-tokens": ["./packages/design-tokens/dist/index.d.ts"],
+      "@tohfa/design-tokens/*": ["./packages/design-tokens/dist/*"]
+    }
+  }
+}

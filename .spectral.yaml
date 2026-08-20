@@ -1,0 +1,33 @@
+# Spectral ruleset for docs/openapi.yaml — `pnpm spec:lint`.
+#
+# Starts from the standard OpenAPI ruleset and adds the TOHFA house rules that
+# keep the contract and the implementation honest. Anything set to `error` here
+# fails CI.
+extends: ['spectral:oas']
+
+rules:
+  # Descriptions are what the client teams read; an undescribed operation is a
+  # support ticket waiting to happen.
+  # Every operation carries a description; `pnpm spec:drift` and this rule
+  # together keep it that way.
+  operation-description: error
+  operation-operationId: error
+  operation-tags: error
+
+  # Examples drift; we would rather have none than a wrong one.
+  oas3-valid-media-example: error
+  oas3-valid-schema-example: error
+
+  # Not useful for an internal API and noisy on a spec this size.
+  info-contact: off
+  oas3-unused-component: warn
+
+  tohfa-problem-json-on-errors:
+    description: >-
+      Error responses must use application/problem+json so clients can switch on
+      the stable `code` field. See packages/shared-types/src/errors.ts.
+    severity: warn
+    given: $.paths[*][*].responses[?(@property >= '400')].content
+    then:
+      field: application/problem+json
+      function: truthy

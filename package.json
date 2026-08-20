@@ -1,0 +1,44 @@
+{
+  "name": "tohfa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,admin -c green,cyan \"pnpm dev:api\" \"pnpm --filter @tohfa/admin-web start\"",
+    "dev:api": "pnpm --filter @tohfa/api dev",
+    "dev:worker": "pnpm --filter @tohfa/api dev:worker",
+    "build": "tsc -b tsconfig.json",
+    "typecheck": "tsc -b tsconfig.json && pnpm --filter @tohfa/admin-web --filter @tohfa/farmer-mobile --filter @tohfa/customer-mobile typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yaml,yml,css,html}\"",
+    "test": "pnpm --filter @tohfa/api test",
+    "test:e2e": "pnpm --filter @tohfa/api test:e2e",
+    "db:migrate": "pnpm --filter @tohfa/api db:migrate",
+    "db:rollback": "pnpm --filter @tohfa/api db:rollback",
+    "db:seed": "pnpm --filter @tohfa/api db:seed",
+    "db:reset": "pnpm --filter @tohfa/api db:reset",
+    "rbac:check": "tsx scripts/check-rbac-drift.ts",
+    "spec:lint": "spectral lint docs/openapi.yaml --fail-severity=error",
+    "spec:drift": "tsx scripts/check-spec-drift.ts",
+    "new:module": "tsx scripts/new-module.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@stoplight/spectral-cli": "^6.11.1",
+    "@types/node": "^20.14.10",
+    "@types/pg": "^8.11.6",
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.4.5",
+    "eslint": "^9.9.0",
+    "globals": "^15.9.0",
+    "pg": "^8.12.0",
+    "prettier": "^3.3.3",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.0.1"
+  }
+}

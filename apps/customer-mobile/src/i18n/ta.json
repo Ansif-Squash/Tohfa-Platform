@@ -1,0 +1,13 @@
+{
+  "$comment": "TODO(STORY-MOB-04): full Tamil translation with a native reviewer. Untranslated keys fall back to English at runtime — that is a bug to be closed, not the intended end state.",
+  "app.name": "தோஃபா",
+  "common.retry": "மீண்டும் முயற்சி",
+  "common.cancel": "ரத்து",
+  "common.continue": "தொடரவும்",
+  "common.loading": "ஏற்றுகிறது…",
+  "home.title": "நீலகிரியிலிருந்து புதியது",
+  "catalog.search": "காய்கறிகளைத் தேடு",
+  "cart.title": "கூடை",
+  "cart.checkout": "பணம் செலுத்து",
+  "wallet.title": "பணப்பை"
+}

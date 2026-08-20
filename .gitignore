@@ -1,0 +1,36 @@
+node_modules/
+dist/
+build/
+coverage/
+.tsbuildinfo
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+
+# Angular
+.angular/
+apps/admin-web/dist/
+
+# React Native / Expo
+apps/*/android/
+apps/*/ios/
+apps/*/.expo/
+*.keystore
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Internal build manual
+AI_BUILD_MANUAL.md

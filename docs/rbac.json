@@ -1,0 +1,2503 @@
+{
+  "$schema": "./rbac.schema.json",
+  "version": "1.0.0",
+  "note": "Ground truth for all authorization. Source: Requirements v1.0 Ch.6 + Role & Feature Matrix v1.0. Where the two disagree, PRECEDENCE is stated in `conflicts` below.",
+  "scopeLevels": {
+    "all": "Unrestricted across the whole system",
+    "own": "Only rows the actor owns or is assigned to (predicate injected server-side)",
+    "view": "Read-only, no mutation",
+    "conditional": "Allowed except where `predicate` forbids it — see the permission's `predicate` field",
+    "none": "Denied"
+  },
+  "roles": [
+    {
+      "code": "SUPER_ADMIN",
+      "name": "TOHFA Super Admin",
+      "level": 1,
+      "colorHex": "#A32D2D",
+      "scopeDimension": null,
+      "summary": "Full system. System configuration, role management, financial oversight, policy setting, override authority for all functions. Only role that can set the fair price ceiling, set allocation percentages, approve payouts above Rs 10,000, and create Super/TOHFA/Main Warehouse Admins. Business-level administrative access, not a DevOps role."
+    },
+    {
+      "code": "TOHFA_ADMIN",
+      "name": "TOHFA Admin",
+      "level": 2,
+      "colorHex": "#F0562A",
+      "scopeDimension": null,
+      "summary": "Operational head across farmers, produce, sales, customers and finance. Cannot create Super Admins or Main Warehouse Admins, cannot set the fair price ceiling, cannot initiate inter-warehouse transfers, cannot approve payouts above Rs 10,000. NOTE: reqs Ch.8.1 assigns no brand colour to this role; #F0562A (Admin app brand orange) is a placeholder — confirm with client."
+    },
+    {
+      "code": "FARMER_ADMIN",
+      "name": "Farmer Admin (Elected)",
+      "level": 3,
+      "colorHex": "#0F6E56",
+      "scopeDimension": "zone_id",
+      "summary": "Elected farmer, not paid staff. Approves peer produce listings but never their own (auto-routed), supports audits, mediates disputes, moderates community groups, edits farm ratings for their own zone only. NOTE: reqs Ch.8.1 assigns no brand colour to this role; #0F6E56 (farmer teal) is a placeholder — confirm with client."
+    },
+    {
+      "code": "MAIN_WH_ADMIN",
+      "name": "Main Warehouse Admin",
+      "level": 3,
+      "colorHex": "#854F0B",
+      "scopeDimension": null,
+      "summary": "Oversees all 4 warehouses (Ooty, Coonoor, Kotagiri, Gudalur). Initiates inter-warehouse transfers, approves stock adjustments, manages Sub Warehouse Admins, aggregate reporting. No farmer-application, pricing, payout or GST-invoice authority."
+    },
+    {
+      "code": "SUB_WH_ADMIN",
+      "name": "Sub Warehouse Admin",
+      "level": 4,
+      "colorHex": "#E48932",
+      "scopeDimension": "warehouse_id",
+      "summary": "Day-to-day operations of exactly one assigned warehouse: goods receipt, quality check, batch assignment, local stock ledger, stock verification, pickup OTP, cash top-up. Cannot access other warehouses, cannot assign orders to warehouses, cannot approve its own stock adjustments."
+    },
+    {
+      "code": "FARMER",
+      "name": "Farmer",
+      "level": 5,
+      "colorHex": "#0F6E56",
+      "scopeDimension": "farmer_id",
+      "summary": "Farmer App end user. Own data only: profile, farms/zones, certifications, crops, listings, counter-offer responses, wallet, payouts, invoices, audit history."
+    },
+    {
+      "code": "CUSTOMER",
+      "name": "Customer",
+      "level": 5,
+      "colorHex": "#0C447C",
+      "scopeDimension": "customer_id",
+      "summary": "Customer App end user. Own data only. Browses the catalog farm-anonymously — grade, certification badges and TOHFA branding only; never farmer or farm identity."
+    }
+  ],
+  "predicates": {
+    "NOT_OWN_LISTING": {
+      "description": "The actor must not be the owner of the listing, nor the farmer who created it, nor an account linked to that farmer.",
+      "enforcement": "Server-side check in the listing approval/rejection/counter-offer service before any state change; the UI restriction is not sufficient.",
+      "onViolation": "auto_route_to_other_admin"
+    },
+    "OWN_ZONE_ONLY": {
+      "description": "The target farmer's zone_id must equal a zone_id assigned to the acting Farmer Admin.",
+      "enforcement": "Server-side predicate injected into the query and re-checked on write.",
+      "onViolation": "reject_403"
+    },
+    "SUPPORT_ONLY": {
+      "description": "The actor may attend and support the audit (attach evidence, add remarks) but may not log findings, score categories, or finalise the audit.",
+      "enforcement": "Server-side check on the audit state-transition and scoring endpoints; the actor is recorded as support_user_id, never auditor_id.",
+      "onViolation": "reject_403"
+    },
+    "LOWER_ROLES_ONLY": {
+      "description": "The target admin's role level must be numerically greater (lower in the hierarchy) than the actor's role level; equal or higher is denied.",
+      "enforcement": "Server-side hierarchy check on every admin-account mutation.",
+      "onViolation": "reject_403"
+    }
+  },
+  "permissions": [
+    {
+      "code": "auth.session.login",
+      "module": "Authentication & Onboarding",
+      "description": "Log in with mobile + password.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "matrix §1"
+    },
+    {
+      "code": "auth.otp.request",
+      "module": "Authentication & Onboarding",
+      "description": "Request a login/verification OTP (6-digit, 60s resend, 3-attempt lockout).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "matrix §1 + reqs FR-F01"
+    },
+    {
+      "code": "auth.password.change_own",
+      "module": "Authentication & Onboarding",
+      "description": "Change own password.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "matrix §1"
+    },
+    {
+      "code": "auth.session.terminate_other",
+      "module": "Authentication & Onboarding",
+      "description": "Terminate another admin's active session.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §1 — SA only"
+    },
+    {
+      "code": "auth.session.revoke_own",
+      "module": "Authentication & Onboarding",
+      "description": "Revoke own session (log out).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "inferred — self-service counterpart of auth.session.terminate_other"
+    },
+    {
+      "code": "auth.principal.view_own",
+      "module": "Authentication & Onboarding",
+      "description": "View own principal: roles, warehouse/zone scope and effective permissions.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "inferred — every client shell reads this to render"
+    },
+    {
+      "code": "farmer.application.list_pending",
+      "module": "Farmers Management",
+      "description": "View the pending farmer-application queue.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2"
+    },
+    {
+      "code": "farmer.application.view",
+      "module": "Farmers Management",
+      "description": "Open a full farmer application for review, at any status.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2 — Farmer Admin queue is read-only (see conflicts 12)"
+    },
+    {
+      "code": "farmer.application.approve",
+      "module": "Farmers Management",
+      "description": "Approve a farmer application (grants platform access).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1"
+    },
+    {
+      "code": "farmer.application.reject",
+      "module": "Farmers Management",
+      "description": "Reject a farmer application with reason.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1"
+    },
+    {
+      "code": "farmer.application.manage_own",
+      "module": "Farmers Management",
+      "description": "Create and edit the steps of own farmer application draft.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs FR-F02 — 5-step application"
+    },
+    {
+      "code": "farmer.application.submit_own",
+      "module": "Farmers Management",
+      "description": "Submit own farmer application for review.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs FR-F02"
+    },
+    {
+      "code": "farmer.application.view_own",
+      "module": "Farmers Management",
+      "description": "View own farmer application status timeline.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs FR-F02"
+    },
+    {
+      "code": "farmer.application.request_info",
+      "module": "Farmers Management",
+      "description": "Send a farmer application back to the applicant for more information.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1"
+    },
+    {
+      "code": "farmer.profile.view_all",
+      "module": "Farmers Management",
+      "description": "View any farmer profile.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 + matrix §2 (see conflicts)"
+    },
+    {
+      "code": "farmer.profile.view_own",
+      "module": "Farmers Management",
+      "description": "View own farmer profile, farms and zone assignment.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §8 — own-data ownership (BR-36)"
+    },
+    {
+      "code": "farmer.profile.edit_own",
+      "module": "Farmers Management",
+      "description": "Edit own farmer profile. Aadhaar and mobile are excluded — see farmer.profile.edit_locked_field.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2 + reqs FR-F02 (BR-33)"
+    },
+    {
+      "code": "farmer.profile.edit",
+      "module": "Farmers Management",
+      "description": "Edit farmer personal/profile details.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 + matrix §2"
+    },
+    {
+      "code": "farmer.profile.edit_locked_field",
+      "module": "Farmers Management",
+      "description": "Edit locked identity fields (Aadhaar, mobile) — requires special verification.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2 — SA only"
+    },
+    {
+      "code": "farmer.account.disable",
+      "module": "Farmers Management",
+      "description": "Disable a farmer account.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1"
+    },
+    {
+      "code": "farmer.account.reactivate",
+      "module": "Farmers Management",
+      "description": "Reactivate a previously disabled farmer account.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2 — SA only (TA can disable but not reactivate)"
+    },
+    {
+      "code": "farmer.document.view",
+      "module": "Farmers Management",
+      "description": "View uploaded farmer KYC/farm documents.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2"
+    },
+    {
+      "code": "farmer.document.verify",
+      "module": "Farmers Management",
+      "description": "Manually verify farmer KYC documents.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2"
+    },
+    {
+      "code": "certification.manage_own",
+      "module": "Farmers Management",
+      "description": "Manually enter and maintain own PGS/NPOP certification records.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §9"
+    },
+    {
+      "code": "certification.verify_via_portal",
+      "module": "Farmers Management",
+      "description": "Verify a certificate against the issuing body's official portal (manual).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §9"
+    },
+    {
+      "code": "certification.mark_verified",
+      "module": "Farmers Management",
+      "description": "Mark a certification verified / unverified.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §9"
+    },
+    {
+      "code": "certification.block_listings",
+      "module": "Farmers Management",
+      "description": "Block a farmer's market listings for unverified/expired certification.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §9 + reqs 2.1"
+    },
+    {
+      "code": "farmer.rating.view",
+      "module": "Farmers Management",
+      "description": "View farm ratings (10 categories x 10 points).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 + matrix §2 (see conflicts)"
+    },
+    {
+      "code": "farmer.rating.edit",
+      "module": "Farmers Management",
+      "description": "Edit farm rating category scores.",
+      "predicate": "OWN_ZONE_ONLY",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "conditional",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 — Farmer Admin: own zone only"
+    },
+    {
+      "code": "farmer.rating.configure_tiers",
+      "module": "Farmers Management",
+      "description": "Configure rating tier thresholds.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 — SA only"
+    },
+    {
+      "code": "farmer.subscription.extend_waive",
+      "module": "Farmers Management",
+      "description": "Extend or waive a farmer subscription.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2 — SA only"
+    },
+    {
+      "code": "farmer.subscription.view_tier_limits",
+      "module": "Farmers Management",
+      "description": "View free-tier limits applied to a farmer.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "view",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §2"
+    },
+    {
+      "code": "produce.calendar.view_consolidated",
+      "module": "Produce Control",
+      "description": "View the consolidated produce calendar across all farmers.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §3"
+    },
+    {
+      "code": "inputs.catalog.manage",
+      "module": "Inputs & Pest Management",
+      "description": "Add, edit, categorise or discontinue approved inputs.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §4"
+    },
+    {
+      "code": "pricing.fair_price.view",
+      "module": "Market & Pricing",
+      "description": "View current fair price ceilings.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "view",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5"
+    },
+    {
+      "code": "pricing.fair_price.set",
+      "module": "Market & Pricing",
+      "description": "Set the fair price ceiling (daily or weekly).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 — SA only; TOHFA Admin = none"
+    },
+    {
+      "code": "pricing.fair_price.bulk_update",
+      "module": "Market & Pricing",
+      "description": "Bulk-update fair price ceilings.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5 — SA only"
+    },
+    {
+      "code": "pricing.retail_price.set",
+      "module": "Market & Pricing",
+      "description": "Set customer-facing retail price (must be at or below the ceiling).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1"
+    },
+    {
+      "code": "pricing.retail_price.view",
+      "module": "Market & Pricing",
+      "description": "View customer-facing retail prices.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "view",
+        "CUSTOMER": "view"
+      },
+      "source": "inferred — the customer catalog cannot render without it"
+    },
+    {
+      "code": "listing.create_own",
+      "module": "Market & Pricing",
+      "description": "Create a produce listing (grade 1/2/3/reject) at or below the ceiling.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5"
+    },
+    {
+      "code": "listing.view_own",
+      "module": "Market & Pricing",
+      "description": "View own produce listings across every status.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §8 — own-data ownership (BR-36)"
+    },
+    {
+      "code": "listing.update_own",
+      "module": "Market & Pricing",
+      "description": "Edit own listing while it is still pending approval.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5"
+    },
+    {
+      "code": "listing.withdraw_own",
+      "module": "Market & Pricing",
+      "description": "Withdraw own listing before it is approved.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5"
+    },
+    {
+      "code": "listing.queue.view_pending",
+      "module": "Market & Pricing",
+      "description": "View the pending listings approval queue.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5"
+    },
+    {
+      "code": "listing.approve",
+      "module": "Market & Pricing",
+      "description": "Approve a produce listing.",
+      "predicate": "NOT_OWN_LISTING",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "conditional",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 — Farmer Admin cannot approve own listings"
+    },
+    {
+      "code": "listing.reject",
+      "module": "Market & Pricing",
+      "description": "Reject a produce listing.",
+      "predicate": "NOT_OWN_LISTING",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "conditional",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5 — Farmer Admin cannot reject own listings"
+    },
+    {
+      "code": "listing.counter_offer.send",
+      "module": "Market & Pricing",
+      "description": "Send a counter-offer to a farmer on a listing (24h window).",
+      "predicate": "NOT_OWN_LISTING",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "conditional",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 — Farmer Admin cannot counter own listings"
+    },
+    {
+      "code": "listing.counter_offer.respond",
+      "module": "Market & Pricing",
+      "description": "Respond to a counter-offer; counter back up to 3 times.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5"
+    },
+    {
+      "code": "listing.approval.auto_route",
+      "module": "Market & Pricing",
+      "description": "Receive a listing auto-routed away from its owning Farmer Admin.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §5 + reqs 2.5"
+    },
+    {
+      "code": "purchase.order.create",
+      "module": "Purchase Management",
+      "description": "Raise a purchase order against an accepted listing.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "inferred — matrix has no PO rows; reqs 5.2 module 8"
+    },
+    {
+      "code": "purchase.order.view",
+      "module": "Purchase Management",
+      "description": "View purchase orders.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "inferred — matrix has no PO rows; reqs 5.2 module 8"
+    },
+    {
+      "code": "inventory.goods_receipt.record",
+      "module": "Inventory & Warehouse",
+      "description": "Receive goods from a farmer at a warehouse.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2"
+    },
+    {
+      "code": "inventory.quality_check.perform",
+      "module": "Inventory & Warehouse",
+      "description": "Perform the 5-point quality check with photos.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7"
+    },
+    {
+      "code": "inventory.produce.reject_incoming",
+      "module": "Inventory & Warehouse",
+      "description": "Reject incoming produce with reason codes.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2"
+    },
+    {
+      "code": "inventory.quality.counter_offer",
+      "module": "Inventory & Warehouse",
+      "description": "Counter-offer to the farmer on quality at goods receipt.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7 — second counter-offer surface"
+    },
+    {
+      "code": "inventory.batch.assign",
+      "module": "Inventory & Warehouse",
+      "description": "Assign batch ID and warehouse storage location.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7 + reqs FR-A05"
+    },
+    {
+      "code": "inventory.batch.view",
+      "module": "Inventory & Warehouse",
+      "description": "View inventory batches and their traceability chain.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2 — warehouse-scoped for Sub WH Admin (BR-30)"
+    },
+    {
+      "code": "inventory.stock_ledger.view_all",
+      "module": "Inventory & Warehouse",
+      "description": "View the append-only stock ledger across all 4 warehouses.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2 + matrix §7"
+    },
+    {
+      "code": "inventory.stock_ledger.view_own",
+      "module": "Inventory & Warehouse",
+      "description": "View the stock ledger for the assigned warehouse.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2"
+    },
+    {
+      "code": "inventory.stock_adjustment.create",
+      "module": "Inventory & Warehouse",
+      "description": "Create a manual stock adjustment.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2"
+    },
+    {
+      "code": "inventory.stock_adjustment.approve",
+      "module": "Inventory & Warehouse",
+      "description": "Approve a manual stock adjustment.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7 — SW cannot approve its own adjustments"
+    },
+    {
+      "code": "inventory.stock_verification.perform",
+      "module": "Inventory & Warehouse",
+      "description": "Physical stock verification (count vs system).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2"
+    },
+    {
+      "code": "inventory.material_handling.manage",
+      "module": "Inventory & Warehouse",
+      "description": "Manage material handling and warehouse materials.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2"
+    },
+    {
+      "code": "warehouse.all.view",
+      "module": "Inventory & Warehouse",
+      "description": "View all 4 warehouses on a consolidated dashboard.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2"
+    },
+    {
+      "code": "warehouse.capacity.set",
+      "module": "Inventory & Warehouse",
+      "description": "Set warehouse capacity limits.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2 (matrix §7 says SA only — see conflicts)"
+    },
+    {
+      "code": "transfer.inter_warehouse.initiate",
+      "module": "Inventory & Warehouse",
+      "description": "Initiate an inter-warehouse stock transfer.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2 — SA + MW only; TOHFA Admin = none"
+    },
+    {
+      "code": "transfer.inter_warehouse.receive",
+      "module": "Inventory & Warehouse",
+      "description": "Receive an incoming inter-warehouse transfer.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7"
+    },
+    {
+      "code": "transfer.high_value.approve",
+      "module": "Inventory & Warehouse",
+      "description": "Approve a high-value inter-warehouse transfer.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7 — SA only; threshold undefined"
+    },
+    {
+      "code": "allocation.dashboard.view",
+      "module": "Reserve & Allocation",
+      "description": "View the 70/10/10/10 allocation dashboard.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7"
+    },
+    {
+      "code": "allocation.channel_percentage.set",
+      "module": "Reserve & Allocation",
+      "description": "Set the channel allocation percentages.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 — SA only"
+    },
+    {
+      "code": "allocation.per_produce.adjust",
+      "module": "Reserve & Allocation",
+      "description": "Adjust allocation for an individual produce item.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7"
+    },
+    {
+      "code": "allocation.b2b_horeca.manage",
+      "module": "Reserve & Allocation",
+      "description": "Manage B2B/Horeca allocation from consolidated inventory.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §7 (manual) vs reqs 2.2 (automatic) — see conflicts"
+    },
+    {
+      "code": "customer.self_register",
+      "module": "Customers Management",
+      "description": "Self-register as a customer with instant OTP activation.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "all"
+      },
+      "source": "matrix §6"
+    },
+    {
+      "code": "customer.record.create",
+      "module": "Customers Management",
+      "description": "Manually add a customer record.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "customer.list.view",
+      "module": "Customers Management",
+      "description": "View the customer list.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "own",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "customer.profile.edit",
+      "module": "Customers Management",
+      "description": "Edit a customer profile.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "customer.gst_details.manage",
+      "module": "Customers Management",
+      "description": "Manage B2B/Horeca GST and business details.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "matrix §6"
+    },
+    {
+      "code": "catalog.browse",
+      "module": "Sales Management",
+      "description": "Browse the customer catalog (grade, certification badges, TOHFA branding only).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "none",
+        "CUSTOMER": "all"
+      },
+      "source": "reqs 2.3 + matrix §5"
+    },
+    {
+      "code": "catalog.farm_identity.view",
+      "module": "Sales Management",
+      "description": "See farmer/farm identity behind a catalog item (farm-anonymous rule).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 2.3 / FR-F08 — customers must never see this"
+    },
+    {
+      "code": "cart.manage_own",
+      "module": "Sales Management",
+      "description": "Manage own cart; items reserved under the 24-hour cart lock.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "reqs FR-C04"
+    },
+    {
+      "code": "cart.view_own",
+      "module": "Sales Management",
+      "description": "View own cart and the state of its 24-hour lock.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "reqs FR-C04"
+    },
+    {
+      "code": "order.place",
+      "module": "Sales Management",
+      "description": "Place an online order.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "reqs FR-C04"
+    },
+    {
+      "code": "order.view_own",
+      "module": "Sales Management",
+      "description": "View own orders, tracking timeline and live order events.",
+      "grants": {
+        "SUPER_ADMIN": "own",
+        "TOHFA_ADMIN": "own",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "matrix §8 — own-data ownership (BR-36)"
+    },
+    {
+      "code": "order.reorder_own",
+      "module": "Sales Management",
+      "description": "Rebuild a cart from one of own past orders.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "reqs FR-C05"
+    },
+    {
+      "code": "order.list.view_all",
+      "module": "Sales Management",
+      "description": "View sales orders.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "sales.channel.manage",
+      "module": "Sales Management",
+      "description": "Manage sales channels.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "own",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3 (matrix §6 is stricter — see conflicts)"
+    },
+    {
+      "code": "order.warehouse.assign",
+      "module": "Sales Management",
+      "description": "Assign an order to a fulfilling warehouse.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §6 — Sub WH Admin cannot self-assign orders"
+    },
+    {
+      "code": "order.mark_packed",
+      "module": "Sales Management",
+      "description": "Mark an order as packed.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §6"
+    },
+    {
+      "code": "order.dispatch",
+      "module": "Sales Management",
+      "description": "Dispatch a packed order for delivery.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs FR-C04 — contested by matrix principle 9; no Track 1 path (rules.md contradiction 3)"
+    },
+    {
+      "code": "order.pickup_otp.verify",
+      "module": "Sales Management",
+      "description": "Verify the customer's 4-digit pickup/delivery OTP.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §6 + reqs FR-C05"
+    },
+    {
+      "code": "order.delivery_status.view",
+      "module": "Sales Management",
+      "description": "View order/delivery status.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "matrix §6"
+    },
+    {
+      "code": "order.delivery_slot.select",
+      "module": "Sales Management",
+      "description": "Select a delivery slot (Morning/Afternoon/Evening).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "reqs FR-C04 — contested by matrix principle 9"
+    },
+    {
+      "code": "invoice.generate",
+      "module": "Sales Management",
+      "description": "Generate a sales invoice.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "invoice.gst.generate",
+      "module": "Sales Management",
+      "description": "Generate a GST invoice for B2B/Horeca.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3 — SA/TA only"
+    },
+    {
+      "code": "invoice.view_own",
+      "module": "Sales Management",
+      "description": "View and download own invoices.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "own",
+        "CUSTOMER": "own"
+      },
+      "source": "matrix §8 — own-data ownership (BR-36)"
+    },
+    {
+      "code": "support.ticket.create_own",
+      "module": "Sales Management",
+      "description": "Report an issue and generate a ticket (TKT-YYYY-XXXXX).",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "own"
+      },
+      "source": "matrix §6 + reqs FR-C05"
+    },
+    {
+      "code": "rma.request.process",
+      "module": "Sales Management",
+      "description": "Process returns (RMA).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3 (matrix §6 splits this — see conflicts)"
+    },
+    {
+      "code": "rma.refund.approve",
+      "module": "Sales Management",
+      "description": "Approve a refund.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §6"
+    },
+    {
+      "code": "rma.refund.wallet_process",
+      "module": "Sales Management",
+      "description": "Process an instant wallet refund.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §6"
+    },
+    {
+      "code": "rma.refund.bank_process",
+      "module": "Sales Management",
+      "description": "Process a bank refund (2-4 days).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §6 — SA/TA only"
+    },
+    {
+      "code": "wallet.own.view",
+      "module": "Accounts & Finance",
+      "description": "View own wallet balance and transaction history.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "own"
+      },
+      "source": "matrix §8"
+    },
+    {
+      "code": "wallet.topup.digital",
+      "module": "Accounts & Finance",
+      "description": "Top up own wallet via Razorpay (UPI/card/netbanking).",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "own"
+      },
+      "source": "matrix §8"
+    },
+    {
+      "code": "wallet.cash_topup.process",
+      "module": "Accounts & Finance",
+      "description": "Process a cash top-up at a warehouse.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.2"
+    },
+    {
+      "code": "wallet.cash_topup.fiscal_tag",
+      "module": "Accounts & Finance",
+      "description": "Mark the fiscal cash tag that triggers the server-side wallet credit.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §8 + reqs 2.3"
+    },
+    {
+      "code": "wallet.manual_credit_debit",
+      "module": "Accounts & Finance",
+      "description": "Manually credit or debit a customer wallet.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3 'Wallet management (customers)' (matrix §8 says SA/TA only — see conflicts)"
+    },
+    {
+      "code": "wallet.checkout.enforce_wallet_first",
+      "module": "Accounts & Finance",
+      "description": "Wallet-first checkout enforcement (prompt top-up when short).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "all"
+      },
+      "source": "reqs 2.3 + matrix §8"
+    },
+    {
+      "code": "payout.farmer.initiate",
+      "module": "Accounts & Finance",
+      "description": "Initiate a farmer payout below Rs 10,000.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "payout.dues.view",
+      "module": "Accounts & Finance",
+      "description": "View aged farmer payout dues.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "payout.approve_above_10k",
+      "module": "Accounts & Finance",
+      "description": "Approve a farmer payout above Rs 10,000 (dual approval).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3 — SA only"
+    },
+    {
+      "code": "payout.escalate_above_10k",
+      "module": "Accounts & Finance",
+      "description": "Escalate a payout above Rs 10,000 to the Super Admin.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §11"
+    },
+    {
+      "code": "payment.method.configure",
+      "module": "Accounts & Finance",
+      "description": "Configure available payment methods.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §8 — SA only"
+    },
+    {
+      "code": "finance.expense.log",
+      "module": "Accounts & Finance",
+      "description": "Log operational expenses.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "finance.dashboard.view",
+      "module": "Accounts & Finance",
+      "description": "View the financial dashboard.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §11"
+    },
+    {
+      "code": "finance.pnl.view",
+      "module": "Accounts & Finance",
+      "description": "View the P&L statement and complete cross-warehouse financial reports.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §11"
+    },
+    {
+      "code": "finance.sales_income.view",
+      "module": "Accounts & Finance",
+      "description": "View sales income reports.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "own",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.3"
+    },
+    {
+      "code": "audit.schedule",
+      "module": "Audit Management",
+      "description": "Schedule an internal or external audit.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1"
+    },
+    {
+      "code": "audit.conduct",
+      "module": "Audit Management",
+      "description": "Conduct an audit inspection.",
+      "predicate": "SUPPORT_ONLY",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "conditional",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.1 — Farmer Admin attends in a support capacity only"
+    },
+    {
+      "code": "audit.findings.log",
+      "module": "Audit Management",
+      "description": "Log audit findings.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §9"
+    },
+    {
+      "code": "audit.score.categories",
+      "module": "Audit Management",
+      "description": "Score the 10 audit categories (10 points each).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §9"
+    },
+    {
+      "code": "audit.report.generate",
+      "module": "Audit Management",
+      "description": "Generate the audit report PDF.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "view",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §9"
+    },
+    {
+      "code": "audit.tier.configure_thresholds",
+      "module": "Audit Management",
+      "description": "Configure compliance tier thresholds.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §9 — SA only"
+    },
+    {
+      "code": "admin.staff.list_view",
+      "module": "Workforce & Staff",
+      "description": "View the admin staff list.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "own",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §10"
+    },
+    {
+      "code": "admin.super_admin.create",
+      "module": "Workforce & Staff",
+      "description": "Create a Super Admin account.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 / 2.5"
+    },
+    {
+      "code": "admin.tohfa_admin.create",
+      "module": "Workforce & Staff",
+      "description": "Create a TOHFA Admin account.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 / 2.5"
+    },
+    {
+      "code": "admin.farmer_admin.create",
+      "module": "Workforce & Staff",
+      "description": "Create a Farmer Admin account.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 / 2.5"
+    },
+    {
+      "code": "admin.main_wh_admin.create",
+      "module": "Workforce & Staff",
+      "description": "Create a Main Warehouse Admin account.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 / 2.5"
+    },
+    {
+      "code": "admin.sub_wh_admin.create",
+      "module": "Workforce & Staff",
+      "description": "Create a Sub Warehouse Admin account.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 / 2.5"
+    },
+    {
+      "code": "admin.account.disable",
+      "module": "Workforce & Staff",
+      "description": "Disable an admin account.",
+      "predicate": "LOWER_ROLES_ONLY",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "conditional",
+        "FARMER_ADMIN": "conditional",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §10 — TA/MW restricted to roles below their own"
+    },
+    {
+      "code": "admin.promotion.approve",
+      "module": "Workforce & Staff",
+      "description": "Approve or reject a warehouse admin promotion.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 5.3 FR-A01 — SA only"
+    },
+    {
+      "code": "admin.decision.override",
+      "module": "Workforce & Staff",
+      "description": "Override any decision made by a lower role.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 5.3 FR-A01 — SA only"
+    },
+    {
+      "code": "role.definition.view",
+      "module": "Workforce & Staff",
+      "description": "View role definitions.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §10"
+    },
+    {
+      "code": "role.permission.edit",
+      "module": "Workforce & Staff",
+      "description": "Edit role permissions.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §10 — SA only"
+    },
+    {
+      "code": "notification.own.view",
+      "module": "Notifications & Reports",
+      "description": "View own notifications and manage own notification preferences.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "matrix §13"
+    },
+    {
+      "code": "notification.own.mark_read",
+      "module": "Notifications & Reports",
+      "description": "Mark own notifications as read.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "matrix §13"
+    },
+    {
+      "code": "notification.template.configure",
+      "module": "Notifications & Reports",
+      "description": "Configure app-wide notification templates and communication rules.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 — SA only"
+    },
+    {
+      "code": "announcement.system_wide.create",
+      "module": "Notifications & Reports",
+      "description": "Publish a system-wide announcement.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4"
+    },
+    {
+      "code": "announcement.warehouse.create",
+      "module": "Notifications & Reports",
+      "description": "Publish a warehouse-specific announcement.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4"
+    },
+    {
+      "code": "alert.threshold.configure",
+      "module": "Notifications & Reports",
+      "description": "Configure system alert thresholds.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §13 (reqs 6.4 'Configure notifications' is SA only — see conflicts)"
+    },
+    {
+      "code": "support.ticket.view_all",
+      "module": "Notifications & Reports",
+      "description": "View all support tickets.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "view",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §13"
+    },
+    {
+      "code": "support.ticket.respond",
+      "module": "Notifications & Reports",
+      "description": "Respond to a support ticket.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §13"
+    },
+    {
+      "code": "community.group.moderate",
+      "module": "Notifications & Reports",
+      "description": "Moderate regional farmer community groups.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §13"
+    },
+    {
+      "code": "dispute.farmer.mediate",
+      "module": "Notifications & Reports",
+      "description": "Mediate disputes between farmers or between a farmer and TOHFA.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §13 + reqs FR-A03"
+    },
+    {
+      "code": "report.export.file",
+      "module": "Notifications & Reports",
+      "description": "Export a report as PDF / Excel / CSV.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "view",
+        "MAIN_WH_ADMIN": "view",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "own",
+        "CUSTOMER": "own"
+      },
+      "source": "matrix §12"
+    },
+    {
+      "code": "report.bulk_data_export",
+      "module": "Notifications & Reports",
+      "description": "Bulk compliance data export.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §12 — SA only"
+    },
+    {
+      "code": "system.config.manage",
+      "module": "Settings & Profile",
+      "description": "Manage system-wide configuration (fair price ceilings, fees, allocation, session timeouts).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 5.2 module 16 — SA only"
+    },
+    {
+      "code": "system.integration_key.manage",
+      "module": "Settings & Profile",
+      "description": "Manage third-party integration keys.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 — SA only (matrix §15 says infra-level/out of app — see conflicts)"
+    },
+    {
+      "code": "system.db_export.raw",
+      "module": "Settings & Profile",
+      "description": "Emergency access to raw database exports (audit-logged).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 — SA only (matrix §15 says infra-level/out of app — see conflicts)"
+    },
+    {
+      "code": "auditlog.view",
+      "module": "Settings & Profile",
+      "description": "View immutable system audit logs.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "own",
+        "SUB_WH_ADMIN": "own",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "reqs 6.4 (matrix §15 gives MW 'view (all)' — see conflicts)"
+    },
+    {
+      "code": "auditlog.export",
+      "module": "Settings & Profile",
+      "description": "Export system audit logs.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "none",
+        "CUSTOMER": "none"
+      },
+      "source": "matrix §15 — SA only"
+    },
+    {
+      "code": "upload.signed_url.create",
+      "module": "Settings & Profile",
+      "description": "Request a pre-signed URL for a direct document, certificate or photo upload.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "inferred — every document upload path in docs/openapi.yaml uses it"
+    }
+  ],
+  "creationRules": [
+    {
+      "canCreate": "SUPER_ADMIN",
+      "allowedCreators": [
+        "SUPER_ADMIN"
+      ],
+      "enforcement": "server-side check"
+    },
+    {
+      "canCreate": "TOHFA_ADMIN",
+      "allowedCreators": [
+        "SUPER_ADMIN"
+      ],
+      "enforcement": "server-side check"
+    },
+    {
+      "canCreate": "FARMER_ADMIN",
+      "allowedCreators": [
+        "SUPER_ADMIN",
+        "TOHFA_ADMIN"
+      ],
+      "enforcement": "server-side check"
+    },
+    {
+      "canCreate": "MAIN_WH_ADMIN",
+      "allowedCreators": [
+        "SUPER_ADMIN"
+      ],
+      "enforcement": "server-side check"
+    },
+    {
+      "canCreate": "SUB_WH_ADMIN",
+      "allowedCreators": [
+        "SUPER_ADMIN",
+        "TOHFA_ADMIN",
+        "MAIN_WH_ADMIN"
+      ],
+      "enforcement": "server-side check"
+    }
+  ],
+  "scopeFilters": [
+    {
+      "role": "SUB_WH_ADMIN",
+      "dimension": "warehouse_id",
+      "rule": "Every query MUST be filtered by the admin's assigned warehouse_id. Cross-warehouse rows return empty, never 403.",
+      "source": "reqs 2.5"
+    },
+    {
+      "role": "FARMER_ADMIN",
+      "dimension": "zone_id",
+      "rule": "Rating edits and other `own`/`conditional` grants MUST be filtered by the zones assigned to this Farmer Admin. Listing approval additionally applies the NOT_OWN_LISTING predicate, which auto-routes rather than returning empty.",
+      "source": "reqs 6.1 + FR-A03"
+    },
+    {
+      "role": "FARMER",
+      "dimension": "farmer_id",
+      "rule": "Every query MUST be filtered by the authenticated farmer_id. Cross-farmer rows return empty, never 403.",
+      "source": "matrix principle 8"
+    },
+    {
+      "role": "CUSTOMER",
+      "dimension": "customer_id",
+      "rule": "Every query MUST be filtered by the authenticated customer_id. Catalog responses MUST additionally strip every farmer/farm identity field (farm-anonymous rule).",
+      "source": "matrix principle 2 + principle 8"
+    }
+  ],
+  "conflicts": [
+    {
+      "topic": "Audit log scope for Main Warehouse Admin",
+      "reqsCh6": "own",
+      "roleMatrix": "view (all)",
+      "precedence": "reqs Ch.6",
+      "decision": "MAIN_WH_ADMIN gets `own`. Confirm with client."
+    },
+    {
+      "topic": "Set warehouse capacity",
+      "reqsCh6": "SUPER_ADMIN all, TOHFA_ADMIN all, MAIN_WH_ADMIN all",
+      "roleMatrix": "SUPER_ADMIN only; TOHFA_ADMIN none, MAIN_WH_ADMIN none",
+      "precedence": "reqs Ch.6",
+      "decision": "`warehouse.capacity.set` = all for SA/TA/MW. The matrix is stricter; if the client confirms the matrix, tighten to SA only. Confirm with client."
+    },
+    {
+      "topic": "View all farmer profiles / view farm ratings",
+      "reqsCh6": "FARMER_ADMIN, MAIN_WH_ADMIN, SUB_WH_ADMIN = Y (full)",
+      "roleMatrix": "all three = V (read-only)",
+      "precedence": "reqs Ch.6",
+      "decision": "`view` for all three. Ch.6 `Y` on a read-only row is equivalent to `view` because neither document grants those roles any edit permission on farmer profiles or ratings. No behavioural difference; recorded for completeness."
+    },
+    {
+      "topic": "Wallet management (customers) for MW/SW",
+      "reqsCh6": "MAIN_WH_ADMIN = Y, SUB_WH_ADMIN = own",
+      "roleMatrix": "manual credit/debit is SUPER_ADMIN + TOHFA_ADMIN only; MW/SW get view on wallets",
+      "precedence": "reqs Ch.6",
+      "decision": "`wallet.manual_credit_debit` = all for MW, own for SW. This is the loosest reading of a money-moving permission — flag it explicitly at sign-off; if the client confirms the matrix, tighten to SA/TA only."
+    },
+    {
+      "topic": "Process returns (RMA) for MW/SW",
+      "reqsCh6": "MAIN_WH_ADMIN = Y, SUB_WH_ADMIN = Y (blanket)",
+      "roleMatrix": "split: approve refund MW=full/SW=own, wallet refund MW=full/SW=own, bank refund SA/TA only",
+      "precedence": "Role Matrix (adds detail Ch.6 omits)",
+      "decision": "Blanket `rma.request.process` retained per Ch.6, but the finer-grained matrix rows are the operative ones — `rma.refund.bank_process` is SA/TA only. Ch.6 does not state a bank-refund value, so the matrix does not override it."
+    },
+    {
+      "topic": "Manage sales channels for MW/SW",
+      "reqsCh6": "MAIN_WH_ADMIN = own, SUB_WH_ADMIN = own",
+      "roleMatrix": "Horeca MW=view/SW=none; B2B MW=view/SW=none; Online MW=own/SW=own; Live market MW=full/SW=own",
+      "precedence": "Role Matrix (adds detail Ch.6 omits)",
+      "decision": "Generic `sales.channel.manage` keeps own/own per Ch.6; per-channel permissions carry the matrix values. MW/SW have no Horeca or B2B write path."
+    },
+    {
+      "topic": "Manage integration keys",
+      "reqsCh6": "SUPER_ADMIN = all (in-app)",
+      "roleMatrix": "§15 marks all 14 integrations EXT — infra-level, no role manages them in-app (principle 11)",
+      "precedence": "reqs Ch.6",
+      "decision": "`system.integration_key.manage` = SA only and kept in the model, but an entire admin UI for it may be out of scope. Requires client confirmation before any screen is built."
+    },
+    {
+      "topic": "Raw database export / emergency DB access",
+      "reqsCh6": "SUPER_ADMIN = all, audit-logged",
+      "roleMatrix": "§15 marks emergency database access EXT for every role including SA",
+      "precedence": "reqs Ch.6",
+      "decision": "`system.db_export.raw` = SA only and audit-logged. Same open question as integration keys. Confirm with client."
+    },
+    {
+      "topic": "Configure notification/alert thresholds",
+      "reqsCh6": "'Configure notifications' = SUPER_ADMIN only",
+      "roleMatrix": "templates SA only, but `Configure alert thresholds` = SA + TA",
+      "precedence": "Role Matrix (different feature, not the same value)",
+      "decision": "`notification.template.configure` = SA only per Ch.6; `alert.threshold.configure` = SA + TA per the matrix. Treated as two distinct features, not a contradiction of a Ch.6 value."
+    },
+    {
+      "topic": "B2B/Horeca allocation",
+      "reqsCh6": "Ch.2.2: allocation is automatic from consolidated inventory",
+      "roleMatrix": "§7: `Manage B2B/Horeca Manual allocation`, SA/TA full",
+      "precedence": "unresolved — affects the allocation engine, not a permission value",
+      "decision": "Permission `allocation.b2b_horeca.manage` = SA/TA. Whether the engine allocates automatically or an admin allocates manually requires client confirmation."
+    },
+    {
+      "topic": "Approve farmer application — Farmer Admin",
+      "reqsCh6": "FARMER_ADMIN = View on the 'Approve farmer applications' row",
+      "roleMatrix": "`Approve farmer application` FA=none, with a separate `View pending applications list` FA=view",
+      "precedence": "reqs Ch.6",
+      "decision": "`farmer.application.approve` = `view` for FARMER_ADMIN, which is behaviourally identical to the matrix decomposition (read the queue, cannot act). No approval path exists for FA either way."
+    },
+    {
+      "topic": "Delivery slots / doorstep delivery vs pickup-only",
+      "reqsCh6": "Ch.2.3 + FR-C04/C05: doorstep OTP, delivery slots, out-for-delivery status, driver performance",
+      "roleMatrix": "Principle 9: all orders fulfilled via warehouse pickup; no driver or delivery-fleet feature anywhere",
+      "precedence": "unresolved — scope-level conflict",
+      "decision": "`order.delivery_slot.select` is modelled for CUSTOMER but is not implemented in Track 1. The pickup + 4-digit OTP path is the default. Requires client confirmation."
+    }
+  ],
+  "conflictPrecedence": "Requirements Document Ch.6 is authoritative. The Role & Feature Matrix supplies additional features Ch.6 omits, but never overrides a value Ch.6 states."
+}

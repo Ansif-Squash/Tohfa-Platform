@@ -1,0 +1,14 @@
+{
+  "$comment": "TODO(STORY-MOB-04): full Tamil translation with a native reviewer from the Nilgiris. Tamil is a first-class language for this app, not an afterthought — an untranslated key falls back to English at runtime, which is a bug to be fixed, not a feature.",
+  "app.name": "தோஃபா விவசாயி",
+  "common.retry": "மீண்டும் முயற்சி",
+  "common.cancel": "ரத்து",
+  "common.continue": "தொடரவும்",
+  "common.loading": "ஏற்றுகிறது…",
+  "common.offline": "நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். உங்கள் தகவல் சேமிக்கப்பட்டுள்ளது.",
+  "auth.login.title": "உள்நுழைக",
+  "auth.login.mobile": "கைபேசி எண்",
+  "home.title": "என் பண்ணை",
+  "home.listings": "என் பட்டியல்கள்",
+  "home.wallet": "பணப்பை"
+}

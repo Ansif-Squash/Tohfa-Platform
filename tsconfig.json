@@ -1,0 +1,13 @@
+{
+  /* Solution-style root config. `pnpm typecheck` == `tsc -b tsconfig.json`.
+     apps/admin-web (Angular) and the two React Native apps are NOT referenced
+     here: they use their own compilers/toolchains and are typechecked by their
+     own `typecheck` script. */
+  "files": [],
+  "references": [
+    { "path": "./packages/design-tokens" },
+    { "path": "./packages/shared-types" },
+    { "path": "./apps/api" },
+    { "path": "./scripts" }
+  ]
+}

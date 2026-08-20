@@ -1,0 +1,32 @@
+{
+  "name": "@tohfa/admin-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TOHFA admin console. Angular 17, standalone components, no NgModules.",
+  "scripts": {
+    "start": "ng serve --port 4200",
+    "build": "ng build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "ng test --watch=false --browsers=ChromeHeadless",
+    "tokens": "node -e \"const m=require('@tohfa/design-tokens');require('node:fs').writeFileSync('src/tokens.generated.css', m.toCssBlock())\""
+  },
+  "dependencies": {
+    "@angular/common": "^17.3.0",
+    "@angular/compiler": "^17.3.0",
+    "@angular/core": "^17.3.0",
+    "@angular/forms": "^17.3.0",
+    "@angular/platform-browser": "^17.3.0",
+    "@angular/router": "^17.3.0",
+    "@tohfa/design-tokens": "workspace:*",
+    "@tohfa/shared-types": "workspace:*",
+    "rxjs": "~7.8.1",
+    "tslib": "^2.6.3",
+    "zone.js": "~0.14.4"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^17.3.0",
+    "@angular/cli": "^17.3.0",
+    "@angular/compiler-cli": "^17.3.0",
+    "typescript": "~5.4.5"
+  }
+}

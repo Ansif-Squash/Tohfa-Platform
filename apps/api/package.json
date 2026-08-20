@@ -1,0 +1,49 @@
+{
+  "name": "@tohfa/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TOHFA REST API. Express 4 + TypeScript. Reference implementation for every module.",
+  "main": "./dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "dev:worker": "tsx watch src/jobs/worker.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "test": "vitest run --exclude \"**/*.e2e.test.ts\"",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run e2e.test",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:rollback": "tsx src/db/migrate.ts --down",
+    "db:seed": "tsx src/db/migrate.ts --seed",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "db:reset": "tsx src/db/migrate.ts --down --all && tsx src/db/migrate.ts && tsx src/db/migrate.ts --seed"
+  },
+  "dependencies": {
+    "@tohfa/shared-types": "workspace:*",
+    "bullmq": "^5.12.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "pino": "^9.3.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "9.0.6",
+    "@types/node": "^20.14.10",
+    "@types/pg": "^8.11.6",
+    "@types/supertest": "^6.0.2",
+    "pino-pretty": "^11.2.2",
+    "supertest": "^7.0.0",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}
