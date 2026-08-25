@@ -102,6 +102,18 @@ const GRANT_CASES: readonly GrantCase[] = [
     expected: ScopeLevel.ALL,
     because: 'Main Warehouse Admin oversees all four warehouses.',
   },
+  {
+    permission: 'upload.signed_url.create',
+    role: RoleCode.CUSTOMER,
+    expected: ScopeLevel.ALL,
+    because: 'Every authenticated role (including customer) can request signed upload targets.',
+  },
+  {
+    permission: 'farmer.profile.view_own',
+    role: RoleCode.FARMER,
+    expected: ScopeLevel.OWN,
+    because: 'Farmers may view their own farmer profile, farms, and zone assignment (BR-36).',
+  },
 ];
 
 describe('docs/rbac.json grants', () => {
