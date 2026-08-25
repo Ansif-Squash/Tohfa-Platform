@@ -22,6 +22,8 @@ import { logger, newTraceId, runWithContext } from './logger.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { warehousesRouter } from './modules/_example/warehouses.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { uploadsRouter } from './modules/uploads/uploads.routes.js';
+import { farmerApplicationsRouter } from './modules/farmer-applications/farmer-applications.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -86,6 +88,8 @@ export function createApp(): Express {
   // REFERENCE: every module router mounts under /v1/<plural-noun>.
   app.use('/v1/warehouses', warehousesRouter);
   app.use('/v1/auth', authRouter);
+  app.use('/v1/uploads', uploadsRouter);
+  app.use('/v1/farmers', farmerApplicationsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
