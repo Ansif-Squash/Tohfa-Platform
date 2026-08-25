@@ -21,6 +21,7 @@ import { errorHandler, notFoundHandler } from './http/errorHandler.js';
 import { logger, newTraceId, runWithContext } from './logger.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { warehousesRouter } from './modules/_example/warehouses.routes.js';
+import { authRouter } from './modules/auth/auth.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -84,7 +85,7 @@ export function createApp(): Express {
 
   // REFERENCE: every module router mounts under /v1/<plural-noun>.
   app.use('/v1/warehouses', warehousesRouter);
-  // TODO(STORY-*): mount auth, farmers, listings, orders, inventory, finance.
+  app.use('/v1/auth', authRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

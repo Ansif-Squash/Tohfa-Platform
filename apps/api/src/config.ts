@@ -52,8 +52,8 @@ const envSchema = z.object({
 
   OTP_LENGTH: intFromEnv(4, 8).default(6),
   OTP_TTL_SECONDS: intFromEnv(30, 3600).default(300),
-  OTP_MAX_ATTEMPTS: intFromEnv(1, 20).default(5),
-  OTP_RESEND_SECONDS: intFromEnv(0, 3600).default(30),
+  OTP_MAX_ATTEMPTS: intFromEnv(1, 20).default(3),
+  OTP_RESEND_SECONDS: intFromEnv(0, 3600).default(60),
 
   CORS_ORIGINS: csv.default('http://localhost:4200'),
   LOG_LEVEL: z

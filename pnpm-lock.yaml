@@ -102,6 +102,9 @@ importers:
       '@tohfa/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
       bullmq:
         specifier: ^5.12.0
         version: 5.81.3
@@ -133,6 +136,9 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      '@types/bcryptjs':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@types/cors':
         specifier: ^2.8.17
         version: 2.8.19
@@ -169,6 +175,9 @@ importers:
 
   apps/customer-mobile:
     dependencies:
+      '@babel/runtime':
+        specifier: ^8.0.0
+        version: 8.0.0
       '@tohfa/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -197,6 +206,9 @@ importers:
 
   apps/farmer-mobile:
     dependencies:
+      '@babel/runtime':
+        specifier: ^8.0.0
+        version: 8.0.0
       '@tohfa/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -1076,6 +1088,9 @@ packages:
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
+
+  '@babel/runtime@8.0.0':
+    resolution: {integrity: sha512-sL6cvO2IfkSu/iU+zs2S/w01B7A8V7suXSIKEN4hPFFdZoiPGxrj5pAG0lCaqLWiEIrjKzdznIWuaLcxPR53qw==}
 
   '@babel/template@7.29.7':
     resolution: {integrity: sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==}
@@ -2180,6 +2195,10 @@ packages:
     resolution: {integrity: sha512-92F7/SFyufn4DXsha9+QfKnN03JGqtMFMXgSHbZOo8JG59WkTni7UzAouNQDf7AuP9OAMxVOPQcqG3sB7w+kkg==}
     engines: {node: ^16.14.0 || >=18.0.0}
 
+  '@types/bcryptjs@3.0.0':
+    resolution: {integrity: sha512-WRZOuCuaz8UcZZE4R5HXTco2goQSI2XxjGY3hbM/xDvwmqFWd4ivooImsMx65OKM6CtNKbnZ5YL+YwAwK7c1dg==}
+    deprecated: This is a stub types definition. bcryptjs provides its own type definitions, so you do not need this installed.
+
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
 
@@ -2720,6 +2739,10 @@ packages:
 
   batch@0.6.1:
     resolution: {integrity: sha512-x+VAiMRL6UPkx+kudNvxTl6hB2XNNCG2r+7wixVfIYwu/2HKRXimwQyaumLjMveWvT2Hkd/cAJw+QBMfJ/EKVw==}
+
+  bcryptjs@3.0.3:
+    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
+    hasBin: true
 
   big.js@5.2.2:
     resolution: {integrity: sha512-vyL2OymJxmarO8gxMr0mhChsO9QGwhynfuu4+MHTAW6czfq9humCB7rKpUjDd9YUiDPU4mzpyupFSvOClAwbmQ==}
@@ -6510,7 +6533,7 @@ snapshots:
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@angular-devkit/architect': 0.1703.17(chokidar@3.6.0)
-      '@angular-devkit/build-webpack': 0.1703.17(chokidar@3.6.0)(webpack-dev-server@4.15.1(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35)))(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))
+      '@angular-devkit/build-webpack': 0.1703.17(chokidar@3.6.0)(webpack-dev-server@4.15.1(webpack@5.94.0(postcss@8.4.35)))(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))
       '@angular-devkit/core': 17.3.17(chokidar@3.6.0)
       '@angular/compiler-cli': 17.3.12(@angular/compiler@17.3.12(@angular/core@17.3.12(rxjs@7.8.2)(zone.js@0.14.10)))(typescript@5.4.5)
       '@babel/core': 7.26.10
@@ -6569,7 +6592,7 @@ snapshots:
       watchpack: 2.4.0
       webpack: 5.94.0(esbuild@0.20.1)(postcss@8.4.35)
       webpack-dev-middleware: 6.1.2(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))
-      webpack-dev-server: 4.15.1(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))
+      webpack-dev-server: 4.15.1(webpack@5.94.0(postcss@8.4.35))
       webpack-merge: 5.10.0
       webpack-subresource-integrity: 5.1.0(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))
     optionalDependencies:
@@ -6600,12 +6623,12 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@angular-devkit/build-webpack@0.1703.17(chokidar@3.6.0)(webpack-dev-server@4.15.1(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35)))(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))':
+  '@angular-devkit/build-webpack@0.1703.17(chokidar@3.6.0)(webpack-dev-server@4.15.1(webpack@5.94.0(postcss@8.4.35)))(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))':
     dependencies:
       '@angular-devkit/architect': 0.1703.17(chokidar@3.6.0)
       rxjs: 7.8.1
       webpack: 5.94.0(esbuild@0.20.1)(postcss@8.4.35)
-      webpack-dev-server: 4.15.1(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))
+      webpack-dev-server: 4.15.1(webpack@5.94.0(postcss@8.4.35))
     transitivePeerDependencies:
       - chokidar
 
@@ -8157,6 +8180,8 @@ snapshots:
 
   '@babel/runtime@7.29.7': {}
 
+  '@babel/runtime@8.0.0': {}
+
   '@babel/template@7.29.7':
     dependencies:
       '@babel/code-frame': 7.29.7
@@ -9414,6 +9439,10 @@ snapshots:
       '@tufjs/canonical-json': 2.0.0
       minimatch: 9.0.9
 
+  '@types/bcryptjs@3.0.0':
+    dependencies:
+      bcryptjs: 3.0.3
+
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
@@ -10075,6 +10104,8 @@ snapshots:
   baseline-browser-mapping@2.11.15: {}
 
   batch@0.6.1: {}
+
+  bcryptjs@3.0.3: {}
 
   big.js@5.2.2: {}
 
@@ -13774,7 +13805,7 @@ snapshots:
     dependencies:
       rimraf: 2.6.3
 
-  terser-webpack-plugin@5.6.1(esbuild@0.20.1)(postcss@8.4.35)(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35)):
+  terser-webpack-plugin@5.6.1(esbuild@0.20.1)(postcss@8.4.35)(webpack@5.94.0(postcss@8.4.35)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
@@ -14111,7 +14142,7 @@ snapshots:
 
   webidl-conversions@3.0.1: {}
 
-  webpack-dev-middleware@5.3.4(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35)):
+  webpack-dev-middleware@5.3.4(webpack@5.94.0(postcss@8.4.35)):
     dependencies:
       colorette: 2.0.20
       memfs: 3.5.3
@@ -14130,7 +14161,7 @@ snapshots:
     optionalDependencies:
       webpack: 5.94.0(esbuild@0.20.1)(postcss@8.4.35)
 
-  webpack-dev-server@4.15.1(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35)):
+  webpack-dev-server@4.15.1(webpack@5.94.0(postcss@8.4.35)):
     dependencies:
       '@types/bonjour': 3.5.13
       '@types/connect-history-api-fallback': 1.5.4
@@ -14160,7 +14191,7 @@ snapshots:
       serve-index: 1.9.2
       sockjs: 0.3.24
       spdy: 4.0.2
-      webpack-dev-middleware: 5.3.4(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))
+      webpack-dev-middleware: 5.3.4(webpack@5.94.0(postcss@8.4.35))
       ws: 8.21.3
     optionalDependencies:
       webpack: 5.94.0(esbuild@0.20.1)(postcss@8.4.35)
@@ -14205,7 +14236,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 3.3.0
       tapable: 2.3.3
-      terser-webpack-plugin: 5.6.1(esbuild@0.20.1)(postcss@8.4.35)(webpack@5.94.0(esbuild@0.20.1)(postcss@8.4.35))
+      terser-webpack-plugin: 5.6.1(esbuild@0.20.1)(postcss@8.4.35)(webpack@5.94.0(postcss@8.4.35))
       watchpack: 2.5.2
       webpack-sources: 3.5.1
     transitivePeerDependencies:
