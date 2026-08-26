@@ -61,6 +61,14 @@ export interface FarmerProfileRow {
   created_at: Date;
 }
 
+export interface ListAdminApplicationsOptions {
+  status?: ApplicationStatus | undefined;
+  zoneId?: string | undefined;
+  submittedAfter?: string | undefined;
+  limit: number;
+  cursor?: string | undefined;
+}
+
 export interface FarmerApplicationsRepo {
   createApplication(
     db: Executor,
@@ -88,6 +96,10 @@ export interface FarmerApplicationsRepo {
     actorId?: string | undefined,
     note?: string | undefined,
   ): Promise<FarmerApplicationRow>;
+  listAdminApplications(
+    db: Executor,
+    options: ListAdminApplicationsOptions,
+  ): Promise<{ items: FarmerApplicationRow[]; nextCursor: string | null; hasMore: boolean }>;
   getStatusHistory(db: Executor, applicationId: string): Promise<StatusHistoryRow[]>;
   findFarmerByUserId(db: Executor, userId: string): Promise<FarmerProfileRow | null>;
   findFarmerById(db: Executor, farmerId: string): Promise<FarmerProfileRow | null>;
@@ -210,6 +222,46 @@ export const farmerApplicationsRepo: FarmerApplicationsRepo = {
     );
 
     return result.rows[0]!;
+  },
+
+  async listAdminApplications(db, options) {
+    const conditions: string[] = ['deleted_at IS NULL'];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+
+    if (options.status !== undefined) {
+      conditions.push(`status = $${paramIndex++}`);
+      values.push(options.status);
+    }
+    if (options.submittedAfter !== undefined) {
+      conditions.push(`submitted_at >= $${paramIndex++}`);
+      values.push(options.submittedAfter);
+    }
+    if (options.cursor !== undefined && options.cursor.length > 0) {
+      conditions.push(`id < $${paramIndex++}`);
+      values.push(options.cursor);
+    }
+
+    values.push(options.limit + 1);
+    const limitParam = paramIndex;
+
+    const result = await db.query<FarmerApplicationRow>(
+      `SELECT id, mobile, full_name, preferred_locale, status, is_draft,
+              current_step, completed_steps, step1_personal, step2_farm_details,
+              step3_location, step4_documents, user_id, farmer_id, submitted_at,
+              created_at, updated_at
+         FROM farmer_applications
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY created_at DESC, id DESC
+        LIMIT $${limitParam}`,
+      values,
+    );
+
+    const hasMore = result.rows.length > options.limit;
+    const items = hasMore ? result.rows.slice(0, options.limit) : result.rows;
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]!.id : null;
+
+    return { items, nextCursor, hasMore };
   },
 
   async getStatusHistory(db, applicationId) {

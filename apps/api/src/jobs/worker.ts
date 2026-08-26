@@ -6,7 +6,7 @@
  * to starve HTTP request handling, and the two scale independently.
  */
 import { Worker, type Job } from 'bullmq';
-import { closePool, pool } from '../db/pool.js';
+import { closePool, pool, withTransaction } from '../db/pool.js';
 import { logger, newTraceId, runWithContext } from '../logger.js';
 import { closeRedis, queueRedis } from '../redis.js';
 import {
@@ -17,29 +17,80 @@ import {
   type JobPayloads,
 } from './queue.js';
 
+import { certificationsRepo } from '../modules/certifications/certifications.repo.js';
+
 type Handler<N extends JobName> = (payload: JobPayloads[N], job: Job) => Promise<void>;
 
 /**
- * EXAMPLE JOB — copy this shape for every new handler.
- *
- * Sweeps farm certificates that have expired or will expire within
- * `horizonDays`, so listings under a lapsed certification can be blocked with
- * CERT_EXPIRED before a customer ever sees them.
+ * BR-01, BR-38: Sweeps farm certificates, evaluates market block state using
+ * the single shared recompute function in Asia/Kolkata timezone, logs audit
+ * transitions, and records run metrics into job_runs.
  */
-const certificateExpirySweep: Handler<'certificate-expiry-sweep'> = async (payload) => {
+export const certificateExpirySweep: Handler<'certificate-expiry-sweep'> = async (payload) => {
   logger.info({ horizonDays: payload.horizonDays }, 'certificate-expiry-sweep: starting');
 
-  // TODO(STORY-FARM-08): replace this probe with the real sweep:
-  //   1. SELECT certificates WHERE valid_to < now() + $1 AND status <> 'EXPIRED'
-  //   2. UPDATE them to EXPIRED / EXPIRING_SOON inside one transaction
-  //   3. writeAuditLog for each transition
-  //   4. enqueue farmer notifications
-  const probe = await pool.query<{ now: string }>('SELECT now()::text AS now');
-
-  logger.info(
-    { serverTime: probe.rows[0]?.now, horizonDays: payload.horizonDays },
-    'certificate-expiry-sweep: finished (stub)',
+  // 1. Create job_runs tracking record
+  const runResult = await pool.query<{ id: string }>(
+    `INSERT INTO job_runs (job_name, status, started_at)
+     VALUES ('certificate-expiry-sweep', 'RUNNING', now())
+     RETURNING id`,
   );
+  const runId = runResult.rows[0]?.id;
+
+  try {
+    // 2. Fetch all active farmers
+    const farmerIds = await certificationsRepo.getAllActiveFarmerIds(pool);
+    let itemsProcessed = 0;
+
+    // 3. Recompute each farmer's market block status
+    for (const farmerId of farmerIds) {
+      const result = await withTransaction(async (tx) => {
+        return certificationsRepo.recomputeFarmerMarketBlock(
+          tx,
+          farmerId,
+          null,
+          'SYSTEM',
+          'JOB',
+        );
+      });
+
+      if (result.changed) {
+        itemsProcessed += 1;
+      }
+    }
+
+    // 4. Mark job_run as succeeded
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'SUCCEEDED',
+                finished_at = now(),
+                items_scanned = $2,
+                items_processed = $3,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, farmerIds.length, itemsProcessed],
+      );
+    }
+
+    logger.info(
+      { itemsScanned: farmerIds.length, itemsProcessed },
+      'certificate-expiry-sweep: completed',
+    );
+  } catch (error) {
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'FAILED',
+                finished_at = now(),
+                error = $2,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, (error as Error).message],
+      );
+    }
+    throw error;
+  }
 };
 
 const HANDLERS: { [N in JobName]: Handler<N> } = {

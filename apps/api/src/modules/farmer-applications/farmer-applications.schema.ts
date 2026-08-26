@@ -99,3 +99,31 @@ export const updateFarmerProfileBody = z
     aadhaarNumber: z.any().optional(),
   });
 export type UpdateFarmerProfileBody = z.infer<typeof updateFarmerProfileBody>;
+
+export const listAdminApplicationsQuery = z.object({
+  status: z.enum(['SUBMITTED', 'DOCS_REVIEW', 'FARM_VERIFICATION', 'AUDIT', 'APPROVED', 'REJECTED']).optional(),
+  zoneId: z.string().uuid().optional(),
+  submittedAfter: z.string().datetime().optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+export type ListAdminApplicationsQuery = z.infer<typeof listAdminApplicationsQuery>;
+
+export const approveApplicationBody = z.object({
+  zoneId: z.string().uuid().optional(),
+  note: z.string().max(500).optional(),
+});
+export type ApproveApplicationBody = z.infer<typeof approveApplicationBody>;
+
+export const rejectApplicationBody = z.object({
+  reasonCode: z.enum(['DOCUMENTS_INVALID', 'LAND_NOT_VERIFIED', 'DUPLICATE_APPLICANT', 'OUTSIDE_SERVICE_AREA', 'OTHER']),
+  reason: z.string().trim().min(5).max(500),
+});
+export type RejectApplicationBody = z.infer<typeof rejectApplicationBody>;
+
+export const requestInfoApplicationBody = z.object({
+  message: z.string().trim().min(5).max(1000),
+  requiredSteps: z.array(z.number().int().min(1).max(5)).optional(),
+});
+export type RequestInfoApplicationBody = z.infer<typeof requestInfoApplicationBody>;
+

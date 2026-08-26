@@ -80,7 +80,7 @@ export interface Column<T extends Row = Row> {
     `,
   ],
   template: `
-    <table *ngIf="rows.length > 0; else emptyState">
+    <table *ngIf="rows && rows.length > 0; else emptyState">
       <thead>
         <tr>
           <th *ngFor="let column of columns" [class.right]="column.align === 'right'">

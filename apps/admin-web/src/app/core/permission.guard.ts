@@ -1,21 +1,23 @@
 /**
- * Route guard backed by docs/rbac.json.
+ * Route guard backed by docs/rbac.json and AuthService.
  *
- * Again: this only hides UI. The API re-checks every permission. Its purpose is
- * to stop an admin landing on a screen that will only 403 at them.
- *
- * ```ts
- * { path: 'pricing', canActivate: [permissionGuard('pricing.fair_price.view')], ... }
- * ```
+ * Checks authentication first: redirects to /login if unauthenticated.
+ * Then checks permission: redirects to /forbidden if unauthorized.
  */
 import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
+import { AuthService } from './auth.service';
 import { RbacService } from './rbac.service';
 
 export function permissionGuard(permissionCode: string): CanActivateFn {
   return () => {
+    const auth = inject(AuthService);
     const rbac = inject(RbacService);
     const router = inject(Router);
+
+    if (!auth.isAuthenticated()) {
+      return router.createUrlTree(['/login']);
+    }
 
     if (rbac.can(permissionCode)) return true;
 
@@ -28,8 +30,13 @@ export function permissionGuard(permissionCode: string): CanActivateFn {
 /** Guard for screens that mutate: `view` scope is not enough. */
 export function mutationGuard(permissionCode: string): CanActivateFn {
   return () => {
+    const auth = inject(AuthService);
     const rbac = inject(RbacService);
     const router = inject(Router);
+
+    if (!auth.isAuthenticated()) {
+      return router.createUrlTree(['/login']);
+    }
 
     if (rbac.canMutate(permissionCode)) return true;
 

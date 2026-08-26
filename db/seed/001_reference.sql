@@ -308,6 +308,48 @@ ON CONFLICT (slug) DO UPDATE SET
     updated_at      = now();
 
 -- -----------------------------------------------------------------------------
+-- Notification Templates — BR-38a: 11 golden-thread transactional events in en & ta
+-- -----------------------------------------------------------------------------
+INSERT INTO notification_templates (code, channel, locale, subject, body_template, is_active) VALUES
+    ('FARMER_APP_APPROVED', 'IN_APP', 'en', 'Application Approved', 'Welcome to TOHFA! Your farmer registration {{applicationId}} has been approved with ID {{tohfaFarmerId}}.', true),
+    ('FARMER_APP_APPROVED', 'IN_APP', 'ta', 'விண்ணப்பம் ஏற்கப்பட்டது', 'தோஹ்பா தளத்திற்கு வரவேற்கிறோம்! உங்கள் பதிவு {{applicationId}} அடையாள எண் {{tohfaFarmerId}} உடன் ஏற்கப்பட்டது.', true),
+
+    ('FARMER_APP_REJECTED', 'IN_APP', 'en', 'Application Rejected', 'Your registration application {{applicationId}} was not approved. Reason: {{reason}}.', true),
+    ('FARMER_APP_REJECTED', 'IN_APP', 'ta', 'விண்ணப்பம் நிராகரிக்கப்பட்டது', 'உங்கள் பதிவு விண்ணப்பம் {{applicationId}} நிராகரிக்கப்பட்டது. காரணம்: {{reason}}.', true),
+
+    ('FARMER_APP_INFO_REQUESTED', 'IN_APP', 'en', 'Information Requested', 'Additional information requested for application {{applicationId}}: {{message}}.', true),
+    ('FARMER_APP_INFO_REQUESTED', 'IN_APP', 'ta', 'கூடுதல் தகவல் தேவை', 'விண்ணப்பம் {{applicationId}} தொடர்பான கூடுதல் தகவல் தேவை: {{message}}.', true),
+
+    ('COUNTER_OFFER_RECEIVED', 'IN_APP', 'en', 'Counter-Offer Received', 'A counter-offer of ₹{{offerPrice}}/kg was received for your listing {{listingId}} (original: ₹{{originalPrice}}/kg).', true),
+    ('COUNTER_OFFER_RECEIVED', 'IN_APP', 'ta', 'மறு விலை பெறப்பட்டது', 'உங்கள் பட்டியல் {{listingId}}-க்கு ₹{{offerPrice}}/கிலோ மறு விலை பெறப்பட்டது (அசல் விலை: ₹{{originalPrice}}/கிலோ).', true),
+
+    ('COUNTER_OFFER_EXPIRING', 'IN_APP', 'en', 'Counter-Offer Expiring Soon', 'Counter-offer for listing {{listingId}} expires in {{hoursRemaining}} hours.', true),
+    ('COUNTER_OFFER_EXPIRING', 'IN_APP', 'ta', 'மறு விலை விரைவில் காலாவதியாகிறது', 'பட்டியல் {{listingId}}-க்கான மறு விலை {{hoursRemaining}} மணி நேரத்தில் காலாவதியாகிறது.', true),
+
+    ('GOODS_RECEIVED', 'IN_APP', 'en', 'Goods Received (GRN)', 'GRN {{grnNumber}} generated for {{quantityKg}} kg of {{produceName}}.', true),
+    ('GOODS_RECEIVED', 'IN_APP', 'ta', 'பொருட்கள் பெறப்பட்டன (GRN)', '{{produceName}} {{quantityKg}} கிலோவிற்கு GRN {{grnNumber}} உருவாக்கப்பட்டது.', true),
+
+    ('PAYOUT_RELEASED', 'IN_APP', 'en', 'Payout Released', 'Payout of ₹{{amount}} released to your bank account (Ref: {{reference}}).', true),
+    ('PAYOUT_RELEASED', 'IN_APP', 'ta', 'பணம் விடுவிக்கப்பட்டது', 'உங்கள் வங்கிக் கணக்கிற்கு ₹{{amount}} பணம் அனுப்பப்பட்டது (குறிப்பு: {{reference}}).', true),
+
+    ('ORDER_CONFIRMED', 'IN_APP', 'en', 'Order Confirmed', 'Order #{{orderNumber}} confirmed for ₹{{totalAmount}}.', true),
+    ('ORDER_CONFIRMED', 'IN_APP', 'ta', 'ஆர்டர் உறுதிசெய்யப்பட்டது', 'ஆர்டர் #{{orderNumber}} ₹{{totalAmount}}-க்கு உறுதிசெய்யப்பட்டது.', true),
+
+    ('ORDER_DISPATCHED', 'IN_APP', 'en', 'Order Dispatched', 'Order #{{orderNumber}} is on its way.', true),
+    ('ORDER_DISPATCHED', 'IN_APP', 'ta', 'ஆர்டர் அனுப்பப்பட்டது', 'ஆர்டர் #{{orderNumber}} அனுப்பப்பட்டுள்ளது.', true),
+
+    ('ORDER_DELIVERED', 'IN_APP', 'en', 'Order Delivered', 'Order #{{orderNumber}} has been delivered.', true),
+    ('ORDER_DELIVERED', 'IN_APP', 'ta', 'ஆர்டர் டெலிவரி செய்யப்பட்டது', 'ஆர்டர் #{{orderNumber}} டெலிவரி செய்யப்பட்டது.', true),
+
+    ('WALLET_CREDITED', 'IN_APP', 'en', 'Wallet Credited', '₹{{amount}} credited to your wallet (Ref: {{reference}}). Current balance: ₹{{balance}}.', true),
+    ('WALLET_CREDITED', 'IN_APP', 'ta', 'வாலட்டில் பணம் சேர்க்கப்பட்டது', 'உங்கள் வாலட்டில் ₹{{amount}} சேர்க்கப்பட்டது (குறிப்பு: {{reference}}). இருப்பு: ₹{{balance}}.', true)
+ON CONFLICT (code, channel, locale) DO UPDATE SET
+    subject       = EXCLUDED.subject,
+    body_template = EXCLUDED.body_template,
+    is_active     = EXCLUDED.is_active,
+    updated_at    = now();
+
+-- -----------------------------------------------------------------------------
 -- Sanity checks. A seed that silently produced 3 warehouses would break BR-30
 -- scoping in a way nobody notices until a Sub Warehouse Admin sees nothing.
 -- -----------------------------------------------------------------------------

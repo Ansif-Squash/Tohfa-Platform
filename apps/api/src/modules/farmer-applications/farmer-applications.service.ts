@@ -1,5 +1,7 @@
+import { writeAuditLog } from '../../audit/auditLog.js';
 import type { Actor } from '../../auth/requireAuth.js';
-import { pool } from '../../db/pool.js';
+import { pool, withTransaction } from '../../db/pool.js';
+import { eventBus } from '../../events/bus.js';
 import { AppError } from '../../http/problem.js';
 import {
   farmerApplicationsRepo,
@@ -13,7 +15,11 @@ import {
   step3LocationSchema,
   step4DocumentsSchema,
   step5ReviewSchema,
+  type ApproveApplicationBody,
   type CreateFarmerApplicationBody,
+  type ListAdminApplicationsQuery,
+  type RejectApplicationBody,
+  type RequestInfoApplicationBody,
   type UpdateFarmerProfileBody,
 } from './farmer-applications.schema.js';
 
@@ -62,6 +68,11 @@ export interface FarmerApplicationsService {
   ): Promise<unknown>;
   getMyProfile(actor: Actor): Promise<unknown>;
   updateMyProfile(actor: Actor, body: UpdateFarmerProfileBody): Promise<unknown>;
+  listAdminApplications(actor: Actor, query: ListAdminApplicationsQuery): Promise<unknown>;
+  getAdminApplication(actor: Actor, id: string): Promise<unknown>;
+  approveApplication(actor: Actor, id: string, body: ApproveApplicationBody): Promise<unknown>;
+  rejectApplication(actor: Actor, id: string, body: RejectApplicationBody): Promise<unknown>;
+  requestInfoApplication(actor: Actor, id: string, body: RequestInfoApplicationBody): Promise<unknown>;
 }
 
 export function createFarmerApplicationsService(
@@ -319,6 +330,218 @@ export function createFarmerApplicationsService(
         marketBlockReason: updated.market_block_reason,
         createdAt: updated.created_at.toISOString(),
       };
+    },
+
+    async listAdminApplications(_actor, query) {
+      const { items, nextCursor, hasMore } = await repo.listAdminApplications(pool, query);
+      return {
+        items: items.map(mapApplicationResponse),
+        page: { nextCursor, hasMore },
+      };
+    },
+
+    async getAdminApplication(_actor, id) {
+      const app = await repo.findById(pool, id);
+      if (app === null) {
+        throw new AppError('NOT_FOUND', { detail: 'Application not found.' });
+      }
+      return mapApplicationResponse(app);
+    },
+
+    async approveApplication(actor, id, body) {
+      const app = await repo.findById(pool, id);
+      if (app === null) {
+        throw new AppError('NOT_FOUND', { detail: 'Application not found.' });
+      }
+
+      if (app.status === 'APPROVED') {
+        throw new AppError('CONFLICT', {
+          status: 409,
+          detail: 'Application is already approved.',
+        });
+      }
+
+      const result = await withTransaction(async (tx) => {
+        const year = new Date().getFullYear();
+        const tohfaFarmerId = await repo.allocateNextTohfaFarmerId(tx, year);
+
+        let userId = app.user_id;
+        if (userId === null) {
+          const userRes = await tx.query<{ id: string }>(
+            `INSERT INTO users (mobile, full_name, preferred_locale)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (mobile) DO UPDATE SET full_name = EXCLUDED.full_name
+             RETURNING id`,
+            [app.mobile, app.full_name, app.preferred_locale],
+          );
+          userId = userRes.rows[0]!.id;
+        }
+
+        await tx.query(
+          `INSERT INTO user_roles (user_id, role_code)
+           VALUES ($1, 'FARMER')
+           ON CONFLICT DO NOTHING`,
+          [userId],
+        );
+
+        const personal = (app.step1_personal as Record<string, unknown>) ?? {};
+        const farmerRes = await tx.query<{ id: string }>(
+          `INSERT INTO farmers (
+             user_id, tohfa_farmer_id, zone_id, farming_experience_years,
+             address_line1, village, taluk, district, aadhaar_last4,
+             kyc_status, application_status, is_market_blocked, market_block_reason
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'VERIFIED', 'APPROVED', true, 'No organic certifications uploaded (BR-01, BR-02)')
+           RETURNING id`,
+          [
+            userId,
+            tohfaFarmerId,
+            body.zoneId ?? null,
+            personal['farmingExperienceYears'] ?? 0,
+            personal['addressLine1'] ?? null,
+            personal['village'] ?? null,
+            personal['taluk'] ?? null,
+            personal['district'] ?? null,
+            personal['aadhaarLast4'] ?? null,
+          ],
+        );
+        const farmerId = farmerRes.rows[0]!.id;
+
+        const updated = await repo.transitionStatus(
+          tx,
+          id,
+          app.status,
+          'APPROVED',
+          actor.userId,
+          body.note ?? 'Approved by admin',
+        );
+
+        await tx.query(
+          `UPDATE farmer_applications SET farmer_id = $1, user_id = $2 WHERE id = $3`,
+          [farmerId, userId, id],
+        );
+
+        await writeAuditLog(tx, {
+          actorId: actor.userId,
+          ...(actor.roles[0]?.code ? { actorRole: actor.roles[0].code } : {}),
+          actionCode: 'farmer.application.approve',
+          entityType: 'farmer_application',
+          entityId: id,
+          before: { status: app.status },
+          after: { status: 'APPROVED', tohfaFarmerId, farmerId },
+          changedFields: ['status', 'farmer_id'],
+        });
+
+        return { updated, tohfaFarmerId, userId };
+      });
+
+      await eventBus.publish('farmer.application.approved', {
+        userId: result.userId,
+        applicationId: id,
+        tohfaFarmerId: result.tohfaFarmerId,
+      });
+
+      return mapApplicationResponse(result.updated);
+    },
+
+    async rejectApplication(actor, id, body) {
+      const app = await repo.findById(pool, id);
+      if (app === null) {
+        throw new AppError('NOT_FOUND', { detail: 'Application not found.' });
+      }
+
+      if (app.status === 'REJECTED') {
+        throw new AppError('CONFLICT', {
+          status: 409,
+          detail: 'Application is already rejected.',
+        });
+      }
+
+      const updated = await withTransaction(async (tx) => {
+        const res = await repo.transitionStatus(
+          tx,
+          id,
+          app.status,
+          'REJECTED',
+          actor.userId,
+          `[${body.reasonCode}] ${body.reason}`,
+        );
+
+        await writeAuditLog(tx, {
+          actorId: actor.userId,
+          ...(actor.roles[0]?.code ? { actorRole: actor.roles[0].code } : {}),
+          actionCode: 'farmer.application.reject',
+          entityType: 'farmer_application',
+          entityId: id,
+          before: { status: app.status },
+          after: { status: 'REJECTED', reasonCode: body.reasonCode, reason: body.reason },
+          changedFields: ['status'],
+        });
+
+        return res;
+      });
+
+      if (app.user_id) {
+        await eventBus.publish('farmer.application.rejected', {
+          userId: app.user_id,
+          applicationId: id,
+          reason: body.reason,
+        });
+      }
+
+      return mapApplicationResponse(updated);
+    },
+
+    async requestInfoApplication(actor, id, body) {
+      const app = await repo.findById(pool, id);
+      if (app === null) {
+        throw new AppError('NOT_FOUND', { detail: 'Application not found.' });
+      }
+
+      const updated = await withTransaction(async (tx) => {
+        const res = await repo.transitionStatus(
+          tx,
+          id,
+          app.status,
+          'DOCS_REVIEW',
+          actor.userId,
+          `More info requested: ${body.message}`,
+        );
+
+        if (body.requiredSteps && body.requiredSteps.length > 0) {
+          const remainingSteps = app.completed_steps.filter(
+            (s) => !body.requiredSteps!.includes(s),
+          );
+          await tx.query(
+            `UPDATE farmer_applications SET completed_steps = $1 WHERE id = $2`,
+            [remainingSteps, id],
+          );
+        }
+
+        await writeAuditLog(tx, {
+          actorId: actor.userId,
+          ...(actor.roles[0]?.code ? { actorRole: actor.roles[0].code } : {}),
+          actionCode: 'farmer.application.request_info',
+          entityType: 'farmer_application',
+          entityId: id,
+          before: { status: app.status },
+          after: { status: 'DOCS_REVIEW', message: body.message, requiredSteps: body.requiredSteps },
+          changedFields: ['status'],
+        });
+
+        return res;
+      });
+
+      if (app.user_id) {
+        await eventBus.publish('farmer.application.info_requested', {
+          userId: app.user_id,
+          applicationId: id,
+          steps: body.requiredSteps ?? [4],
+          message: body.message,
+        });
+      }
+
+      return mapApplicationResponse(updated);
     },
   };
 }

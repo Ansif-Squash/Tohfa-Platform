@@ -23,7 +23,10 @@ import { healthRouter } from './modules/health/health.routes.js';
 import { warehousesRouter } from './modules/_example/warehouses.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
-import { farmerApplicationsRouter } from './modules/farmer-applications/farmer-applications.routes.js';
+import { adminFarmerApplicationsRouter, farmerApplicationsRouter } from './modules/farmer-applications/farmer-applications.routes.js';
+import { certificationsAdminRouter, certificationsFarmerRouter } from './modules/certifications/certifications.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
+import { fairPricesRouter, retailPricesRouter } from './modules/pricing/pricing.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -90,6 +93,12 @@ export function createApp(): Express {
   app.use('/v1/auth', authRouter);
   app.use('/v1/uploads', uploadsRouter);
   app.use('/v1/farmers', farmerApplicationsRouter);
+  app.use('/v1/farmers/me/certifications', certificationsFarmerRouter);
+  app.use('/v1/admin/farmer-applications', adminFarmerApplicationsRouter);
+  app.use('/v1/admin/certifications', certificationsAdminRouter);
+  app.use('/v1/notifications', notificationsRouter);
+  app.use('/v1/fair-prices', fairPricesRouter);
+  app.use('/v1/retail-prices', retailPricesRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
