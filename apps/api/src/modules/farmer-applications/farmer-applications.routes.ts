@@ -4,8 +4,12 @@ import { asyncHandler } from '../../http/asyncHandler.js';
 import { getValidated, validate } from '../../http/validate.js';
 import { requirePermission } from '../../rbac/requirePermission.js';
 import {
+  approveApplicationBody,
   createFarmerApplicationBody,
   farmerApplicationIdParams,
+  listAdminApplicationsQuery,
+  rejectApplicationBody,
+  requestInfoApplicationBody,
   updateFarmerProfileBody,
   updateStepParams,
 } from './farmer-applications.schema.js';
@@ -82,6 +86,77 @@ farmerApplicationsRouter.patch(
     const actor = requireActor(req.actor);
     const body = getValidated(req, 'body', updateFarmerProfileBody);
     const result = await farmerApplicationsService.updateMyProfile(actor, body);
+    res.json(result);
+  }),
+);
+
+// Admin farmer applications router (mounted at /v1/admin/farmer-applications)
+export const adminFarmerApplicationsRouter: Router = Router();
+
+adminFarmerApplicationsRouter.get(
+  '/',
+  requireAuth,
+  requirePermission('farmer.application.list_pending'),
+  validate({ query: listAdminApplicationsQuery }),
+  asyncHandler(async (req, res) => {
+    const actor = requireActor(req.actor);
+    const query = getValidated(req, 'query', listAdminApplicationsQuery);
+    const result = await farmerApplicationsService.listAdminApplications(actor, query);
+    res.json(result);
+  }),
+);
+
+adminFarmerApplicationsRouter.get(
+  '/:id',
+  requireAuth,
+  requirePermission('farmer.application.view'),
+  validate({ params: farmerApplicationIdParams }),
+  asyncHandler(async (req, res) => {
+    const actor = requireActor(req.actor);
+    const { id } = getValidated(req, 'params', farmerApplicationIdParams);
+    const result = await farmerApplicationsService.getAdminApplication(actor, id);
+    res.json(result);
+  }),
+);
+
+adminFarmerApplicationsRouter.post(
+  '/:id/approve',
+  requireAuth,
+  requirePermission('farmer.application.approve'),
+  validate({ params: farmerApplicationIdParams, body: approveApplicationBody }),
+  asyncHandler(async (req, res) => {
+    const actor = requireActor(req.actor);
+    const { id } = getValidated(req, 'params', farmerApplicationIdParams);
+    const body = getValidated(req, 'body', approveApplicationBody);
+    const result = await farmerApplicationsService.approveApplication(actor, id, body);
+    res.json(result);
+  }),
+);
+
+adminFarmerApplicationsRouter.post(
+  '/:id/reject',
+  requireAuth,
+  requirePermission('farmer.application.reject'),
+  validate({ params: farmerApplicationIdParams, body: rejectApplicationBody }),
+  asyncHandler(async (req, res) => {
+    const actor = requireActor(req.actor);
+    const { id } = getValidated(req, 'params', farmerApplicationIdParams);
+    const body = getValidated(req, 'body', rejectApplicationBody);
+    const result = await farmerApplicationsService.rejectApplication(actor, id, body);
+    res.json(result);
+  }),
+);
+
+adminFarmerApplicationsRouter.post(
+  '/:id/request-info',
+  requireAuth,
+  requirePermission('farmer.application.request_info'),
+  validate({ params: farmerApplicationIdParams, body: requestInfoApplicationBody }),
+  asyncHandler(async (req, res) => {
+    const actor = requireActor(req.actor);
+    const { id } = getValidated(req, 'params', farmerApplicationIdParams);
+    const body = getValidated(req, 'body', requestInfoApplicationBody);
+    const result = await farmerApplicationsService.requestInfoApplication(actor, id, body);
     res.json(result);
   }),
 );

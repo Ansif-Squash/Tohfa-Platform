@@ -45,6 +45,30 @@ const GRANT_CASES: readonly GrantCase[] = [
     because: 'Elected farmer admins have no pricing authority.',
   },
   {
+    permission: 'pricing.fair_price.bulk_update',
+    role: RoleCode.SUPER_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'Super Admin can bulk update fair price ceilings.',
+  },
+  {
+    permission: 'pricing.fair_price.bulk_update',
+    role: RoleCode.TOHFA_ADMIN,
+    expected: ScopeLevel.NONE,
+    because: 'TOHFA Admin explicitly cannot bulk update fair price ceilings.',
+  },
+  {
+    permission: 'pricing.retail_price.set',
+    role: RoleCode.SUPER_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'Super Admin can set retail prices.',
+  },
+  {
+    permission: 'pricing.retail_price.set',
+    role: RoleCode.TOHFA_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'TOHFA Admin can set retail prices.',
+  },
+  {
     permission: 'pricing.fair_price.view',
     role: RoleCode.FARMER,
     expected: ScopeLevel.VIEW,
@@ -113,6 +137,36 @@ const GRANT_CASES: readonly GrantCase[] = [
     role: RoleCode.FARMER,
     expected: ScopeLevel.OWN,
     because: 'Farmers may view their own farmer profile, farms, and zone assignment (BR-36).',
+  },
+  {
+    permission: 'certification.manage_own',
+    role: RoleCode.FARMER,
+    expected: ScopeLevel.OWN,
+    because: 'Farmers may create and manage their own PGS/NPOP certification records (BR-02).',
+  },
+  {
+    permission: 'certification.mark_verified',
+    role: RoleCode.SUPER_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'Super Admin and TOHFA Admin may verify/unverify certifications manually (BR-02b).',
+  },
+  {
+    permission: 'certification.mark_verified',
+    role: RoleCode.FARMER,
+    expected: ScopeLevel.NONE,
+    because: 'Farmers cannot verify their own certificates under any circumstance (BR-02).',
+  },
+  {
+    permission: 'notification.own.view',
+    role: RoleCode.CUSTOMER,
+    expected: ScopeLevel.ALL,
+    because: 'All authenticated users can view their own in-app notifications (BR-36).',
+  },
+  {
+    permission: 'notification.own.mark_read',
+    role: RoleCode.FARMER,
+    expected: ScopeLevel.ALL,
+    because: 'Users can mark their own notifications as read (BR-36).',
   },
 ];
 

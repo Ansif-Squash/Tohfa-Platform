@@ -16,19 +16,40 @@ export interface NavRoute {
 
 /** Drives both the router and the sidebar. Add a screen here, once. */
 export const NAV: readonly NavRoute[] = [
+  { path: 'farmer-applications', label: 'Farmer Applications', permission: 'farmer.application.list_pending' },
   { path: 'warehouses', label: 'Warehouses', permission: 'warehouse.all.view' },
   { path: 'pricing', label: 'Fair Price', permission: 'pricing.fair_price.view' },
   { path: 'listings', label: 'Listings', permission: 'listing.approve' },
-  // TODO(STORY-ADMIN-*): farmers, orders, inventory, finance, audits.
 ];
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'warehouses' },
+  { path: '', pathMatch: 'full', redirectTo: 'farmer-applications' },
+
+  {
+    path: 'login',
+    loadComponent: async () =>
+      (await import('./features/auth/login.component')).LoginComponent,
+  },
+
+  {
+    path: 'farmer-applications',
+    canActivate: [permissionGuard('farmer.application.list_pending')],
+    loadComponent: async () =>
+      (await import('./features/farmer-applications/farmer-applications-list.component'))
+        .FarmerApplicationsListComponent,
+  },
+
+  {
+    path: 'farmer-applications/:id',
+    canActivate: [permissionGuard('farmer.application.view')],
+    loadComponent: async () =>
+      (await import('./features/farmer-applications/farmer-application-detail.component'))
+        .FarmerApplicationDetailComponent,
+  },
 
   {
     path: 'warehouses',
     canActivate: [permissionGuard('warehouse.all.view')],
-    // TODO(STORY-ADMIN-02): replace with the real warehouses screen.
     loadComponent: async () =>
       (await import('./shared/data-table/data-table.component')).DataTableComponent,
   },

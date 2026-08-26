@@ -127,6 +127,11 @@ function mockFarmerApplicationsRepo(initialApp?: Partial<FarmerApplicationRow>):
       throw new Error('Application not found');
     },
     getStatusHistory: async () => history,
+    listAdminApplications: async () => ({
+      items: appState ? [appState] : [],
+      nextCursor: null,
+      hasMore: false,
+    }),
     findFarmerByUserId: async () => mockProfile,
     findFarmerById: async () => mockProfile,
     updateFarmerProfile: async () => mockProfile,
@@ -294,6 +299,31 @@ describe('Farmer Applications & BR-33/BR-36 Test Contracts', () => {
       const res = await request(app)
         .patch('/v1/farmers/applications/11111111-1111-1111-1111-111111111111/steps/99')
         .send({});
+
+      expect(res.status).toBe(422);
+      expect(res.body.code).toBe('VALIDATION_FAILED');
+    });
+
+    it('GET /v1/admin/farmer-applications requires authentication', async () => {
+      const res = await request(app).get('/v1/admin/farmer-applications');
+      expect(res.status).toBe(401);
+    });
+
+    it('POST /v1/admin/farmer-applications/:id/reject requires reasonCode and min length reason', async () => {
+      const adminToken = (await import('../../auth/jwt.js')).signAccessToken({
+        sub: IDS.userSuperAdmin,
+        roles: [{ code: 'SUPER_ADMIN' }],
+        farmerId: null,
+        customerId: null,
+      });
+
+      const res = await request(app)
+        .post('/v1/admin/farmer-applications/11111111-1111-1111-1111-111111111111/reject')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          reasonCode: 'INVALID_ENUM',
+          reason: 'bad',
+        });
 
       expect(res.status).toBe(422);
       expect(res.body.code).toBe('VALIDATION_FAILED');

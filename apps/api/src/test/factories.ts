@@ -20,6 +20,7 @@ import type { WarehouseResponse } from '../modules/_example/warehouses.schema.js
 /** Stable ids so assertions read well and failures are diffable. */
 export const IDS = {
   userSuperAdmin: '00000000-0000-4000-8000-000000000001',
+  userTohfaAdmin: '00000000-0000-4000-8000-000000000005',
   userSubWhAdmin: '00000000-0000-4000-8000-000000000002',
   userFarmerAdmin: '00000000-0000-4000-8000-000000000003',
   userFarmer: '00000000-0000-4000-8000-000000000004',
