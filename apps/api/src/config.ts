@@ -55,6 +55,15 @@ const envSchema = z.object({
   OTP_MAX_ATTEMPTS: intFromEnv(1, 20).default(3),
   OTP_RESEND_SECONDS: intFromEnv(0, 3600).default(60),
 
+  // S-20 rate limiting. Limits are configuration, never literals in code.
+  // The auth surface limiter keys by mobile AND by IP; the per-mobile budget is
+  // deliberately larger than the BR-32 3-attempt OTP lockout so the sliding
+  // window cannot pre-empt the challenge lockout.
+  AUTH_RATE_LIMIT_MAX: intFromEnv(1, 10_000).default(20),
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: intFromEnv(1, 86_400).default(300),
+  AUTH_RATE_LIMIT_IP_MAX: intFromEnv(1, 10_000).default(120),
+  AUTH_RATE_LIMIT_IP_WINDOW_SECONDS: intFromEnv(1, 86_400).default(300),
+
   CORS_ORIGINS: csv.default('http://localhost:4200'),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])

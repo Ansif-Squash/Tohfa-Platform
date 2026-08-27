@@ -14,6 +14,7 @@
     "test": "vitest run --exclude \"**/*.e2e.test.ts\"",
     "test:watch": "vitest",
     "test:e2e": "vitest run e2e.test",
+    "test:contract": "vitest run contract.test",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:rollback": "tsx src/db/migrate.ts --down",
     "db:seed": "tsx src/db/migrate.ts --seed",
@@ -22,6 +23,7 @@
   },
   "dependencies": {
     "@azure/storage-blob": "^12.33.0",
+    "@sentry/node": "^10.71.0",
     "@tohfa/shared-types": "workspace:*",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.12.0",

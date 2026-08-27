@@ -14,7 +14,7 @@
  * supertest and `server.ts` owns the socket.
  */
 import cors from 'cors';
-import express, { type Express, type RequestHandler } from 'express';
+import express, { type Express, type RequestHandler, type Router } from 'express';
 import helmet from 'helmet';
 import { config } from './config.js';
 import { errorHandler, notFoundHandler } from './http/errorHandler.js';
@@ -29,6 +29,29 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { fairPricesRouter, retailPricesRouter } from './modules/pricing/pricing.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
+
+/**
+ * Every router the API exposes, with the path prefix it is mounted under.
+ *
+ * This is the single source of truth BOTH for `createApp()` (traffic) and for
+ * the S-20 contract test (`apps/api/src/contract/contract.test.ts`), which
+ * enumerates these routers to prove the live surface matches docs/openapi.yaml.
+ */
+export const API_MOUNTS: ReadonlyArray<{
+  prefix: string;
+  router: Router;
+}> = [
+  { prefix: '/v1/warehouses', router: warehousesRouter },
+  { prefix: '/v1/auth', router: authRouter },
+  { prefix: '/v1/uploads', router: uploadsRouter },
+  { prefix: '/v1/farmers', router: farmerApplicationsRouter },
+  { prefix: '/v1/farmers/me/certifications', router: certificationsFarmerRouter },
+  { prefix: '/v1/admin/farmer-applications', router: adminFarmerApplicationsRouter },
+  { prefix: '/v1/admin/certifications', router: certificationsAdminRouter },
+  { prefix: '/v1/notifications', router: notificationsRouter },
+  { prefix: '/v1/fair-prices', router: fairPricesRouter },
+  { prefix: '/v1/retail-prices', router: retailPricesRouter },
+];
 
 /**
  * Establishes the async-local logging context for the request. A client-supplied
@@ -88,17 +111,10 @@ export function createApp(): Express {
   // Probes are unversioned: orchestrators should not care about the API version.
   app.use(healthRouter);
 
-  // REFERENCE: every module router mounts under /v1/<plural-noun>.
-  app.use('/v1/warehouses', warehousesRouter);
-  app.use('/v1/auth', authRouter);
-  app.use('/v1/uploads', uploadsRouter);
-  app.use('/v1/farmers', farmerApplicationsRouter);
-  app.use('/v1/farmers/me/certifications', certificationsFarmerRouter);
-  app.use('/v1/admin/farmer-applications', adminFarmerApplicationsRouter);
-  app.use('/v1/admin/certifications', certificationsAdminRouter);
-  app.use('/v1/notifications', notificationsRouter);
-  app.use('/v1/fair-prices', fairPricesRouter);
-  app.use('/v1/retail-prices', retailPricesRouter);
+  // Every business router, mounted from the same table the contract test reads.
+  for (const { prefix, router } of API_MOUNTS) {
+    app.use(prefix, router);
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

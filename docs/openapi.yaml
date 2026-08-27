@@ -425,6 +425,82 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '500': { $ref: '#/components/responses/ServerError' }
 
+  /warehouses:
+    get:
+      tags: [Inventory]
+      operationId: listWarehouses
+      summary: List warehouses
+      description: |
+        Master list of warehouses that hold consolidated farmer inventory (BR-24).
+        A Sub Warehouse Admin token sees only its own warehouse; everyone else sees
+        the full consolidated view per their scope.
+      x-permission: warehouse.all.view
+      x-business-rules: [BR-24]
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 120 }
+          description: Free-text match on warehouse name or code.
+        - name: type
+          in: query
+          required: false
+          schema: { type: string, enum: [MAIN, SUB] }
+        - name: isActive
+          in: query
+          required: false
+          schema: { type: string, enum: ['true', 'false'] }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Paginated warehouse list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, pageSize, total]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Warehouse' }
+                  page: { type: integer, minimum: 1 }
+                  pageSize: { type: integer, minimum: 1 }
+                  total: { type: integer }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /warehouses/{id}:
+    get:
+      tags: [Inventory]
+      operationId: getWarehouse
+      summary: One warehouse by id
+      description: Fetches a single warehouse by its UUID. Scoped per RBAC — a Sub
+        Warehouse Admin receives its own warehouse; other roles receive any warehouse
+        their scope permits.
+      x-permission: warehouse.all.view
+      x-business-rules: [BR-24]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: The warehouse.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Warehouse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
   /farmers/applications:
     post:
       tags: [Farmer Onboarding]
@@ -3300,6 +3376,20 @@ components:
             correlationId: 01J9F1B2C3D4E5F6G7H8J9KJ
 
   schemas:
+    Warehouse:
+      type: object
+      description: A warehouse holding consolidated farmer inventory (BR-24).
+      required: [id, code, name, type, isActive, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: WH-CBE-MAIN }
+        name: { type: string, example: Coimbatore Main Warehouse }
+        type: { type: string, enum: [MAIN, SUB] }
+        city: { type: string, nullable: true, example: Coonoor }
+        capacityKg: { type: number, nullable: true, description: Storage capacity in kg. }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
     Problem:
       type: object
       description: |

@@ -77,6 +77,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Contract test (routes vs openapi + rbac)
+        run: pnpm test:contract
+
       - name: Unit tests
         run: pnpm test
 
