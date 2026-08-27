@@ -30,6 +30,17 @@ export interface LoginResponse {
   availableRoles?: Array<RoleAssignment | RoleCode>;
 }
 
+export function normalizeMobile(mobile: string): string {
+  const cleaned = mobile.trim().replace(/[\s-]/g, '');
+  if (/^[6-9]\d{9}$/.test(cleaned)) {
+    return `+91${cleaned}`;
+  }
+  if (/^91[6-9]\d{9}$/.test(cleaned)) {
+    return `+${cleaned}`;
+  }
+  return cleaned;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -47,7 +58,11 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.tokens.get() !== null);
 
   async login(mobile: string, password: string, roleCode?: RoleCode): Promise<LoginResponse> {
-    const payload: { mobile: string; password: string; roleCode?: RoleCode } = { mobile, password };
+    const normalizedMobile = normalizeMobile(mobile);
+    const payload: { mobile: string; password: string; roleCode?: RoleCode } = {
+      mobile: normalizedMobile,
+      password,
+    };
     if (roleCode !== undefined) {
       payload.roleCode = roleCode;
     }
