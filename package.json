@@ -8,7 +8,7 @@
     "node": ">=20.11"
   },
   "scripts": {
-    "dev": "concurrently -n api,admin -c green,cyan \"pnpm dev:api\" \"pnpm --filter @tohfa/admin-web start\"",
+    "dev": "docker compose up -d --wait postgres redis && concurrently -n api,admin -c green,cyan \"pnpm dev:api\" \"pnpm --filter @tohfa/admin-web start\"",
     "dev:api": "pnpm --filter @tohfa/api dev",
     "dev:worker": "pnpm --filter @tohfa/api dev:worker",
     "build": "tsc -b tsconfig.json",

@@ -15,9 +15,9 @@ import * as Sentry from '@sentry/node';
 import { config } from '../config.js';
 import { currentTraceId } from '../logger.js';
 
-/** Covers tokens, passwords, secrets, OTP/codes, Aadhaar, bank/money fields. */
+/** Covers tokens, passwords, secrets, OTP/codes, Aadhaar, bank/money/balance fields. */
 const SENSITIVE_KEY_RE =
-  /(password|passwd|pwd|secret|authorization|cookie|token|jwt|otp|verification.?code|reset.?code|pin|aadhaar|aadhar|account.?number|bank.?account|ifsc|upi|card|pan|money|amount|price|ceiling|rate)/i;
+  /(password|passwd|pwd|secret|authorization|cookie|token|jwt|otp|verification.?code|reset.?code|pin|aadhaar|aadhar|account.?number|bank.?account|ifsc|upi|card|pan|money|amount|price|ceiling|rate|balance)/i;
 
 const SCRUB_PLACEHOLDER = '[scrubbed]';
 
