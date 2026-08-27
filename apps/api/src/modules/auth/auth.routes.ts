@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireActor, requireAuth } from '../../auth/requireAuth.js';
 import { asyncHandler } from '../../http/asyncHandler.js';
+import { createRateLimiter } from '../../http/rateLimiter.js';
 import { getValidated, validate } from '../../http/validate.js';
 import { requirePermission } from '../../rbac/requirePermission.js';
 import {
@@ -17,8 +18,11 @@ import { authService } from './auth.service.js';
 
 export const authRouter: Router = Router();
 
+const authLimiter = createRateLimiter({ windowSeconds: 60, maxRequests: 20, keyPrefix: 'auth' });
+
 authRouter.post(
   '/register/customer',
+  authLimiter,
   validate({ body: registerCustomerBody }),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', registerCustomerBody);
@@ -29,6 +33,7 @@ authRouter.post(
 
 authRouter.post(
   '/otp/send',
+  authLimiter,
   validate({ body: sendOtpBody }),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', sendOtpBody);
@@ -39,6 +44,7 @@ authRouter.post(
 
 authRouter.post(
   '/otp/verify',
+  authLimiter,
   validate({ body: verifyOtpBody }),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', verifyOtpBody);
@@ -49,6 +55,7 @@ authRouter.post(
 
 authRouter.post(
   '/login',
+  authLimiter,
   validate({ body: loginBody }),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', loginBody);
@@ -80,6 +87,7 @@ authRouter.post(
 
 authRouter.post(
   '/forgot-password',
+  authLimiter,
   validate({ body: forgotPasswordBody }),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', forgotPasswordBody);
@@ -90,6 +98,7 @@ authRouter.post(
 
 authRouter.post(
   '/reset-password',
+  authLimiter,
   validate({ body: resetPasswordBody }),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', resetPasswordBody);

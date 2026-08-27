@@ -18,6 +18,7 @@ import {
 } from './queue.js';
 
 import { certificationsRepo } from '../modules/certifications/certifications.repo.js';
+import { listingsRepo } from '../modules/listings/listings.repo.js';
 
 type Handler<N extends JobName> = (payload: JobPayloads[N], job: Job) => Promise<void>;
 
@@ -93,8 +94,42 @@ export const certificateExpirySweep: Handler<'certificate-expiry-sweep'> = async
   }
 };
 
+export const counterOfferExpirySweep: Handler<'counter-offer-expiry-sweep'> = async (payload) => {
+  logger.info('counter-offer-expiry-sweep: starting');
+
+  // 1. Create job_runs tracking record
+  const runResult = await pool.query<{ id: string }>(
+    `INSERT INTO job_runs (job_name, status, started_at)\n     VALUES ('counter-offer-expiry-sweep', 'RUNNING', now())\n     RETURNING id`,
+  );
+  const runId = runResult.rows[0]?.id;
+
+  try {
+    // 2. Sweep expired counter offers
+    const itemsProcessed = await listingsRepo.sweepExpiredCounterOffers(pool);
+
+    // 3. Mark job_run as succeeded
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs\n            SET status = 'SUCCEEDED',\n                finished_at = now(),\n                items_processed = $2,\n                updated_at = now()\n          WHERE id = $1`,
+        [runId, itemsProcessed],
+      );
+    }
+
+    logger.info({ itemsProcessed }, 'counter-offer-expiry-sweep: completed');
+  } catch (error) {
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs\n            SET status = 'FAILED',\n                finished_at = now(),\n                error = $2,\n                updated_at = now()\n          WHERE id = $1`,
+        [runId, (error as Error).message],
+      );
+    }
+    throw error;
+  }
+};
+
 const HANDLERS: { [N in JobName]: Handler<N> } = {
   'certificate-expiry-sweep': certificateExpirySweep,
+  'counter-offer-expiry-sweep': counterOfferExpirySweep,
 };
 
 async function dispatch(job: Job): Promise<void> {

@@ -1,4 +1,4 @@
--- =============================================================================
+451///-- =============================================================================
 -- 0005_warehouse_inventory.sql
 -- The four fixed warehouses (BR-23), purchasing, goods receipt and quality
 -- check, the APPEND-ONLY stock ledger (BR-37) that is the only source of truth
@@ -556,6 +556,34 @@ COMMENT ON TABLE allocations IS
     'contradiction 10.';
 
 SELECT app_attach_updated_at_triggers();
+
+-- -----------------------------------------------------------------------------
+-- warehouse_consolidated_inventory — BR-24
+-- -----------------------------------------------------------------------------
+CREATE MATERIALIZED VIEW warehouse_consolidated_inventory AS
+SELECT
+    warehouse_id,
+    crop_id,
+    grade,
+    SUM(qty_available) AS total_qty,
+    jsonb_agg(jsonb_build_object('farmer_id', source_farmer_id, 'qty', qty_available)) AS provenance
+FROM inventory_batches
+WHERE status = 'ACTIVE'
+GROUP BY warehouse_id, crop_id, grade;
+
+CREATE INDEX idx_warehouse_consolidated_inventory ON warehouse_consolidated_inventory (warehouse_id, crop_id, grade);
+
+CREATE OR REPLACE FUNCTION refresh_warehouse_consolidated_inventory() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse_consolidated_inventory;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trg_refresh_warehouse_consolidated_inventory
+AFTER INSERT OR UPDATE OR DELETE ON inventory_batches
+FOR EACH STATEMENT EXECUTE FUNCTION refresh_warehouse_consolidated_inventory();
 
 -- +migrate Down
 

@@ -24,6 +24,7 @@
     "rbac:check": "tsx scripts/check-rbac-drift.ts",
     "spec:lint": "spectral lint docs/openapi.yaml --fail-severity=error",
     "spec:drift": "tsx scripts/check-spec-drift.ts",
+    "test:contract": "tsx scripts/check-contract-drift.ts",
     "new:module": "tsx scripts/new-module.ts"
   },
   "devDependencies": {

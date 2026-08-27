@@ -9,6 +9,7 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { logger } from '../logger.js';
+import { captureException } from '../sentry.js';
 import { AppError, internalProblem } from './problem.js';
 
 export const PROBLEM_CONTENT_TYPE = 'application/problem+json';
@@ -39,6 +40,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     const problem = error.toProblem(instance);
     if (error.status >= 500) {
       logger.error({ err: error, code: error.code, path: instance }, 'request failed');
+      captureException(error, { path: instance, traceId: req.traceId });
     } else {
       logger.warn({ code: error.code, path: instance, detail: error.detail }, 'request rejected');
     }
@@ -48,6 +50,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
 
   // Anything else is a bug. Log everything, tell the client nothing.
   logger.error({ err: error, path: instance }, 'unhandled error');
+  captureException(error, { path: instance, traceId: req.traceId });
   res.status(500).type(PROBLEM_CONTENT_TYPE).json(internalProblem(instance));
 };
 

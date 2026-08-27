@@ -27,6 +27,7 @@ import { adminFarmerApplicationsRouter, farmerApplicationsRouter } from './modul
 import { certificationsAdminRouter, certificationsFarmerRouter } from './modules/certifications/certifications.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { fairPricesRouter, retailPricesRouter } from './modules/pricing/pricing.routes.js';
+import { listingsRouter } from './modules/listings/listings.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -99,6 +100,7 @@ export function createApp(): Express {
   app.use('/v1/notifications', notificationsRouter);
   app.use('/v1/fair-prices', fairPricesRouter);
   app.use('/v1/retail-prices', retailPricesRouter);
+  app.use('/v1/listings', listingsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

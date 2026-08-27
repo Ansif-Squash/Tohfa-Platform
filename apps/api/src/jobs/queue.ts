@@ -17,7 +17,7 @@ export const QUEUE_NAME = 'tohfa';
 export interface JobPayloads {
   /** Flags farm certificates that expire soon / have expired. */
   'certificate-expiry-sweep': { horizonDays: number };
-  // TODO(STORY-LIST-06): 'counter-offer-expiry-sweep': { }
+  'counter-offer-expiry-sweep': { description: 'Sweeps expired counter offers and lapses them', defaultPayload: {}, repeat: { pattern: '*/5 * * * *', tz: 'UTC' } },
   // TODO(STORY-ORD-11): 'cart-lock-reaper': { }
   // TODO(STORY-FIN-09): 'payout-settlement-poll': { }
 }
