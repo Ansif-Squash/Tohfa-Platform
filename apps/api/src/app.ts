@@ -22,6 +22,7 @@ import { logger, newTraceId, runWithContext } from './logger.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { warehousesRouter } from './modules/_example/warehouses.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { listingsRouter } from './modules/listings/listings.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import { adminFarmerApplicationsRouter, farmerApplicationsRouter } from './modules/farmer-applications/farmer-applications.routes.js';
 import { certificationsAdminRouter, certificationsFarmerRouter } from './modules/certifications/certifications.routes.js';
@@ -51,6 +52,7 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/notifications', router: notificationsRouter },
   { prefix: '/v1/fair-prices', router: fairPricesRouter },
   { prefix: '/v1/retail-prices', router: retailPricesRouter },
+  { prefix: '/v1/listings', router: listingsRouter },
 ];
 
 /**
