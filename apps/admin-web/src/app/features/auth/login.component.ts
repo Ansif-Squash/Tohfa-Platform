@@ -189,8 +189,9 @@ export class LoginComponent {
         this.router.navigate(['/farmer-applications']);
       }
     } catch (err: unknown) {
+      const e = err as { problem?: { detail?: string }; error?: { detail?: string }; message?: string };
       this.errorMessage.set(
-        (err as { message?: string })?.message ?? 'Invalid credentials. Please try again.',
+        e.problem?.detail ?? e.error?.detail ?? e.message ?? 'Invalid credentials. Please try again.',
       );
     } finally {
       this.loading.set(false);
@@ -205,8 +206,9 @@ export class LoginComponent {
       await this.auth.login(this.mobile, this.password, role);
       this.router.navigate(['/farmer-applications']);
     } catch (err: unknown) {
+      const e = err as { problem?: { detail?: string }; error?: { detail?: string }; message?: string };
       this.errorMessage.set(
-        (err as { message?: string })?.message ?? 'Failed to log in with selected role.',
+        e.problem?.detail ?? e.error?.detail ?? e.message ?? 'Failed to select role. Please try again.',
       );
     } finally {
       this.loading.set(false);

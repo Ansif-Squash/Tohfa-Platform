@@ -55,6 +55,13 @@ export const routes: Routes = [
   },
 
   {
+    path: 'pricing',
+    canActivate: [permissionGuard('pricing.fair_price.view')],
+    loadComponent: async () =>
+      (await import('./features/pricing/pricing-shell.component')).PricingShellComponent,
+  },
+
+  {
     path: 'forbidden',
     loadComponent: async () =>
       (await import('./layout/shell.component')).ForbiddenComponent,
