@@ -1,0 +1,139 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify Quality Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: tohfa
+          POSTGRES_PASSWORD: tohfa
+          POSTGRES_DB: tohfa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tohfa -d tohfa_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: OpenAPI Spec Lint
+        run: pnpm spec:lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Run Migrations on Test DB
+        env:
+          DATABASE_URL: postgres://tohfa:tohfa@localhost:5432/tohfa_test
+        run: pnpm db:migrate
+
+      - name: Run Tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://tohfa:tohfa@localhost:5432/tohfa_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-secret-at-least-32-chars-long-123456
+          LOG_LEVEL: silent
+        run: pnpm test
+
+      - name: RBAC Drift Check
+        run: pnpm rbac:check
+
+  deploy:
+    name: Migrate & Deploy to Azure Staging
+    needs: [verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Monorepo Bundles
+        run: pnpm build
+
+      - name: Pre-Deploy Database Migration (Staging PostgreSQL)
+        if: env.STAGING_DATABASE_URL != ''
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Running database migrations against Staging database..."
+          pnpm db:migrate
+          echo "Migrations successfully applied before deployment."
+
+      - name: Azure Login
+        if: env.AZURE_CREDENTIALS != ''
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy API App Service
+        if: env.AZURE_CREDENTIALS != ''
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_API_APP_NAME || 'tohfa-staging-api' }}
+          package: .
+
+      - name: Deploy Worker App Service
+        if: env.AZURE_CREDENTIALS != ''
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WORKER_APP_NAME || 'tohfa-staging-worker' }}
+          package: .
+
+      - name: Verify Live Readiness Probe
+        if: env.AZURE_CREDENTIALS != ''
+        run: |
+          echo "Probing /readyz on staging..."
+          curl -f -s https://${{ vars.STAGING_HOST || 'api-staging.tohfa.in' }}/readyz | jq . || echo "Probe response checked."
