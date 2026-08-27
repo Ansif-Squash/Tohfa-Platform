@@ -10,12 +10,14 @@ import { closePool, pool, withTransaction } from '../db/pool.js';
 import { logger, newTraceId, runWithContext } from '../logger.js';
 import { closeRedis, queueRedis } from '../redis.js';
 import {
+  JOB_TRACE_FIELD,
   QUEUE_NAME,
   closeQueue,
   registerRepeatableJobs,
   type JobName,
   type JobPayloads,
 } from './queue.js';
+import { initSentry, reportError } from '../obs/sentry.js';
 
 import { certificationsRepo } from '../modules/certifications/certifications.repo.js';
 
@@ -97,6 +99,9 @@ const HANDLERS: { [N in JobName]: Handler<N> } = {
   'certificate-expiry-sweep': certificateExpirySweep,
 };
 
+// Start Sentry before any job can fail so worker errors are reportable.
+initSentry();
+
 async function dispatch(job: Job): Promise<void> {
   const name = job.name as JobName;
   const handler = HANDLERS[name] as ((payload: unknown, job: Job) => Promise<void>) | undefined;
@@ -107,21 +112,36 @@ async function dispatch(job: Job): Promise<void> {
     throw new Error(`No handler registered for job "${job.name}"`);
   }
 
-  await handler(job.data, job);
+  // Strip the reserved tracing field so handlers only ever see their payload.
+  const data = { ...(job.data as Record<string, unknown>) };
+  delete data[JOB_TRACE_FIELD];
+  await handler(data, job);
 }
 
 export const worker = new Worker(
   QUEUE_NAME,
-  async (job: Job) =>
-    runWithContext({ traceId: newTraceId() }, async () => {
+  async (job: Job) => {
+    // Re-establish the correlation context carried from the enqueueing request
+    // (or start a fresh one for repeatable/scheduled work). Every log line the
+    // job emits then carries the same traceId that returned to the client.
+    const carried = (job.data as Record<string, unknown>)[JOB_TRACE_FIELD];
+    const traceId = typeof carried === 'string' && carried.length > 0 ? carried : newTraceId();
+
+    await runWithContext({ traceId }, async () => {
       const startedAt = Date.now();
       logger.info({ job: job.name, jobId: job.id }, 'job started');
-      await dispatch(job);
-      logger.info(
-        { job: job.name, jobId: job.id, ms: Date.now() - startedAt },
-        'job completed',
-      );
-    }),
+      try {
+        await dispatch(job);
+        logger.info(
+          { job: job.name, jobId: job.id, ms: Date.now() - startedAt },
+          'job completed',
+        );
+      } catch (error) {
+        reportError({ error, tags: { job: job.name, env: 'worker' } });
+        throw error;
+      }
+    });
+  },
   { connection: queueRedis, concurrency: 4 },
 );
 

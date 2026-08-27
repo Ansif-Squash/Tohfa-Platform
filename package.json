@@ -17,6 +17,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yaml,yml,css,html}\"",
     "test": "pnpm --filter @tohfa/api test",
     "test:e2e": "pnpm --filter @tohfa/api test:e2e",
+    "test:contract": "pnpm --filter @tohfa/api test:contract",
     "db:migrate": "pnpm --filter @tohfa/api db:migrate",
     "db:rollback": "pnpm --filter @tohfa/api db:rollback",
     "db:seed": "pnpm --filter @tohfa/api db:seed",

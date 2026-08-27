@@ -3,6 +3,7 @@ import { requireActor, requireAuth } from '../../auth/requireAuth.js';
 import { asyncHandler } from '../../http/asyncHandler.js';
 import { getValidated, validate } from '../../http/validate.js';
 import { requirePermission } from '../../rbac/requirePermission.js';
+import { authRateLimit } from '../../rate-limit/rateLimiter.js';
 import {
   forgotPasswordBody,
   loginBody,
@@ -20,6 +21,7 @@ export const authRouter: Router = Router();
 authRouter.post(
   '/register/customer',
   validate({ body: registerCustomerBody }),
+  authRateLimit(),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', registerCustomerBody);
     const result = await authService.registerCustomer(body);
@@ -30,6 +32,7 @@ authRouter.post(
 authRouter.post(
   '/otp/send',
   validate({ body: sendOtpBody }),
+  authRateLimit(),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', sendOtpBody);
     const result = await authService.sendOtp(body);
@@ -40,6 +43,7 @@ authRouter.post(
 authRouter.post(
   '/otp/verify',
   validate({ body: verifyOtpBody }),
+  authRateLimit(),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', verifyOtpBody);
     const result = await authService.verifyOtp(body, req.ip, req.headers['user-agent']);
@@ -50,6 +54,7 @@ authRouter.post(
 authRouter.post(
   '/login',
   validate({ body: loginBody }),
+  authRateLimit(),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', loginBody);
     const result = await authService.login(body, req.ip, req.headers['user-agent']);
@@ -81,6 +86,7 @@ authRouter.post(
 authRouter.post(
   '/forgot-password',
   validate({ body: forgotPasswordBody }),
+  authRateLimit(),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', forgotPasswordBody);
     const result = await authService.forgotPassword(body);
@@ -91,6 +97,7 @@ authRouter.post(
 authRouter.post(
   '/reset-password',
   validate({ body: resetPasswordBody }),
+  authRateLimit(),
   asyncHandler(async (req, res) => {
     const body = getValidated(req, 'body', resetPasswordBody);
     await authService.resetPassword(body);

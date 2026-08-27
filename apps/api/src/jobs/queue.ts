@@ -10,8 +10,17 @@
  */
 import { Queue, type JobsOptions, type RepeatOptions } from 'bullmq';
 import { queueRedis } from '../redis.js';
+import { currentTraceId } from '../logger.js';
 
 export const QUEUE_NAME = 'tohfa';
+
+/**
+ * Reserved field on every job payload that carries the requesting correlation
+ * id. `enqueue` copies the ambient traceId onto the job so the worker can
+ * re-establish the same logging context, letting a job log line be traced back
+ * to the request that queued it (S-20).
+ */
+export const JOB_TRACE_FIELD = 'correlationId';
 
 /** Payload shape for every named job. Extend this, never use `any`. */
 export interface JobPayloads {
@@ -66,7 +75,11 @@ export async function enqueue<N extends JobName>(
   payload: JobPayloads[N],
   options: JobsOptions = {},
 ): Promise<void> {
-  await jobQueue.add(name, payload, options);
+  // Carry the requesting correlation id so the worker can re-establish the
+  // same logging context for the whole job run.
+  const traceId = currentTraceId();
+  const data = traceId === undefined ? payload : { ...payload, [JOB_TRACE_FIELD]: traceId };
+  await jobQueue.add(name, data, options);
 }
 
 /** Register (or refresh) every repeatable job. Called by the worker at boot. */
