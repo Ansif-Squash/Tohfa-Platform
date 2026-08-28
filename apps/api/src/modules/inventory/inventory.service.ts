@@ -23,6 +23,7 @@ import type {
   RecordMovementInput,
   StockLedgerEntryView,
 } from './inventory.schema.js';
+import { allocationsService } from '../allocations/allocations.service.js';
 
 export type TransactionRunner = <T>(fn: (tx: Executor) => Promise<T>) => Promise<T>;
 
@@ -51,14 +52,21 @@ export class InventoryService {
         batchId: batchRow.id,
         warehouseId: batchRow.warehouse_id,
         movementType: 'RECEIPT',
-        qtyDeltaKg: input.qtyReceivedKg,
-        refType: input.goodsReceiptId ? 'goods_receipt' : null,
-        refId: input.goodsReceiptId ?? null,
-        remarks: 'Batch intake from accepted goods receipt',
-        performedBy: actor.userId,
       });
 
-      // 3. Write audit log in the same transaction
+      // 3. Allocate the batch across channels (70/10/10/10 split)
+      await allocationsService.allocateBatch(
+        {
+          batchId: batchRow.id,
+          warehouseId: batchRow.warehouse_id,
+          cropId: batchRow.crop_id,
+          qtyReceivedKg: input.qtyReceivedKg,
+          receivedOn: input.receivedOn,
+        },
+        client,
+      );
+
+      // 4. Write audit log in the same transaction
       await writeAuditLog(client, {
         actorId: actor.userId,
         actorRole: scope.roleCode,
