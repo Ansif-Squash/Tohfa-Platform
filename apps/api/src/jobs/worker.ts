@@ -10,14 +10,17 @@ import { closePool, pool, withTransaction } from '../db/pool.js';
 import { logger, newTraceId, runWithContext } from '../logger.js';
 import { closeRedis, queueRedis } from '../redis.js';
 import {
+  JOB_TRACE_FIELD,
   QUEUE_NAME,
   closeQueue,
   registerRepeatableJobs,
   type JobName,
   type JobPayloads,
 } from './queue.js';
+import { initSentry, reportError } from '../obs/sentry.js';
 
 import { certificationsRepo } from '../modules/certifications/certifications.repo.js';
+import { counterOffersService } from '../modules/listings/counter-offers.service.js';
 
 type Handler<N extends JobName> = (payload: JobPayloads[N], job: Job) => Promise<void>;
 
@@ -93,9 +96,65 @@ export const certificateExpirySweep: Handler<'certificate-expiry-sweep'> = async
   }
 };
 
+export const counterOfferExpirySweep: Handler<'counter-offer-expiry-sweep'> = async (
+  payload,
+) => {
+  logger.info({ batchSize: payload.batchSize }, 'counter-offer-expiry-sweep: starting');
+
+  const runResult = await pool.query<{ id: string }>(
+    `INSERT INTO job_runs (job_name, status, started_at)
+     VALUES ('counter-offer-expiry-sweep', 'RUNNING', now())
+     RETURNING id`,
+  );
+  const runId = runResult.rows[0]?.id;
+
+  try {
+    const result = await counterOffersService.sweepExpiredOffers();
+
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'SUCCEEDED',
+                finished_at = now(),
+                items_scanned = $2,
+                items_processed = $3,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, result.scanned, result.offersLapsed],
+      );
+    }
+
+    logger.info(
+      {
+        scanned: result.scanned,
+        offersLapsed: result.offersLapsed,
+        listingsReverted: result.listingsReverted,
+      },
+      'counter-offer-expiry-sweep: completed',
+    );
+  } catch (error) {
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'FAILED',
+                finished_at = now(),
+                error = $2,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, (error as Error).message],
+      );
+    }
+    throw error;
+  }
+};
+
 const HANDLERS: { [N in JobName]: Handler<N> } = {
   'certificate-expiry-sweep': certificateExpirySweep,
+  'counter-offer-expiry-sweep': counterOfferExpirySweep,
 };
+
+// Start Sentry before any job can fail so worker errors are reportable.
+initSentry();
 
 async function dispatch(job: Job): Promise<void> {
   const name = job.name as JobName;
@@ -107,21 +166,36 @@ async function dispatch(job: Job): Promise<void> {
     throw new Error(`No handler registered for job "${job.name}"`);
   }
 
-  await handler(job.data, job);
+  // Strip the reserved tracing field so handlers only ever see their payload.
+  const data = { ...(job.data as Record<string, unknown>) };
+  delete data[JOB_TRACE_FIELD];
+  await handler(data, job);
 }
 
 export const worker = new Worker(
   QUEUE_NAME,
-  async (job: Job) =>
-    runWithContext({ traceId: newTraceId() }, async () => {
+  async (job: Job) => {
+    // Re-establish the correlation context carried from the enqueueing request
+    // (or start a fresh one for repeatable/scheduled work). Every log line the
+    // job emits then carries the same traceId that returned to the client.
+    const carried = (job.data as Record<string, unknown>)[JOB_TRACE_FIELD];
+    const traceId = typeof carried === 'string' && carried.length > 0 ? carried : newTraceId();
+
+    await runWithContext({ traceId }, async () => {
       const startedAt = Date.now();
       logger.info({ job: job.name, jobId: job.id }, 'job started');
-      await dispatch(job);
-      logger.info(
-        { job: job.name, jobId: job.id, ms: Date.now() - startedAt },
-        'job completed',
-      );
-    }),
+      try {
+        await dispatch(job);
+        logger.info(
+          { job: job.name, jobId: job.id, ms: Date.now() - startedAt },
+          'job completed',
+        );
+      } catch (error) {
+        reportError({ error, tags: { job: job.name, env: 'worker' } });
+        throw error;
+      }
+    });
+  },
   { connection: queueRedis, concurrency: 4 },
 );
 

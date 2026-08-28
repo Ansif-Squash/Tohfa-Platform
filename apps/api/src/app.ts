@@ -14,7 +14,7 @@
  * supertest and `server.ts` owns the socket.
  */
 import cors from 'cors';
-import express, { type Express, type RequestHandler } from 'express';
+import express, { type Express, type RequestHandler, type Router } from 'express';
 import helmet from 'helmet';
 import { config } from './config.js';
 import { errorHandler, notFoundHandler } from './http/errorHandler.js';
@@ -22,6 +22,7 @@ import { logger, newTraceId, runWithContext } from './logger.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { warehousesRouter } from './modules/_example/warehouses.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { listingsRouter } from './modules/listings/listings.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import { adminFarmerApplicationsRouter, farmerApplicationsRouter } from './modules/farmer-applications/farmer-applications.routes.js';
 import { certificationsAdminRouter, certificationsFarmerRouter } from './modules/certifications/certifications.routes.js';
@@ -124,17 +125,10 @@ export function createApp(): Express {
   // Probes are unversioned: orchestrators should not care about the API version.
   app.use(healthRouter);
 
-  // REFERENCE: every module router mounts under /v1/<plural-noun>.
-  app.use('/v1/warehouses', warehousesRouter);
-  app.use('/v1/auth', authRouter);
-  app.use('/v1/uploads', uploadsRouter);
-  app.use('/v1/farmers', farmerApplicationsRouter);
-  app.use('/v1/farmers/me/certifications', certificationsFarmerRouter);
-  app.use('/v1/admin/farmer-applications', adminFarmerApplicationsRouter);
-  app.use('/v1/admin/certifications', certificationsAdminRouter);
-  app.use('/v1/notifications', notificationsRouter);
-  app.use('/v1/fair-prices', fairPricesRouter);
-  app.use('/v1/retail-prices', retailPricesRouter);
+  // Every business router, mounted from the same table the contract test reads.
+  for (const { prefix, router } of API_MOUNTS) {
+    app.use(prefix, router);
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -8,7 +8,9 @@
  */
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
+import { config } from '../config.js';
 import { logger } from '../logger.js';
+import { reportError } from '../obs/sentry.js';
 import { AppError, internalProblem } from './problem.js';
 
 export const PROBLEM_CONTENT_TYPE = 'application/problem+json';
@@ -39,6 +41,10 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     const problem = error.toProblem(instance);
     if (error.status >= 500) {
       logger.error({ err: error, code: error.code, path: instance }, 'request failed');
+      reportError({
+        error,
+        tags: { code: error.code, env: config.NODE_ENV, path: stripQuery(instance) },
+      });
     } else {
       logger.warn({ code: error.code, path: instance, detail: error.detail }, 'request rejected');
     }
@@ -48,8 +54,15 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
 
   // Anything else is a bug. Log everything, tell the client nothing.
   logger.error({ err: error, path: instance }, 'unhandled error');
+  reportError({ error, tags: { env: config.NODE_ENV, path: stripQuery(instance) } });
   res.status(500).type(PROBLEM_CONTENT_TYPE).json(internalProblem(instance));
 };
+
+/** Drop the query string so Sentry groups by route, not by attacker-controlled params. */
+function stripQuery(path: string): string {
+  const q = path.indexOf('?');
+  return q === -1 ? path : path.slice(0, q);
+}
 
 /** Flatten a ZodError into the `errors` map of a VALIDATION_FAILED problem. */
 export function zodToAppError(error: ZodError): AppError {

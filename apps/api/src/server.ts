@@ -7,12 +7,16 @@ import { createApp } from './app.js';
 import { config } from './config.js';
 import { closePool } from './db/pool.js';
 import { logger } from './logger.js';
+import { initSentry, reportError } from './obs/sentry.js';
 import { closeRedis } from './redis.js';
 import { loadRbac } from './rbac/loadRbac.js';
 
 // Load and validate docs/rbac.json before accepting traffic: a malformed
 // permission matrix must stop the deploy, not fail the first request.
 const rbac = loadRbac();
+
+// Start Sentry before the app so the first request is already reportable.
+initSentry();
 
 const app = createApp();
 
@@ -61,6 +65,7 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 
 process.on('unhandledRejection', (reason) => {
   logger.error({ err: reason }, 'unhandled promise rejection');
+  reportError({ error: reason, tags: { source: 'unhandledRejection', env: config.NODE_ENV } });
 });
 
 export { app, server };

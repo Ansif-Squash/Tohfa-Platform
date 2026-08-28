@@ -10,14 +10,27 @@
  */
 import { Queue, type JobsOptions, type RepeatOptions } from 'bullmq';
 import { queueRedis } from '../redis.js';
+import { currentTraceId } from '../logger.js';
 
 export const QUEUE_NAME = 'tohfa';
+
+/**
+ * Reserved field on every job payload that carries the requesting correlation
+ * id. `enqueue` copies the ambient traceId onto the job so the worker can
+ * re-establish the same logging context, letting a job log line be traced back
+ * to the request that queued it (S-20).
+ */
+export const JOB_TRACE_FIELD = 'correlationId';
 
 /** Payload shape for every named job. Extend this, never use `any`. */
 export interface JobPayloads {
   /** Flags farm certificates that expire soon / have expired. */
   'certificate-expiry-sweep': { horizonDays: number };
-  // TODO(STORY-LIST-06): 'counter-offer-expiry-sweep': { }
+  /**
+   * BR-10b: lapses counter-offers past their window and returns their listings
+   * to the admin queue. idempotent by construction (guarded PENDING update).
+   */
+  'counter-offer-expiry-sweep': { batchSize: number };
   // TODO(STORY-ORD-11): 'cart-lock-reaper': { }
   // TODO(STORY-FIN-09): 'payout-settlement-poll': { }
 }
@@ -46,6 +59,14 @@ export const JOB_REGISTRY: { [N in JobName]: JobDefinition<N> } = {
     // 02:15 IST every day — off-peak for the warehouses.
     repeat: { pattern: '15 2 * * *', tz: 'Asia/Kolkata' },
   },
+  'counter-offer-expiry-sweep': {
+    name: 'counter-offer-expiry-sweep',
+    description:
+      'BR-10b: lapses unanswered counter-offers past their 24h window and returns their listings to the admin queue. Idempotent.',
+    defaultPayload: { batchSize: 500 },
+    // Every 15 minutes — a lapsed offer must stop blocking a listing promptly.
+    repeat: { pattern: '*/15 * * * *', tz: 'Asia/Kolkata' },
+  },
 };
 
 export const defaultJobOptions: JobsOptions = {
@@ -66,7 +87,11 @@ export async function enqueue<N extends JobName>(
   payload: JobPayloads[N],
   options: JobsOptions = {},
 ): Promise<void> {
-  await jobQueue.add(name, payload, options);
+  // Carry the requesting correlation id so the worker can re-establish the
+  // same logging context for the whole job run.
+  const traceId = currentTraceId();
+  const data = traceId === undefined ? payload : { ...payload, [JOB_TRACE_FIELD]: traceId };
+  await jobQueue.add(name, data, options);
 }
 
 /** Register (or refresh) every repeatable job. Called by the worker at boot. */
