@@ -27,8 +27,44 @@ import { adminFarmerApplicationsRouter, farmerApplicationsRouter } from './modul
 import { certificationsAdminRouter, certificationsFarmerRouter } from './modules/certifications/certifications.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { fairPricesRouter, retailPricesRouter } from './modules/pricing/pricing.routes.js';
+import {
+  adminListingsRouter,
+  farmerCounterOffersRouter,
+} from './modules/listings/counter-offers.routes.js';
+import {
+  adminBatchesRouter,
+  adminStockLedgerRouter,
+} from './modules/inventory/inventory.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
+
+/**
+ * Every router the API exposes, with the path prefix it is mounted under.
+ *
+ * This is the single source of truth BOTH for `createApp()` (traffic) and for
+ * the S-20 contract test (`apps/api/src/contract/contract.test.ts`), which
+ * enumerates these routers to prove the live surface matches docs/openapi.yaml.
+ */
+export const API_MOUNTS: ReadonlyArray<{
+  prefix: string;
+  router: Router;
+}> = [
+  { prefix: '/v1/warehouses', router: warehousesRouter },
+  { prefix: '/v1/auth', router: authRouter },
+  { prefix: '/v1/uploads', router: uploadsRouter },
+  { prefix: '/v1/farmers', router: farmerApplicationsRouter },
+  { prefix: '/v1/farmers/me/certifications', router: certificationsFarmerRouter },
+  { prefix: '/v1/admin/farmer-applications', router: adminFarmerApplicationsRouter },
+  { prefix: '/v1/admin/certifications', router: certificationsAdminRouter },
+  { prefix: '/v1/notifications', router: notificationsRouter },
+  { prefix: '/v1/fair-prices', router: fairPricesRouter },
+  { prefix: '/v1/retail-prices', router: retailPricesRouter },
+  { prefix: '/v1/listings', router: listingsRouter },
+  { prefix: '/v1/listings', router: farmerCounterOffersRouter },
+  { prefix: '/v1/admin/listings', router: adminListingsRouter },
+  { prefix: '/v1/admin/batches', router: adminBatchesRouter },
+  { prefix: '/v1/admin/stock-ledger', router: adminStockLedgerRouter },
+];
 
 /**
  * Establishes the async-local logging context for the request. A client-supplied
