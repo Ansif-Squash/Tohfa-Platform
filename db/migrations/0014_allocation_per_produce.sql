@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0011_allocation_per_produce.sql
+-- 0014_allocation_per_produce.sql
 -- S-27: Per-produce allocation overrides (BR-12)
 -- Adds nullable crop_id to allocation_config, updates uniqueness indexes,
 -- and widens the sum guard trigger to check SUM(percentage) = 100 per crop_id.

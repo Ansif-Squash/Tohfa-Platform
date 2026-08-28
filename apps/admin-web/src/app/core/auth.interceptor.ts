@@ -13,7 +13,7 @@ import {
   type HttpInterceptorFn,
   type HttpRequest,
 } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, filter, switchMap, take, throwError, type Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -24,33 +24,41 @@ const REFRESH_TOKEN_KEY = 'tohfa.refreshToken';
 
 @Injectable({ providedIn: 'root' })
 export class TokenStore {
-  private token: string | null = null;
-  private refreshToken: string | null = null;
+  private readonly tokenSignal = signal<string | null>(
+    typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(ACCESS_TOKEN_KEY) : null,
+  );
+  private readonly refreshTokenSignal = signal<string | null>(
+    typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(REFRESH_TOKEN_KEY) : null,
+  );
 
   get(): string | null {
-    this.token ??= sessionStorage.getItem(ACCESS_TOKEN_KEY);
-    return this.token;
+    return this.tokenSignal();
   }
 
   getRefresh(): string | null {
-    this.refreshToken ??= sessionStorage.getItem(REFRESH_TOKEN_KEY);
-    return this.refreshToken;
+    return this.refreshTokenSignal();
   }
 
   set(token: string, refreshToken?: string): void {
-    this.token = token;
-    sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+    this.tokenSignal.set(token);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+    }
     if (refreshToken !== undefined) {
-      this.refreshToken = refreshToken;
-      sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      this.refreshTokenSignal.set(refreshToken);
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      }
     }
   }
 
   clear(): void {
-    this.token = null;
-    this.refreshToken = null;
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    this.tokenSignal.set(null);
+    this.refreshTokenSignal.set(null);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+      sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    }
   }
 }
 

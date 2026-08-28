@@ -170,7 +170,7 @@ INSERT INTO allocation_config (channel, percentage, effective_from) VALUES
     ('LIVE_MARKET', 10.00, DATE '2025-01-01'),
     ('RESERVE',     10.00, DATE '2025-01-01'),
     ('BUFFER',      10.00, DATE '2025-01-01')
-ON CONFLICT (channel, effective_from) DO UPDATE SET
+ON CONFLICT (channel, effective_from) WHERE crop_id IS NULL DO UPDATE SET
     percentage = EXCLUDED.percentage,
     updated_at = now();
 

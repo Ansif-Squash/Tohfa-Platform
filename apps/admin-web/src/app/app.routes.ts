@@ -12,7 +12,7 @@ export const NAV: readonly NavRoute[] = [
   { path: 'farmer-applications', label: 'Farmer Applications', permission: 'farmer.application.list_pending' },
   { path: 'warehouses', label: 'Warehouses', permission: 'warehouse.all.view' },
   { path: 'pricing', label: 'Fair Price', permission: 'pricing.fair_price.view' },
-  { path: 'listings', label: 'Listings', permission: 'listing.approve' },
+  { path: 'listings', label: 'Listings', permission: 'listing.queue.view_pending' },
   { path: 'goods-receipts', label: 'Goods Receipts', permission: 'inventory.goods_receipt.record' },
 ];
 

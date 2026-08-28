@@ -6,11 +6,12 @@
  */
 import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
+import { NAV } from '../app.routes';
 import { AuthService } from './auth.service';
 import { RbacService } from './rbac.service';
 
 export function permissionGuard(permissionCode: string): CanActivateFn {
-  return () => {
+  return (route) => {
     const auth = inject(AuthService);
     const rbac = inject(RbacService);
     const router = inject(Router);
@@ -20,6 +21,14 @@ export function permissionGuard(permissionCode: string): CanActivateFn {
     }
 
     if (rbac.can(permissionCode)) return true;
+
+    // If attempting to access default route but lack permission, forward to first accessible route
+    if (route.routeConfig?.path === 'farmer-applications') {
+      const target = rbac.firstAllowedPath(NAV);
+      if (target !== '/farmer-applications') {
+        return router.createUrlTree([target]);
+      }
+    }
 
     return router.createUrlTree(['/forbidden'], {
       queryParams: { permission: permissionCode },
@@ -49,10 +58,12 @@ export function mutationGuard(permissionCode: string): CanActivateFn {
 /** Guard for public/auth screens: redirects already-authenticated users to dashboard. */
 export const guestGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
+  const rbac = inject(RbacService);
   const router = inject(Router);
 
   if (auth.isAuthenticated()) {
-    return router.createUrlTree(['/farmer-applications']);
+    const target = rbac.firstAllowedPath(NAV);
+    return router.createUrlTree([target]);
   }
   return true;
 };
