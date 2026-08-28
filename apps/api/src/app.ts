@@ -34,6 +34,10 @@ import {
 } from './modules/listings/counter-offers.routes.js';
 import { purchaseOrdersRouter } from './modules/purchase-orders/purchase-orders.routes.js';
 import { goodsReceiptsRouter } from './modules/goods-receipts/goods-receipts.routes.js';
+import {
+  adminAllocationsRouter,
+  adminAllocationConfigRouter,
+} from './modules/allocations/allocations.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -63,6 +67,8 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/admin/listings', router: adminListingsRouter },
   { prefix: '/v1/admin/purchase-orders', router: purchaseOrdersRouter },
   { prefix: '/v1/admin/goods-receipts', router: goodsReceiptsRouter },
+  { prefix: '/v1/admin/allocations', router: adminAllocationsRouter },
+  { prefix: '/v1/admin/allocation-config', router: adminAllocationConfigRouter },
 ];
 
 /**
