@@ -3540,8 +3540,8 @@ components:
 
     CounterOfferStatus:
       type: string
-      enum: [PENDING, ACCEPTED, REJECTED, COUNTERED, EXPIRED]
-      description: A `PENDING` offer becomes `EXPIRED` automatically 24 hours after creation (BR-10).
+      enum: [PENDING, ACCEPTED, REJECTED, COUNTERED, LAPSED]
+      description: A `PENDING` offer becomes `LAPSED` automatically 24 hours after creation (BR-10); a lapse is neither an acceptance nor a rejection.
 
     ApplicationStatus:
       type: string
@@ -3997,7 +3997,7 @@ components:
         id: { type: string, format: uuid }
         listingId: { type: [string, 'null'], format: uuid }
         goodsReceiptId: { type: [string, 'null'], format: uuid }
-        round: { type: integer, minimum: 1, maximum: 3 }
+        round: { type: integer, minimum: 1, maximum: 4 }
         offeredBy: { type: string, enum: [ADMIN, FARMER] }
         offeredByUserId: { type: [string, 'null'], format: uuid }
         pricePerKg: { $ref: '#/components/schemas/Money' }

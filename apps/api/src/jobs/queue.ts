@@ -26,7 +26,11 @@ export const JOB_TRACE_FIELD = 'correlationId';
 export interface JobPayloads {
   /** Flags farm certificates that expire soon / have expired. */
   'certificate-expiry-sweep': { horizonDays: number };
-  // TODO(STORY-LIST-06): 'counter-offer-expiry-sweep': { }
+  /**
+   * BR-10b: lapses counter-offers past their window and returns their listings
+   * to the admin queue. idempotent by construction (guarded PENDING update).
+   */
+  'counter-offer-expiry-sweep': { batchSize: number };
   // TODO(STORY-ORD-11): 'cart-lock-reaper': { }
   // TODO(STORY-FIN-09): 'payout-settlement-poll': { }
 }
@@ -54,6 +58,14 @@ export const JOB_REGISTRY: { [N in JobName]: JobDefinition<N> } = {
     defaultPayload: { horizonDays: 30 },
     // 02:15 IST every day — off-peak for the warehouses.
     repeat: { pattern: '15 2 * * *', tz: 'Asia/Kolkata' },
+  },
+  'counter-offer-expiry-sweep': {
+    name: 'counter-offer-expiry-sweep',
+    description:
+      'BR-10b: lapses unanswered counter-offers past their 24h window and returns their listings to the admin queue. Idempotent.',
+    defaultPayload: { batchSize: 500 },
+    // Every 15 minutes — a lapsed offer must stop blocking a listing promptly.
+    repeat: { pattern: '*/15 * * * *', tz: 'Asia/Kolkata' },
   },
 };
 

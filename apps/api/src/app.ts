@@ -28,6 +28,10 @@ import { adminFarmerApplicationsRouter, farmerApplicationsRouter } from './modul
 import { certificationsAdminRouter, certificationsFarmerRouter } from './modules/certifications/certifications.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { fairPricesRouter, retailPricesRouter } from './modules/pricing/pricing.routes.js';
+import {
+  adminListingsRouter,
+  farmerCounterOffersRouter,
+} from './modules/listings/counter-offers.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -53,6 +57,8 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/fair-prices', router: fairPricesRouter },
   { prefix: '/v1/retail-prices', router: retailPricesRouter },
   { prefix: '/v1/listings', router: listingsRouter },
+  { prefix: '/v1/listings', router: farmerCounterOffersRouter },
+  { prefix: '/v1/admin/listings', router: adminListingsRouter },
 ];
 
 /**
