@@ -45,3 +45,27 @@ export function mutationGuard(permissionCode: string): CanActivateFn {
     });
   };
 }
+
+/** Guard for public/auth screens: redirects already-authenticated users to dashboard. */
+export const guestGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isAuthenticated()) {
+    return router.createUrlTree(['/farmer-applications']);
+  }
+  return true;
+};
+
+/** Guard for authenticated routes: redirects unauthenticated users to /login. */
+export const authGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (!auth.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+  return true;
+};
+
+

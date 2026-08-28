@@ -1718,6 +1718,34 @@ paths:
         '500': { $ref: '#/components/responses/ServerError' }
 
   /admin/goods-receipts:
+    get:
+      tags: [Purchase]
+      operationId: listGoodsReceipts
+      summary: List goods receipts
+      description: Lists goods receipts with warehouse scoping (BR-30).
+      x-permission: inventory.goods_receipt.record
+      x-business-rules: [BR-30]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { type: string, enum: [AWAITING_QC, ACCEPTED, PARTIALLY_ACCEPTED, REJECTED, COUNTER_OFFERED] } }
+        - { name: purchaseOrderId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Paged goods receipts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/GoodsReceipt' } }
+                  page: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
     post:
       tags: [Purchase]
       operationId: createGoodsReceipt
@@ -1751,6 +1779,27 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/goods-receipts/{id}:
+    get:
+      tags: [Purchase]
+      operationId: getGoodsReceipt
+      summary: Get goods receipt detail
+      description: Returns goods receipt by ID with warehouse scoping (BR-30).
+      x-permission: inventory.goods_receipt.record
+      x-business-rules: [BR-30]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200':
+          description: Goods receipt details.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GoodsReceipt' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '500': { $ref: '#/components/responses/ServerError' }
 
   /admin/goods-receipts/{id}/quality-check:
@@ -4105,6 +4154,21 @@ components:
         priceAdjustment: { $ref: '#/components/schemas/Money' }
         checkedBy: { type: string, format: uuid }
         checkedAt: { type: string, format: date-time }
+
+    RejectedGoodsDisposal:
+      type: object
+      description: Record of disposal for rejected goods from quality check or intake.
+      required: [id, goodsReceiptId, warehouseId, quantityKg, disposalMethod, reason, disposedBy, disposedAt]
+      properties:
+        id: { type: string, format: uuid }
+        goodsReceiptId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        quantityKg: { $ref: '#/components/schemas/Quantity' }
+        disposalMethod: { type: string, enum: [COMPOST, DISCARD, RETURN_TO_FARMER, BIO_WASTE] }
+        reason: { type: string }
+        photos: { type: array, items: { type: string, format: uri } }
+        disposedBy: { type: string, format: uuid }
+        disposedAt: { type: string, format: date-time }
 
     Batch:
       type: object
