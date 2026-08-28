@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import type { RoleCode } from '@tohfa/shared-types';
@@ -163,7 +163,7 @@ import { AuthService } from '../../core/auth.service';
     </div>
   `,
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -173,6 +173,12 @@ export class LoginComponent {
   errorMessage = signal<string | null>(null);
   requiresRoleSelection = signal(false);
   availableRoles = signal<RoleCode[]>([]);
+
+  ngOnInit(): void {
+    if (this.auth.isAuthenticated()) {
+      this.router.navigate(['/farmer-applications']);
+    }
+  }
 
   async onSubmit(): Promise<void> {
     if (!this.mobile || !this.password) return;
@@ -186,7 +192,7 @@ export class LoginComponent {
         this.availableRoles.set(roles);
         this.requiresRoleSelection.set(true);
       } else {
-        this.router.navigate(['/farmer-applications']);
+        await this.router.navigate(['/farmer-applications']);
       }
     } catch (err: unknown) {
       const e = err as { problem?: { detail?: string }; error?: { detail?: string }; message?: string };
@@ -204,7 +210,7 @@ export class LoginComponent {
 
     try {
       await this.auth.login(this.mobile, this.password, role);
-      this.router.navigate(['/farmer-applications']);
+      await this.router.navigate(['/farmer-applications']);
     } catch (err: unknown) {
       const e = err as { problem?: { detail?: string }; error?: { detail?: string }; message?: string };
       this.errorMessage.set(
@@ -215,3 +221,4 @@ export class LoginComponent {
     }
   }
 }
+
