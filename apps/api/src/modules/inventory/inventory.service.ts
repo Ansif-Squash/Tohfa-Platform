@@ -62,7 +62,7 @@ export class InventoryService {
           warehouseId: batchRow.warehouse_id,
           cropId: batchRow.crop_id,
           qtyReceivedKg: input.qtyReceivedKg,
-          receivedOn: input.receivedOn,
+          ...(input.receivedOn ? { receivedOn: input.receivedOn } : {}),
         },
         client,
       );

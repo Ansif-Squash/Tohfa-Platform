@@ -23,7 +23,7 @@ adminAllocationsRouter.get(
     res.json(await allocationsService.listAllocations(scope, filters));
   }),
 );
-
+56
 adminAllocationConfigRouter.patch(
   '/',
   requireAuth,
