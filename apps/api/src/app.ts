@@ -32,10 +32,8 @@ import {
   adminListingsRouter,
   farmerCounterOffersRouter,
 } from './modules/listings/counter-offers.routes.js';
-import {
-  adminBatchesRouter,
-  adminStockLedgerRouter,
-} from './modules/inventory/inventory.routes.js';
+import { purchaseOrdersRouter } from './modules/purchase-orders/purchase-orders.routes.js';
+import { goodsReceiptsRouter } from './modules/goods-receipts/goods-receipts.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -63,8 +61,8 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/listings', router: listingsRouter },
   { prefix: '/v1/listings', router: farmerCounterOffersRouter },
   { prefix: '/v1/admin/listings', router: adminListingsRouter },
-  { prefix: '/v1/admin/batches', router: adminBatchesRouter },
-  { prefix: '/v1/admin/stock-ledger', router: adminStockLedgerRouter },
+  { prefix: '/v1/admin/purchase-orders', router: purchaseOrdersRouter },
+  { prefix: '/v1/admin/goods-receipts', router: goodsReceiptsRouter },
 ];
 
 /**
