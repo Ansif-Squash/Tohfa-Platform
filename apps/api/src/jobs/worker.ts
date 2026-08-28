@@ -20,6 +20,7 @@ import {
 import { initSentry, reportError } from '../obs/sentry.js';
 
 import { certificationsRepo } from '../modules/certifications/certifications.repo.js';
+import { counterOffersService } from '../modules/listings/counter-offers.service.js';
 
 type Handler<N extends JobName> = (payload: JobPayloads[N], job: Job) => Promise<void>;
 
@@ -95,8 +96,61 @@ export const certificateExpirySweep: Handler<'certificate-expiry-sweep'> = async
   }
 };
 
+export const counterOfferExpirySweep: Handler<'counter-offer-expiry-sweep'> = async (
+  payload,
+) => {
+  logger.info({ batchSize: payload.batchSize }, 'counter-offer-expiry-sweep: starting');
+
+  const runResult = await pool.query<{ id: string }>(
+    `INSERT INTO job_runs (job_name, status, started_at)
+     VALUES ('counter-offer-expiry-sweep', 'RUNNING', now())
+     RETURNING id`,
+  );
+  const runId = runResult.rows[0]?.id;
+
+  try {
+    const result = await counterOffersService.sweepExpiredOffers();
+
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'SUCCEEDED',
+                finished_at = now(),
+                items_scanned = $2,
+                items_processed = $3,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, result.scanned, result.offersLapsed],
+      );
+    }
+
+    logger.info(
+      {
+        scanned: result.scanned,
+        offersLapsed: result.offersLapsed,
+        listingsReverted: result.listingsReverted,
+      },
+      'counter-offer-expiry-sweep: completed',
+    );
+  } catch (error) {
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'FAILED',
+                finished_at = now(),
+                error = $2,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, (error as Error).message],
+      );
+    }
+    throw error;
+  }
+};
+
 const HANDLERS: { [N in JobName]: Handler<N> } = {
   'certificate-expiry-sweep': certificateExpirySweep,
+  'counter-offer-expiry-sweep': counterOfferExpirySweep,
 };
 
 // Start Sentry before any job can fail so worker errors are reportable.
