@@ -42,8 +42,12 @@ export class RbacService {
   /** Called once by APP_INITIALIZER (see app.config.ts). */
   async load(): Promise<void> {
     if (this.document() !== null) return;
-    const doc = await firstValueFrom(this.http.get<RbacDocument>('/assets/rbac.json'));
-    this.document.set(doc);
+    try {
+      const doc = await firstValueFrom(this.http.get<RbacDocument>('/assets/rbac.json'));
+      this.document.set(doc);
+    } catch (err) {
+      console.warn('Failed to load /assets/rbac.json', err);
+    }
   }
 
   /** Set after login, from the roles in the access token. */
@@ -53,6 +57,10 @@ export class RbacService {
 
   /** Highest scope the current roles hold for `permissionCode`. */
   scopeFor(permissionCode: string): ScopeLevel {
+    if (this.roles().includes('SUPER_ADMIN' as RoleCode)) {
+      return 'all';
+    }
+
     const doc = this.document();
     if (doc === null) return 'none';
 
@@ -89,5 +97,10 @@ export class RbacService {
   /** Brand colour for a role badge, straight from the matrix. */
   colorFor(role: RoleCode): string {
     return this.document()?.roles.find((entry) => entry.code === role)?.colorHex ?? '#0F6E56';
+  }
+
+  firstAllowedPath(routes: readonly { path: string; permission: string }[]): string {
+    const allowed = routes.find((r) => this.can(r.permission));
+    return allowed ? `/${allowed.path}` : '/farmer-applications';
   }
 }

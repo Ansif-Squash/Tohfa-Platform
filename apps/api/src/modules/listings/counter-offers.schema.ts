@@ -51,3 +51,15 @@ export type CounterOfferParams = z.infer<typeof counterOfferParams>;
 export const listingIdParams = z.object({
   id: z.string().uuid(),
 });
+
+/** GET /admin/listings — query parameters for the admin approval queue (S-22). */
+export const listAdminQueueQuery = z.object({
+  status: z
+    .enum(['PENDING_APPROVAL', 'COUNTER_OFFERED', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'])
+    .optional(),
+  cropId: z.string().uuid().optional(),
+  zoneId: z.string().uuid().optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+export type ListAdminQueueQuery = z.infer<typeof listAdminQueueQuery>;

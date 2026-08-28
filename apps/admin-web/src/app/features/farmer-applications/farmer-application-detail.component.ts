@@ -334,6 +334,10 @@ export class FarmerApplicationDetailComponent implements OnInit {
 
     this.service.getStatusTimeline(id).subscribe({
       next: (res) => this.timeline.set(res),
+      error: () => {
+        // Timeline is non-critical; if it fails the rest of the detail page still works
+        this.timeline.set(null);
+      },
     });
   }
 

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
   type OnDestroy,
@@ -428,7 +429,7 @@ type ModalMode = 'none' | 'approve' | 'counter' | 'reject';
               <div class="actions-cell" *ngIf="!item.routedAway">
                 <!-- Approve Button -->
                 <button
-                  *ngIf="canApprove && (item.status === 'PENDING_APPROVAL' || item.status === 'COUNTER_OFFERED')"
+                  *ngIf="canApprove() && (item.status === 'PENDING_APPROVAL' || item.status === 'COUNTER_OFFERED')"
                   class="btn btn-primary btn-sm"
                   (click)="openApproveModal(item)"
                 >
@@ -437,7 +438,7 @@ type ModalMode = 'none' | 'approve' | 'counter' | 'reject';
 
                 <!-- Counter-Offer Button -->
                 <button
-                  *ngIf="canCounter && (item.status === 'PENDING_APPROVAL' || item.status === 'COUNTER_OFFERED')"
+                  *ngIf="canCounter() && (item.status === 'PENDING_APPROVAL' || item.status === 'COUNTER_OFFERED')"
                   class="btn btn-secondary btn-sm"
                   [disabled]="item.counterRoundsUsed >= 3"
                   [title]="item.counterRoundsUsed >= 3 ? strings.ROUNDS_EXHAUSTED : ''"
@@ -448,7 +449,7 @@ type ModalMode = 'none' | 'approve' | 'counter' | 'reject';
 
                 <!-- Reject Button -->
                 <button
-                  *ngIf="canReject && (item.status === 'PENDING_APPROVAL' || item.status === 'COUNTER_OFFERED')"
+                  *ngIf="canReject() && (item.status === 'PENDING_APPROVAL' || item.status === 'COUNTER_OFFERED')"
                   class="btn btn-danger btn-sm"
                   (click)="openRejectModal(item)"
                 >
@@ -628,10 +629,10 @@ export class ListingsQueueComponent implements OnInit, OnDestroy {
 
   readonly strings = LISTINGS_STRINGS;
 
-  // RBAC permissions
-  readonly canApprove = this.rbac.can('listing.approve');
-  readonly canReject = this.rbac.can('listing.reject');
-  readonly canCounter = this.rbac.can('listing.counter_offer.send');
+  // RBAC permissions — computed so they react if the active role changes mid-session
+  readonly canApprove = computed(() => this.rbac.can('listing.approve'));
+  readonly canReject = computed(() => this.rbac.can('listing.reject'));
+  readonly canCounter = computed(() => this.rbac.can('listing.counter_offer.send'));
 
   // State signals
   readonly listings = signal<AdminListing[]>([]);
@@ -722,7 +723,9 @@ export class ListingsQueueComponent implements OnInit, OnDestroy {
   openApproveModal(listing: AdminListing): void {
     this.selectedListing.set(listing);
     this.approvePayload = {
-      warehouseId: this.warehouses()[0]?.id || '',
+      // Always start empty \u2014 forces the user to actively pick a warehouse.
+      // Avoids the race where warehouses haven't loaded yet and [0] is undefined.
+      warehouseId: '',
       expectedDeliveryDate: '',
       note: '',
     };

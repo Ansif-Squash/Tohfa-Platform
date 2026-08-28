@@ -15,6 +15,7 @@
  */
 import { writeAuditLog, type AuditEntry } from '../../audit/auditLog.js';
 import type { Executor } from '../../db/pool.js';
+import type { ListAdminQueueQuery } from './counter-offers.schema.js';
 
 export type CounterActor = 'ADMIN' | 'FARMER';
 
@@ -387,5 +388,177 @@ export const counterOffersRepo = {
    */
   async recordAudit(db: Executor, entry: AuditEntry): Promise<string> {
     return writeAuditLog(db, entry);
+  },
+
+  /**
+   * GET /admin/listings — paginated admin approval queue.
+   *
+   * Returns listings joined with crops and farmer names, with the active
+   * counter-offer (if any) embedded so the UI can render the countdown
+   * without a second fetch. Uses keyset pagination on (created_at, id) so
+   * new rows that arrive mid-scroll don’t cause duplicates.
+   */
+  async listAdminQueue(
+    db: Executor,
+    query: ListAdminQueueQuery,
+  ): Promise<{ items: unknown[]; page: { nextCursor: string | null; hasMore: boolean } }> {
+    const conditions: string[] = ['l.deleted_at IS NULL'];
+    const values: unknown[] = [];
+    let idx = 1;
+
+    if (query.status) {
+      conditions.push(`l.status = $${idx}`);
+      values.push(query.status);
+      idx += 1;
+    }
+    if (query.cropId) {
+      conditions.push(`l.crop_id = $${idx}`);
+      values.push(query.cropId);
+      idx += 1;
+    }
+    if (query.zoneId) {
+      // zone_id lives on farmers, not produce_listings
+      conditions.push(`f.zone_id = $${idx}`);
+      values.push(query.zoneId);
+      idx += 1;
+    }
+    if (query.cursor) {
+      // cursor = base64(createdAt.toISOString() + '|' + id)
+      const decoded = Buffer.from(query.cursor, 'base64').toString('utf8');
+      const [cursorAt, cursorId] = decoded.split('|');
+      if (cursorAt && cursorId) {
+        conditions.push(`(l.created_at, l.id) < ($${idx}, $${idx + 1})`);
+        values.push(cursorAt, cursorId);
+        idx += 2;
+      }
+    }
+
+    const limit = query.limit + 1; // fetch one extra to detect hasMore
+    values.push(limit);
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const res = await db.query<{
+      id: string;
+      listingNumber: string;
+      farmerId: string;
+      farmerName: string | null;
+      tohfaFarmerId: string | null;
+      zoneId: string | null;
+      cropId: string;
+      cropName: string;
+      grade: string;
+      quantityKg: string;
+      askingPricePerKg: string;
+      ceilingPricePerKg: string | null;
+      finalPricePerKg: string | null;
+      finalQuantityKg: string | null;
+      status: string;
+      counterRoundsUsed: number;
+      activeOfferId: string | null;
+      activeOfferRound: number | null;
+      activeOfferPrice: string | null;
+      activeOfferQty: string | null;
+      activeOfferMsg: string | null;
+      activeOfferOfferedBy: string | null;
+      activeOfferExpiresAt: Date | null;
+      activeOfferStatus: string | null;
+      rejectionReason: string | null;
+      version: number;
+      createdAt: Date;
+      updatedAt: Date | null;
+    }>(
+      `SELECT
+        l.id,
+        l.listing_number                     AS "listingNumber",
+        l.farmer_id                          AS "farmerId",
+        u.full_name                          AS "farmerName",
+        f.tohfa_farmer_id                    AS "tohfaFarmerId",
+        f.zone_id                            AS "zoneId",
+        l.crop_id                            AS "cropId",
+        c.name                               AS "cropName",
+        l.grade,
+        l.quantity_kg                        AS "quantityKg",
+        l.price_per_kg                       AS "askingPricePerKg",
+        fp.ceiling_price                     AS "ceilingPricePerKg",
+        l.final_price_per_kg                 AS "finalPricePerKg",
+        l.final_quantity_kg                  AS "finalQuantityKg",
+        l.status,
+        COALESCE(co_counts.cnt, 0)::int      AS "counterRoundsUsed",
+        co.id                                AS "activeOfferId",
+        co.round                             AS "activeOfferRound",
+        co.price_per_kg                      AS "activeOfferPrice",
+        co.quantity_kg                       AS "activeOfferQty",
+        co.message                           AS "activeOfferMsg",
+        co.actor                             AS "activeOfferOfferedBy",
+        co.expires_at                        AS "activeOfferExpiresAt",
+        co.status                            AS "activeOfferStatus",
+        l.rejection_reason                   AS "rejectionReason",
+        l.version,
+        l.created_at                         AS "createdAt",
+        l.updated_at                         AS "updatedAt"
+       FROM produce_listings l
+       JOIN farmers f       ON f.id = l.farmer_id
+       JOIN users  u        ON u.id = f.user_id
+       JOIN crop_master c   ON c.id = l.crop_id
+       LEFT JOIN fair_prices fp ON fp.id = l.fair_price_id
+       LEFT JOIN counter_offers co
+         ON co.listing_id = l.id AND co.status = 'PENDING'
+       LEFT JOIN (
+         SELECT listing_id, COUNT(*)::int AS cnt
+         FROM counter_offers
+         WHERE actor = 'FARMER'
+         GROUP BY listing_id
+       ) co_counts ON co_counts.listing_id = l.id
+       ${where}
+       ORDER BY l.created_at DESC, l.id DESC
+       LIMIT $${idx}`,
+      values,
+    );
+
+    const hasMore = res.rows.length > query.limit;
+    const rows = hasMore ? res.rows.slice(0, query.limit) : res.rows;
+    const lastRow = rows[rows.length - 1];
+    const nextCursor = hasMore && lastRow
+      ? Buffer.from(`${lastRow.createdAt.toISOString()}|${lastRow.id}`).toString('base64')
+      : null;
+
+    const items = rows.map((r) => ({
+      id: r.id,
+      listingNumber: r.listingNumber,
+      farmerId: r.farmerId,
+      farmerName: r.farmerName,
+      tohfaFarmerId: r.tohfaFarmerId,
+      zoneId: r.zoneId,
+      cropId: r.cropId,
+      cropName: r.cropName,
+      grade: r.grade,
+      quantityKg: r.quantityKg,
+      askingPricePerKg: r.askingPricePerKg,
+      ceilingPricePerKg: r.ceilingPricePerKg,
+      finalPricePerKg: r.finalPricePerKg,
+      finalQuantityKg: r.finalQuantityKg,
+      status: r.status,
+      counterRoundsUsed: r.counterRoundsUsed,
+      activeCounterOffer: r.activeOfferId
+        ? {
+            id: r.activeOfferId,
+            listingId: r.id,
+            round: r.activeOfferRound,
+            offeredBy: r.activeOfferOfferedBy,
+            pricePerKg: r.activeOfferPrice,
+            quantityKg: r.activeOfferQty,
+            message: r.activeOfferMsg,
+            status: r.activeOfferStatus,
+            expiresAt: r.activeOfferExpiresAt,
+          }
+        : null,
+      rejectionReason: r.rejectionReason,
+      version: r.version,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+
+    return { items, page: { nextCursor, hasMore } };
   },
 };

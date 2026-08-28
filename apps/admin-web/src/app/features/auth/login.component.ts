@@ -3,7 +3,9 @@ import { ChangeDetectionStrategy, Component, inject, signal, type OnInit } from 
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import type { RoleCode } from '@tohfa/shared-types';
+import { NAV } from '../../app.routes';
 import { AuthService } from '../../core/auth.service';
+import { RbacService } from '../../core/rbac.service';
 
 @Component({
   selector: 'tohfa-login',
@@ -165,6 +167,7 @@ import { AuthService } from '../../core/auth.service';
 })
 export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly rbac = inject(RbacService);
   private readonly router = inject(Router);
 
   mobile = '';
@@ -174,10 +177,18 @@ export class LoginComponent implements OnInit {
   requiresRoleSelection = signal(false);
   availableRoles = signal<RoleCode[]>([]);
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     if (this.auth.isAuthenticated()) {
-      this.router.navigate(['/farmer-applications']);
+      await this.navigateAfterLogin();
     }
+  }
+
+  private async navigateAfterLogin(): Promise<void> {
+    if (!this.rbac.loaded()) {
+      await this.rbac.load();
+    }
+    const target = this.rbac.firstAllowedPath(NAV);
+    await this.router.navigateByUrl(target);
   }
 
   async onSubmit(): Promise<void> {
@@ -192,7 +203,7 @@ export class LoginComponent implements OnInit {
         this.availableRoles.set(roles);
         this.requiresRoleSelection.set(true);
       } else {
-        await this.router.navigate(['/farmer-applications']);
+        await this.navigateAfterLogin();
       }
     } catch (err: unknown) {
       const e = err as { problem?: { detail?: string }; error?: { detail?: string }; message?: string };
@@ -210,7 +221,7 @@ export class LoginComponent implements OnInit {
 
     try {
       await this.auth.login(this.mobile, this.password, role);
-      await this.router.navigate(['/farmer-applications']);
+      await this.navigateAfterLogin();
     } catch (err: unknown) {
       const e = err as { problem?: { detail?: string }; error?: { detail?: string }; message?: string };
       this.errorMessage.set(

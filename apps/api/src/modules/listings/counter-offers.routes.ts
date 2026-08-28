@@ -13,6 +13,7 @@ import { Router } from 'express';
 import { requireAuth } from '../../auth/requireAuth.js';
 import { asyncHandler } from '../../http/asyncHandler.js';
 import { requirePermission } from '../../rbac/requirePermission.js';
+import { pool } from '../../db/pool.js';
 import { counterOffersService } from './counter-offers.service.js';
 import {
   adminApproveListingBody,
@@ -20,13 +21,32 @@ import {
   counterOfferCreateBody,
   counterOfferParams,
   counterOfferRejectBody,
+  listAdminQueueQuery,
   listingIdParams,
 } from './counter-offers.schema.js';
+import { counterOffersRepo } from './counter-offers.repo.js';
 
 export const adminListingsRouter: Router = Router();
 export const farmerCounterOffersRouter: Router = Router();
 
 // ---- admin surface ---------------------------------------------------------
+
+/**
+ * GET /v1/admin/listings — the admin approval queue.
+ * Returns listings paged by (created_at, id) with the active counter-offer
+ * embedded. BR-29: Farmer Admin rows with routedAway=true are read-only.
+ */
+adminListingsRouter.get(
+  '/',
+  requireAuth,
+  requirePermission('listing.queue.view_pending'),
+  asyncHandler(async (req, res) => {
+    const query = listAdminQueueQuery.parse(req.query);
+    const result = await counterOffersRepo.listAdminQueue(pool, query);
+    res.set('Cache-Control', 'no-store');
+    res.json(result);
+  }),
+);
 
 adminListingsRouter.post(
   '/:id/counter-offers',
