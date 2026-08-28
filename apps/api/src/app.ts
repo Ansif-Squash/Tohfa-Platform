@@ -38,6 +38,7 @@ import {
   adminAllocationsRouter,
   adminAllocationConfigRouter,
 } from './modules/allocations/allocations.routes.js';
+import { catalogRouter } from './modules/catalog/catalog.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -69,6 +70,7 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/admin/goods-receipts', router: goodsReceiptsRouter },
   { prefix: '/v1/admin/allocations', router: adminAllocationsRouter },
   { prefix: '/v1/admin/allocation-config', router: adminAllocationConfigRouter },
+  { prefix: '/v1/catalog', router: catalogRouter },
 ];
 
 /**
