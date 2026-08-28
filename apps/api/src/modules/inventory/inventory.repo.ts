@@ -179,45 +179,52 @@ export const inventoryRepo: InventoryRepo = {
 
   async insertLedgerMovement(db: Executor, input: RecordMovementInput): Promise<StockLedgerRow> {
     try {
-      const res = await db.query<StockLedgerRow>(`
-        INSERT INTO stock_ledger (
-          batch_id,
-          warehouse_id,
-          movement_type,
-          qty_delta,
-          balance_after,
-          ref_type,
-          ref_id,
-          remarks,
-          created_by
-        ) VALUES (
-          $1,
-          COALESCE($2, (SELECT warehouse_id FROM inventory_batches WHERE id = $1)),
-          $3,
-          $4,
-          (
-            COALESCE(
-              (SELECT balance_after FROM stock_ledger WHERE batch_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1),
-              '0.000'
-            )::numeric + $4::numeric
-          )::text,
-          $5,
-          $6,
-          $7,
-          $8
-        )
-        RETURNING *
-      `, [
-        input.batchId,
-        input.warehouseId ?? null,
-        input.movementType,
-        input.qtyDeltaKg,
-        input.refType ?? null,
-        input.refId ?? null,
-        input.remarks ?? null,
-        input.performedBy ?? null,
-      ]);
-      return res.rows[0]!;
+        const res = await db.query<StockLedgerRow>(`
+          INSERT INTO stock_ledger (
+            batch_id,
+            warehouse_id,
+            movement_type,
+            qty_delta,
+            balance_after,
+            ref_type,
+            ref_id,
+            remarks,
+            created_by
+          ) VALUES (
+            $1,
+            COALESCE($2, (SELECT warehouse_id FROM inventory_batches WHERE id = $1)),
+            $3,
+            $4,
+            (
+              COALESCE(
+                (SELECT balance_after FROM stock_ledger WHERE batch_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1),
+                '0.000'
+              )::numeric + $4::numeric
+            )::text,
+            $5,
+            $6,
+            $7,
+            $8
+          )
+          RETURNING *
+        `, [
+          input.batchId,
+          input.warehouseId ?? null,
+          input.movementType,
+          input.qtyDeltaKg,
+          input.refType ?? null,
+          input.refId ?? null,
+          input.remarks ?? null,
+          input.performedBy ?? null,
+        ]);
+        const ledgerRow = res.rows[0]!;
+        // Update the batch's available quantity to match the new balance
+        await db.query(`
+          UPDATE inventory_batches
+          SET qty_available = $1
+          WHERE id = $2
+        `, [ledgerRow.balance_after, input.batchId]);
+        return ledgerRow;
     } catch (err: unknown) {
       const errorObj = err as { code?: string; message?: string; hint?: string };
       if (

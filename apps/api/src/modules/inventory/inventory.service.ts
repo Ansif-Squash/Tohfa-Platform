@@ -52,6 +52,7 @@ export class InventoryService {
         batchId: batchRow.id,
         warehouseId: batchRow.warehouse_id,
         movementType: 'RECEIPT',
+        qtyDeltaKg: input.qtyReceivedKg,
       });
 
       // 3. Allocate the batch across channels (70/10/10/10 split)
