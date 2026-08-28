@@ -120,7 +120,7 @@ import { RbacService } from '../core/rbac.service';
           <option *ngFor="let role of roles()" [value]="role">{{ role }}</option>
         </select>
 
-        <button *ngIf="isAuthenticated()" class="logout-btn" (click)="onLogout()">
+        <button class="logout-btn" (click)="onLogout()">
           Logout
         </button>
       </div>
