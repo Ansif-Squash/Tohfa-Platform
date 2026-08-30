@@ -14,6 +14,8 @@ export const NAV: readonly NavRoute[] = [
   { path: 'pricing', label: 'Fair Price', permission: 'pricing.fair_price.view' },
   { path: 'listings', label: 'Listings', permission: 'listing.queue.view_pending' },
   { path: 'goods-receipts', label: 'Goods Receipts', permission: 'inventory.goods_receipt.record' },
+  { path: 'inventory', label: 'Inventory & Stock', permission: 'inventory.stock_ledger.view_own' },
+  { path: 'allocations', label: 'Allocations', permission: 'allocation.dashboard.view' },
 ];
 
 export const routes: Routes = [
@@ -75,6 +77,30 @@ export const routes: Routes = [
         loadComponent: async () =>
           (await import('./features/goods-receipt/goods-receipt-list.component'))
             .GoodsReceiptListComponent,
+      },
+
+      {
+        path: 'inventory',
+        canActivate: [permissionGuard('inventory.stock_ledger.view_own')],
+        loadComponent: async () =>
+          (await import('./features/inventory/inventory-shell.component'))
+            .InventoryShellComponent,
+      },
+
+      {
+        path: 'inventory/batches/:id',
+        canActivate: [permissionGuard('inventory.batch.view')],
+        loadComponent: async () =>
+          (await import('./features/inventory/batch-detail.component'))
+            .BatchDetailComponent,
+      },
+
+      {
+        path: 'allocations',
+        canActivate: [permissionGuard('allocation.dashboard.view')],
+        loadComponent: async () =>
+          (await import('./features/inventory/allocation-dashboard.component'))
+            .AllocationDashboardComponent,
       },
 
       {
