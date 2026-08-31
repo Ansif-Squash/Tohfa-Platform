@@ -2,6 +2,7 @@ import type { Actor } from '../../auth/requireAuth.js';
 import { pool, withTransaction, type Executor } from '../../db/pool.js';
 import { AppError } from '../../http/problem.js';
 import type { ResolvedScope } from '../../rbac/requirePermission.js';
+import type { ProduceGrade } from '../purchase-orders/purchase-orders.schema.js';
 import {
   goodsReceiptsRepo,
   type GoodsReceiptsRepo,
@@ -209,7 +210,7 @@ export function createGoodsReceiptsService(
           ...input,
           goodsReceiptId,
           warehouseId: grn.warehouseId,
-          listedGrade: (grn.grade as any) ?? input.assignedGrade,
+          listedGrade: (grn as { grade?: ProduceGrade }).grade ?? input.assignedGrade,
           checkedBy: actor.userId,
         });
 

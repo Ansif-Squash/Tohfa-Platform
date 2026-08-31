@@ -278,9 +278,10 @@ describe('Auth Module & BR-32 Test Contract', () => {
     it('POST /v1/auth/forgot-password always responds with 202 on real database', async () => {
       if (!(await databaseReady('otp_verifications'))) return;
 
+      const randMobile = `+91987654${Math.floor(1000 + Math.random() * 9000)}`;
       const res = await request(app)
         .post('/v1/auth/forgot-password')
-        .send({ mobile: '+919876543210' });
+        .send({ mobile: randMobile });
 
       expect(res.status).toBe(202);
       expect(res.body).toHaveProperty('challengeId');

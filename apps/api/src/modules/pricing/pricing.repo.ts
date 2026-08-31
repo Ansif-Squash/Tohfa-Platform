@@ -218,7 +218,7 @@ export const pricingRepo: PricingRepo = {
         WHERE rp.crop_id = $1
           AND rp.grade = $2
           AND (rp.effective_to IS NULL OR rp.effective_to >= $3::date)
-          AND rp.price > $4`,
+          AND rp.price > $4::numeric`,
       [input.cropId, input.grade, input.effectiveFrom, input.ceilingPrice],
     );
 

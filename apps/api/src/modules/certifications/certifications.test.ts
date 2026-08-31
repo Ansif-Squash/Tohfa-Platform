@@ -3,7 +3,7 @@ import request from 'supertest';
 import { RoleCode } from '@tohfa/shared-types';
 import { createApp } from '../../app.js';
 import { signAccessToken } from '../../auth/jwt.js';
-import { anActor, databaseReady, describeIfDatabase, IDS } from '../../test/factories.js';
+import { anActor, databaseReady, describeIfDatabase, IDS, newId } from '../../test/factories.js';
 import type { Executor } from '../../db/pool.js';
 import {
   createCertificationsService,
@@ -279,12 +279,20 @@ describe('Certifications & BR-01/BR-02 Test Contracts', () => {
     it('database check constraint enforces verified_by for VERIFIED rows', async () => {
       if (!(await databaseReady('certifications'))) return;
 
+      const testAdminId = newId();
+      const randMobile = `+919800${Math.floor(100000 + Math.random() * 900000)}`;
       const adminToken = signAccessToken({
-        sub: IDS.userSuperAdmin,
+        sub: testAdminId,
         roles: [{ code: 'SUPER_ADMIN' }],
         farmerId: null,
         customerId: null,
       });
+
+      const { pool } = await import('../../db/pool.js');
+      await pool.query(`
+        INSERT INTO users (id, mobile, full_name, user_type, status)
+        VALUES ('${testAdminId}', '${randMobile}', 'Super Admin Cert Test', 'ADMIN', 'ACTIVE');
+      `);
 
       // Validating admin verification route executes correctly
       const res = await request(app)
@@ -293,7 +301,6 @@ describe('Certifications & BR-01/BR-02 Test Contracts', () => {
         .send({
           portalReference: 'REF-1234',
         });
-
       // Either 404 (non-existent id) or 200, but never a 500 constraint crash
       expect([200, 404]).toContain(res.status);
     });

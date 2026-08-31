@@ -157,7 +157,7 @@ export const inventoryRepo: InventoryRepo = {
          received_on,
          expiry_on,
          status
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, COALESCE($10::date, CURRENT_DATE), $11::date, 'ACTIVE')
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9, COALESCE($10::date, CURRENT_DATE), $11::date, 'ACTIVE')
        RETURNING *`,
       [
         input.batchCode,
@@ -166,7 +166,6 @@ export const inventoryRepo: InventoryRepo = {
         input.grade,
         input.goodsReceiptId ?? null,
         input.sourceFarmerId,
-        input.qtyReceivedKg,
         input.qtyReceivedKg,
         input.costPerKg ?? null,
         input.storageLocation ?? null,
@@ -198,9 +197,9 @@ export const inventoryRepo: InventoryRepo = {
             (
               COALESCE(
                 (SELECT balance_after FROM stock_ledger WHERE batch_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1),
-                '0.000'
-              )::numeric + $4::numeric
-            )::text,
+                0.000
+              ) + $4::numeric
+            ),
             $5,
             $6,
             $7,

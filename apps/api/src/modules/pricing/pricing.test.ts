@@ -3,7 +3,7 @@ import request from 'supertest';
 import { createApp } from '../../app.js';
 import { signAccessToken } from '../../auth/jwt.js';
 import type { Executor } from '../../db/pool.js';
-import { anActor, databaseReady, describeIfDatabase, IDS } from '../../test/factories.js';
+import { anActor, databaseReady, describeIfDatabase, IDS, newId } from '../../test/factories.js';
 import {
   compareMoney,
   createPricingService,
@@ -339,8 +339,10 @@ describe('Pricing Module Unit & Business Rules', () => {
     it('BR-08b: Database rejects overlapping fair price window', async () => {
       if (!(await databaseReady('fair_prices'))) return;
 
+      const testAdminId = newId();
+      const randMobile = `+919800${Math.floor(100000 + Math.random() * 900000)}`;
       const superAdminToken = signAccessToken({
-        sub: IDS.userSuperAdmin,
+        sub: testAdminId,
         roles: [{ code: 'SUPER_ADMIN' }],
         farmerId: null,
         customerId: null,
@@ -348,6 +350,11 @@ describe('Pricing Module Unit & Business Rules', () => {
 
       // Get seeded crop
       const { pool } = await import('../../db/pool.js');
+      await pool.query(`
+        INSERT INTO users (id, mobile, full_name, user_type, status)
+        VALUES ('${testAdminId}', '${randMobile}', 'Super Admin Pricing Test', 'ADMIN', 'ACTIVE');
+      `);
+      
       const cropRes = await pool.query<{ id: string }>('SELECT id FROM crop_master LIMIT 1');
       if (cropRes.rows.length === 0) return;
       const testCropId = cropRes.rows[0]!.id;
@@ -370,7 +377,7 @@ describe('Pricing Module Unit & Business Rules', () => {
         pool.query(
           `INSERT INTO fair_prices (crop_id, grade, ceiling_price, effective_from, effective_to, set_by)
            VALUES ($1, 'GRADE_1', 65.00, '2026-09-02', '2026-09-05', $2)`,
-          [testCropId, IDS.userSuperAdmin],
+          [testCropId, testAdminId],
         ),
       ).rejects.toThrow(/fair_prices_no_overlap|conflicting key value violates exclusion constraint/i);
     });

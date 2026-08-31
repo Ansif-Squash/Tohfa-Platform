@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RoleCode, ScopeLevel } from '@tohfa/shared-types';
 import { AppError } from '../../http/problem.js';
 import type { Actor } from '../../auth/requireAuth.js';
+import type { Executor } from '../../db/pool.js';
 import type { ResolvedScope } from '../../rbac/requirePermission.js';
 import { aScope, aSubWarehouseAdmin, anActor, IDS } from '../../test/factories.js';
 import {
@@ -158,7 +159,7 @@ describe('PurchaseOrdersService (Unit & Business Rules)', () => {
     };
 
     const po = await service.createForListing(
-      {} as any,
+      {} as unknown as Executor,
       mockActorAdmin,
       mockScopeAdmin,
       negotiatedListing,
@@ -210,7 +211,7 @@ describe('PurchaseOrdersService (Unit & Business Rules)', () => {
     };
 
     const po = await service.createForListing(
-      {} as any,
+      {} as unknown as Executor,
       mockActorAdmin,
       mockScopeAdmin,
       directListing,
@@ -253,7 +254,7 @@ describe('PurchaseOrdersService (Unit & Business Rules)', () => {
     };
 
     const result = await service.createForListing(
-      {} as any,
+      {} as unknown as Executor,
       mockActorAdmin,
       mockScopeAdmin,
       listing,

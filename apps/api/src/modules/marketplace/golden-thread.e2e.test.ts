@@ -96,8 +96,20 @@ describeIfDatabase('S-30 — Golden Thread End-to-End Supply Chain', () => {
   beforeAll(async () => {
     app = createApp();
     dbAvailable = await databaseReady('produce_listings');
+    console.log('--- dbAvailable:', dbAvailable);
 
     if (!dbAvailable) return;
+
+    const whRes = await pool.query<{ id: string; code: string }>(
+      `SELECT id, code FROM warehouses WHERE code IN ('WH-OOTY', 'WH-COON')`,
+    );
+    for (const row of whRes.rows) {
+      if (row.code === 'WH-OOTY') {
+        (IDS as any).warehouseOoty = row.id;
+      } else if (row.code === 'WH-COON') {
+        (IDS as any).warehouseCoonoor = row.id;
+      }
+    }
 
     // Mint auth tokens for participants
     farmerToken = signAccessToken({
@@ -138,17 +150,51 @@ describeIfDatabase('S-30 — Golden Thread End-to-End Supply Chain', () => {
 
     // Ensure baseline seed rows exist (users, farmer, crop, fair_price)
     await pool.query(`
+      ALTER TABLE stock_ledger DISABLE TRIGGER ALL;
+      ALTER TABLE wallet_transactions DISABLE TRIGGER ALL;
+
+      TRUNCATE TABLE
+        purchase_orders,
+        goods_receipts,
+        quality_checks,
+        quality_check_items,
+        inventory_batches,
+        stock_ledger,
+        stock_adjustments,
+        stock_verifications,
+        stock_transfers,
+        allocations,
+        counter_offers,
+        produce_listings,
+        wallet_transactions
+      RESTART IDENTITY CASCADE;
+
+      ALTER TABLE stock_ledger ENABLE TRIGGER ALL;
+      ALTER TABLE wallet_transactions ENABLE TRIGGER ALL;
+
       INSERT INTO users (id, mobile, full_name, user_type, status)
-      VALUES ('${IDS.userSuperAdmin}', '+919800000001', 'Super Admin', 'ADMIN', 'ACTIVE')
+      VALUES ('${IDS.userSuperAdmin}', '+919800000099', 'Super Admin', 'ADMIN', 'ACTIVE')
       ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';
+
+      INSERT INTO users (id, mobile, full_name, user_type, status)
+      VALUES ('${IDS.userSubWhOoty}', '+919800000091', 'Ooty Sub WH Admin', 'ADMIN', 'ACTIVE')
+      ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';
+
+      INSERT INTO users (id, mobile, full_name, user_type, status)
+      VALUES ('${IDS.userSubWhCoonoor}', '+919800000092', 'Coonoor Sub WH Admin', 'ADMIN', 'ACTIVE')
+      ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';
+
+      INSERT INTO zones (id, code, name, is_active)
+      VALUES ('${IDS.zoneOoty}', 'ZONE_OOTY', 'Ooty Zone', true)
+      ON CONFLICT (id) DO UPDATE SET is_active = true;
 
       INSERT INTO users (id, mobile, full_name, user_type, status)
       VALUES ('${IDS.userFarmer}', '+919876543210', 'Ramesh Farmer', 'FARMER', 'ACTIVE')
       ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';
 
-      INSERT INTO farmers (id, user_id, tohfa_farmer_id, zone_id, status)
-      VALUES ('${IDS.farmerId}', '${IDS.userFarmer}', 'TF-0001', '${IDS.zoneOoty}', 'VERIFIED')
-      ON CONFLICT (id) DO UPDATE SET status = 'VERIFIED';
+      INSERT INTO farmers (id, user_id, tohfa_farmer_id, zone_id, application_status, kyc_status, is_market_blocked)
+      VALUES ('${IDS.farmerId}', '${IDS.userFarmer}', 'TF-0001', '${IDS.zoneOoty}', 'APPROVED', 'VERIFIED', false)
+      ON CONFLICT (id) DO UPDATE SET application_status = 'APPROVED', kyc_status = 'VERIFIED', is_market_blocked = false;
     `);
 
     const catRes = await pool.query<{ id: string }>(
@@ -327,6 +373,8 @@ describeIfDatabase('S-30 — Golden Thread End-to-End Supply Chain', () => {
         warehouseId: IDS.warehouseOoty,
       });
 
+    console.log('--- approveRes status:', approveRes.status, 'body:', approveRes.body);
+
     expect(approveRes.status).toBe(200);
     expect(approveRes.body).toHaveProperty('purchaseOrderId');
     purchaseOrderId = approveRes.body.purchaseOrderId;
@@ -343,11 +391,11 @@ describeIfDatabase('S-30 — Golden Thread End-to-End Supply Chain', () => {
     expect(replayRes.body.purchaseOrderId).toBe(purchaseOrderId);
 
     const poRows = await pool.query(
-      `SELECT * FROM purchase_orders WHERE produce_listing_id = $1`,
+      `SELECT * FROM purchase_orders WHERE listing_id = $1`,
       [createdListingId],
     );
     expect(poRows.rows).toHaveLength(1);
-    expect(Number(poRows.rows[0]!.unit_price)).toBe(68.0);
+    expect(Number(poRows.rows[0]!.price_per_kg)).toBe(68.0);
     expect(Number(poRows.rows[0]!.quantity_kg)).toBe(1000.0);
   });
 

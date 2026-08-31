@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ErrorCode, RoleCode, ScopeLevel } from '@tohfa/shared-types';
 import type { Actor } from '../../auth/requireAuth.js';
 import { AppError } from '../../http/problem.js';
+import type { Executor } from '../../db/pool.js';
 import type { ResolvedScope } from '../../rbac/requirePermission.js';
 import type {
   AllocationsRepo,
@@ -242,9 +243,9 @@ class MockAllocationsRepo implements AllocationsRepo {
   }
 }
 
-const mockExecutor: any = {
+const mockExecutor = {
   query: async () => ({ rows: [{ id: 'audit-1' }] }),
-};
+} as unknown as Executor;
 
 const synchronousRunner: TransactionRunner = async (fn) => fn(mockExecutor);
 
