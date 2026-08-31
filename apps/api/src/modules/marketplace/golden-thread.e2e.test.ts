@@ -136,28 +136,53 @@ describeIfDatabase('S-30 — Golden Thread End-to-End Supply Chain', () => {
       customerId: null,
     });
 
-    // Ensure baseline seed rows exist (crop, fair_price, warehouse, farmer)
+    // Ensure baseline seed rows exist (users, farmer, crop, fair_price)
     await pool.query(`
-      INSERT INTO categories (id, slug, name, sort_order)
-      VALUES ('33333333-3333-4000-8000-000000000001', 'vegetables', 'Vegetables', 1)
-      ON CONFLICT (slug) DO NOTHING;
+      INSERT INTO users (id, mobile, full_name, user_type, status)
+      VALUES ('${IDS.userSuperAdmin}', '+919800000001', 'Super Admin', 'ADMIN', 'ACTIVE')
+      ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';
 
-      INSERT INTO crop_master (id, slug, name, category_id, default_unit)
-      VALUES ('${IDS.cropCarrot}', 'carrot', 'Carrot', '33333333-3333-4000-8000-000000000001', 'kg')
-      ON CONFLICT (slug) DO NOTHING;
-
-      INSERT INTO fair_prices (crop_id, grade, ceiling_price, effective_from, set_by)
-      VALUES ('${IDS.cropCarrot}', 'GRADE_1', 80.00, CURRENT_DATE, '${IDS.userSuperAdmin}')
-      ON CONFLICT (crop_id, grade, effective_from) DO UPDATE SET ceiling_price = 80.00;
-
-      INSERT INTO users (id, mobile, full_name, status)
-      VALUES ('${IDS.userFarmer}', '+919876543210', 'Ramesh Farmer', 'ACTIVE')
+      INSERT INTO users (id, mobile, full_name, user_type, status)
+      VALUES ('${IDS.userFarmer}', '+919876543210', 'Ramesh Farmer', 'FARMER', 'ACTIVE')
       ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';
 
       INSERT INTO farmers (id, user_id, tohfa_farmer_id, zone_id, status)
       VALUES ('${IDS.farmerId}', '${IDS.userFarmer}', 'TF-0001', '${IDS.zoneOoty}', 'VERIFIED')
       ON CONFLICT (id) DO UPDATE SET status = 'VERIFIED';
     `);
+
+    const catRes = await pool.query<{ id: string }>(
+      `SELECT id FROM categories WHERE slug = 'vegetables' LIMIT 1`,
+    );
+    let catId = catRes.rows[0]?.id;
+    if (!catId) {
+      const newCat = await pool.query<{ id: string }>(
+        `INSERT INTO categories (slug, name, sort_order) VALUES ('vegetables', 'Vegetables', 1) RETURNING id`,
+      );
+      catId = newCat.rows[0]!.id;
+    }
+
+    const cropRes = await pool.query<{ id: string }>(
+      `SELECT id FROM crop_master WHERE slug = 'carrot' LIMIT 1`,
+    );
+    if (cropRes.rows[0]) {
+      IDS.cropCarrot = cropRes.rows[0].id;
+    } else {
+      const newCrop = await pool.query<{ id: string }>(
+        `INSERT INTO crop_master (slug, name, category_id, default_unit)
+         VALUES ('carrot', 'Carrot', $1, 'kg')
+         RETURNING id`,
+        [catId],
+      );
+      IDS.cropCarrot = newCrop.rows[0]!.id;
+    }
+
+    await pool.query(
+      `INSERT INTO fair_prices (crop_id, grade, ceiling_price, effective_from, set_by)
+       VALUES ($1, 'GRADE_1', 80.00, CURRENT_DATE, $2)
+       ON CONFLICT (crop_id, grade, effective_from) DO UPDATE SET ceiling_price = 80.00`,
+      [IDS.cropCarrot, IDS.userSuperAdmin],
+    );
   });
 
   afterAll(async () => {
