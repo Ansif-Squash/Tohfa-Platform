@@ -168,6 +168,49 @@ const GRANT_CASES: readonly GrantCase[] = [
     expected: ScopeLevel.ALL,
     because: 'Users can mark their own notifications as read (BR-36).',
   },
+  // --- Cash Top-up: Super, TOHFA, Main and Sub WH Admins may process; Farmer Admin cannot ---
+  {
+    permission: 'wallet.cash_topup.process',
+    role: RoleCode.SUPER_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'Super Admin can process cash top-ups.',
+  },
+  {
+    permission: 'wallet.cash_topup.process',
+    role: RoleCode.TOHFA_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'TOHFA Admin can process cash top-ups.',
+  },
+  {
+    permission: 'wallet.cash_topup.process',
+    role: RoleCode.MAIN_WH_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'Main Warehouse Admin can process cash top-ups.',
+  },
+  {
+    permission: 'wallet.cash_topup.process',
+    role: RoleCode.SUB_WH_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'Sub Warehouse Admin can process cash top-ups.',
+  },
+  {
+    permission: 'wallet.cash_topup.process',
+    role: RoleCode.FARMER_ADMIN,
+    expected: ScopeLevel.NONE,
+    because: 'Farmer Admin has no cash top-up authority.',
+  },
+  {
+    permission: 'wallet.cash_topup.fiscal_tag',
+    role: RoleCode.MAIN_WH_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'Main Warehouse Admin can record fiscal cash tags.',
+  },
+  {
+    permission: 'wallet.cash_topup.fiscal_tag',
+    role: RoleCode.FARMER_ADMIN,
+    expected: ScopeLevel.NONE,
+    because: 'Farmer Admin has no fiscal tag authority.',
+  },
 ];
 
 describe('docs/rbac.json grants', () => {

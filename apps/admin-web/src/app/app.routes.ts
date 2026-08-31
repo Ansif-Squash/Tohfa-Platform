@@ -16,6 +16,7 @@ export const NAV: readonly NavRoute[] = [
   { path: 'goods-receipts', label: 'Goods Receipts', permission: 'inventory.goods_receipt.record' },
   { path: 'inventory', label: 'Inventory & Stock', permission: 'inventory.stock_ledger.view_own' },
   { path: 'allocations', label: 'Allocations', permission: 'allocation.dashboard.view' },
+  { path: 'wallet/cash-topup', label: 'Cash Top-up', permission: 'wallet.cash_topup.process' },
 ];
 
 export const routes: Routes = [
@@ -101,6 +102,13 @@ export const routes: Routes = [
         loadComponent: async () =>
           (await import('./features/inventory/allocation-dashboard.component'))
             .AllocationDashboardComponent,
+      },
+
+      {
+        path: 'wallet/cash-topup',
+        canActivate: [permissionGuard('wallet.cash_topup.process')],
+        loadComponent: async () =>
+          (await import('./features/wallet/cash-topup.component')).CashTopupComponent,
       },
 
       {

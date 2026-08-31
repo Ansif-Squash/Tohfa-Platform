@@ -21,6 +21,7 @@ import { initSentry, reportError } from '../obs/sentry.js';
 
 import { certificationsRepo } from '../modules/certifications/certifications.repo.js';
 import { counterOffersService } from '../modules/listings/counter-offers.service.js';
+import { topupRepo } from '../modules/topup/topup.repo.js';
 
 type Handler<N extends JobName> = (payload: JobPayloads[N], job: Job) => Promise<void>;
 
@@ -148,9 +149,75 @@ export const counterOfferExpirySweep: Handler<'counter-offer-expiry-sweep'> = as
   }
 };
 
+export const dailyCashReconciliation: Handler<'daily-cash-reconciliation'> = async (payload) => {
+  logger.info({ payload }, 'daily-cash-reconciliation: starting');
+
+  const runResult = await pool.query<{ id: string }>(
+    `INSERT INTO job_runs (job_name, status, started_at)
+     VALUES ('daily-cash-reconciliation', 'RUNNING', now())
+     RETURNING id`,
+  );
+  const runId = runResult.rows[0]?.id;
+
+  try {
+    let targetDate = payload.targetDate;
+    if (!targetDate) {
+      const dateRes = await pool.query<{ yest: string }>(
+        `SELECT (CURRENT_DATE - interval '1 day')::text AS yest`,
+      );
+      targetDate = dateRes.rows[0]!.yest;
+    }
+
+    const reconciliationRows = await topupRepo.getDailyCashReconciliation(pool, targetDate);
+
+    for (const row of reconciliationRows) {
+      if (row.topupTotal !== row.ledgerTotal) {
+        logger.error(
+          { warehouseId: row.warehouseId, topupTotal: row.topupTotal, ledgerTotal: row.ledgerTotal, date: targetDate },
+          'daily-cash-reconciliation: DISCREPANCY DETECTED between cash topups and ledger',
+        );
+      } else {
+        logger.info(
+          { warehouseId: row.warehouseId, total: row.topupTotal, count: row.count, date: targetDate },
+          'daily-cash-reconciliation: warehouse cash reconciled successfully',
+        );
+      }
+    }
+
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'COMPLETED',
+                finished_at = now(),
+                items_scanned = $2,
+                items_processed = $2,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, reconciliationRows.length],
+      );
+    }
+
+    logger.info({ warehousesReconciled: reconciliationRows.length, targetDate }, 'daily-cash-reconciliation: completed');
+  } catch (error) {
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'FAILED',
+                finished_at = now(),
+                error = $2,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, (error as Error).message],
+      );
+    }
+    throw error;
+  }
+};
+
 const HANDLERS: { [N in JobName]: Handler<N> } = {
   'certificate-expiry-sweep': certificateExpirySweep,
   'counter-offer-expiry-sweep': counterOfferExpirySweep,
+  'daily-cash-reconciliation': dailyCashReconciliation,
 };
 
 // Start Sentry before any job can fail so worker errors are reportable.

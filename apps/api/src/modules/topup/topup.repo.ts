@@ -98,6 +98,42 @@ export interface TopupRepo {
     db: Executor,
     minutes: number,
   ): Promise<TopupWithPayment[]>;
+
+  getCashTopupCap(db: Executor): Promise<string>;
+
+  findCustomerWallet(
+    db: Executor,
+    customerId: string,
+  ): Promise<{ id: string; balance: string } | null>;
+
+  createCashTopup(
+    db: Executor,
+    params: {
+      walletId: string;
+      customerId: string;
+      warehouseId: string;
+      processedBy: string;
+      amount: Money;
+      fiscalCashTag: string;
+    },
+  ): Promise<TopupRecord>;
+
+  updateTopupWalletTxn(
+    db: Executor,
+    topupId: string,
+    walletTxnId: string,
+  ): Promise<void>;
+
+  updateTopupSmsStatus(
+    db: Executor,
+    topupId: string,
+    params: { sentAt?: Date; error?: string },
+  ): Promise<void>;
+
+  getDailyCashReconciliation(
+    db: Executor,
+    targetDate: string,
+  ): Promise<{ warehouseId: string; topupTotal: string; ledgerTotal: string; count: number }[]>;
 }
 
 export const topupRepo: TopupRepo = {
@@ -242,6 +278,82 @@ export const topupRepo: TopupRepo = {
           AND t.created_at < now() - ($1 || ' minutes')::interval
         ORDER BY t.created_at ASC`,
       [minutes],
+    );
+    return res.rows;
+  },
+
+  async getCashTopupCap(db) {
+    const res = await db.query<{ value: unknown }>(
+      `SELECT value FROM system_config WHERE key = 'cash_topup_cap' LIMIT 1`,
+    );
+    if (res.rows.length > 0 && res.rows[0]?.value != null) {
+      const val = res.rows[0].value;
+      if (typeof val === 'number' || typeof val === 'string') {
+        return String(val);
+      }
+    }
+    return '10000.00';
+  },
+
+  async findCustomerWallet(db, customerId) {
+    const res = await db.query<{ id: string; balance: string }>(
+      `SELECT id, balance::text FROM wallets WHERE customer_id = $1 LIMIT 1`,
+      [customerId],
+    );
+    return res.rows[0] ?? null;
+  },
+
+  async createCashTopup(db, params) {
+    const res = await db.query<TopupRecord>(
+      `INSERT INTO topups (
+         wallet_id, customer_id, channel, amount, fiscal_cash_tag,
+         warehouse_id, processed_by, status
+       )
+       VALUES ($1, $2, 'CASH', $3, $4, $5, $6, 'SUCCESS')
+       RETURNING *`,
+      [
+        params.walletId,
+        params.customerId,
+        params.amount,
+        params.fiscalCashTag,
+        params.warehouseId,
+        params.processedBy,
+      ],
+    );
+    return res.rows[0]!;
+  },
+
+  async updateTopupWalletTxn(db, topupId, walletTxnId) {
+    await db.query(
+      `UPDATE topups SET wallet_txn_id = $1, updated_at = now() WHERE id = $2`,
+      [walletTxnId, topupId],
+    );
+  },
+
+  async updateTopupSmsStatus(db, topupId, params) {
+    await db.query(
+      `UPDATE topups
+          SET sms_sent_at = $1,
+              sms_error = $2,
+              updated_at = now()
+        WHERE id = $3`,
+      [params.sentAt ?? null, params.error ?? null, topupId],
+    );
+  },
+
+  async getDailyCashReconciliation(db, targetDate) {
+    const res = await db.query<{ warehouseId: string; topupTotal: string; ledgerTotal: string; count: number }>(
+      `SELECT t.warehouse_id AS "warehouseId",
+              COALESCE(SUM(t.amount), 0)::text AS "topupTotal",
+              COALESCE(SUM(wt.amount), 0)::text AS "ledgerTotal",
+              COUNT(t.id)::int AS "count"
+         FROM topups t
+         LEFT JOIN wallet_transactions wt ON wt.id = t.wallet_txn_id
+        WHERE t.channel = 'CASH'
+          AND t.status = 'SUCCESS'
+          AND DATE(t.created_at AT TIME ZONE 'Asia/Kolkata') = $1::date
+        GROUP BY t.warehouse_id`,
+      [targetDate],
     );
     return res.rows;
   },

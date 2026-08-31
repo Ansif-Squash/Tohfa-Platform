@@ -4,11 +4,46 @@ import { requireActor, requireAuth } from '../../auth/requireAuth.js';
 import { asyncHandler } from '../../http/asyncHandler.js';
 import { getValidated, validate } from '../../http/validate.js';
 import { requirePermission } from '../../rbac/requirePermission.js';
-import { createTopupSchema } from './topup.schema.js';
+import {
+  cashTopupCreateSchema,
+  createTopupSchema,
+  customerIdParamSchema,
+} from './topup.schema.js';
 import { topupService } from './topup.service.js';
 
 export const topupRouter: Router = Router();
 export const webhookRouter: Router = Router();
+export const adminTopupRouter: Router = Router();
+
+adminTopupRouter.post(
+  '/wallets/:customerId/cash-topup',
+  requireAuth,
+  requirePermission('wallet.cash_topup.process'),
+  validate({
+    params: customerIdParamSchema,
+    body: cashTopupCreateSchema,
+  }),
+  asyncHandler(async (req, res) => {
+    const actor = requireActor(req.actor);
+    const params = getValidated(req, 'params', customerIdParamSchema);
+    const body = getValidated(req, 'body', cashTopupCreateSchema);
+    const idempotencyKey = req.header('idempotency-key');
+
+    const result = await topupService.processCashTopup(
+      actor,
+      req.scope!,
+      params.customerId,
+      {
+        amount: parseMoney(body.amount),
+        warehouseId: body.warehouseId,
+        fiscalCashTag: body.fiscalCashTag,
+        remarks: body.remarks,
+      },
+      idempotencyKey,
+    );
+    res.status(201).json(result);
+  }),
+);
 
 topupRouter.post(
   '/me/topups',
