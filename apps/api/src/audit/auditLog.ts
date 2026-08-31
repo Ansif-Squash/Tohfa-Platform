@@ -33,8 +33,7 @@
 import type { Executor } from '../db/pool.js';
 import { currentTraceId } from '../logger.js';
 
-/** Mirrors the `audit_actor_type` enum in db/migrations/0008_platform.sql. */
-export type AuditActorType = 'USER' | 'SYSTEM' | 'JOB' | 'INTEGRATION';
+export type AuditActorType = 'USER' | 'SYSTEM' | 'JOB' | 'ANONYMOUS';
 
 export type AuditOutcome = 'ALLOWED' | 'DENIED' | 'ERROR';
 
