@@ -4246,6 +4246,8 @@ components:
         channel: { $ref: '#/components/schemas/AllocationChannel' }
         allocatedQtyKg: { $ref: '#/components/schemas/Quantity' }
         consumedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        reservedQtyKg: { $ref: '#/components/schemas/Quantity' }
+        availableQtyKg: { $ref: '#/components/schemas/Quantity' }
         computedBy: { type: string, enum: [AUTO, MANUAL] }
         overriddenBy: { type: [string, 'null'], format: uuid }
 

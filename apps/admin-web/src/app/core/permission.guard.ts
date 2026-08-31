@@ -3,6 +3,8 @@
  *
  * Checks authentication first: redirects to /login if unauthenticated.
  * Then checks permission: redirects to /forbidden if unauthorized.
+ * A screen reachable through several permission codes (e.g. the stock ledger's
+ * view_all / view_own pair) passes when ANY of them is granted.
  */
 import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
@@ -10,7 +12,9 @@ import { NAV } from '../app.routes';
 import { AuthService } from './auth.service';
 import { RbacService } from './rbac.service';
 
-export function permissionGuard(permissionCode: string): CanActivateFn {
+export function permissionGuard(
+  permissionCode: string | readonly string[],
+): CanActivateFn {
   return (route) => {
     const auth = inject(AuthService);
     const rbac = inject(RbacService);
@@ -20,7 +24,8 @@ export function permissionGuard(permissionCode: string): CanActivateFn {
       return router.createUrlTree(['/login']);
     }
 
-    if (rbac.can(permissionCode)) return true;
+    const codes = typeof permissionCode === 'string' ? [permissionCode] : permissionCode;
+    if (codes.some((code) => rbac.can(code))) return true;
 
     // If attempting to access default route but lack permission, forward to first accessible route
     if (route.routeConfig?.path === 'farmer-applications') {
@@ -31,7 +36,7 @@ export function permissionGuard(permissionCode: string): CanActivateFn {
     }
 
     return router.createUrlTree(['/forbidden'], {
-      queryParams: { permission: permissionCode },
+      queryParams: { permission: codes.join('|') },
     });
   };
 }

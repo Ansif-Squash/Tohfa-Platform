@@ -77,6 +77,26 @@ export interface Column<T extends Row = Row> {
         opacity: 0.4;
         cursor: not-allowed;
       }
+      tbody tr.clickable-row {
+        cursor: pointer;
+      }
+      tbody tr.clickable-row:hover {
+        background: var(--tohfa-neutral-grey100);
+      }
+      .load-more {
+        padding: var(--tohfa-space-md);
+        display: flex;
+        justify-content: center;
+      }
+      .load-more button {
+        padding: var(--tohfa-space-xs) var(--tohfa-space-lg);
+        border: 1px solid var(--tohfa-neutral-grey300);
+        border-radius: var(--tohfa-radius-button);
+        background: var(--tohfa-surface);
+        color: var(--tohfa-on-surface);
+        font-weight: var(--tohfa-font-weight-semibold);
+        cursor: pointer;
+      }
     `,
   ],
   template: `
@@ -89,7 +109,11 @@ export interface Column<T extends Row = Row> {
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let row of rows">
+        <tr
+          *ngFor="let row of rows"
+          [class.clickable-row]="clickable"
+          (click)="clickable && rowClick.emit(row)"
+        >
           <td *ngFor="let column of columns" [class.right]="column.align === 'right'">
             {{ render(column, row) }}
           </td>
@@ -101,10 +125,14 @@ export interface Column<T extends Row = Row> {
       <div class="empty tohfa-card">{{ emptyMessage }}</div>
     </ng-template>
 
-    <div class="pager" *ngIf="total > pageSize">
+    <div class="pager" *ngIf="!cursorMode && total > pageSize">
       <span>{{ rangeLabel }}</span>
       <button type="button" [disabled]="page <= 1" (click)="goTo(page - 1)">Previous</button>
       <button type="button" [disabled]="page >= lastPage" (click)="goTo(page + 1)">Next</button>
+    </div>
+
+    <div class="load-more" *ngIf="cursorMode && hasMore">
+      <button type="button" (click)="loadMore.emit()">{{ loadMoreLabel }}</button>
     </div>
   `,
 })
@@ -115,8 +143,20 @@ export class DataTableComponent {
   @Input() page = 1;
   @Input() pageSize = 20;
   @Input() emptyMessage = 'Nothing to show yet.';
+  /**
+   * Cursor paging mode for append-only, unbounded sources (stock ledger).
+   * The numbered pager needs a total; a cursor source has none, so it shows a
+   * Load-more control driven by `hasMore` instead.
+   */
+  @Input() cursorMode = false;
+  @Input() hasMore = false;
+  @Input() loadMoreLabel = 'Load more';
+  /** Optional clickable rows (e.g. open batch detail from the ledger). */
+  @Input() clickable = false;
 
   @Output() readonly pageChange = new EventEmitter<number>();
+  @Output() readonly loadMore = new EventEmitter<void>();
+  @Output() readonly rowClick = new EventEmitter<Row>();
 
   get lastPage(): number {
     return Math.max(1, Math.ceil(this.total / this.pageSize));

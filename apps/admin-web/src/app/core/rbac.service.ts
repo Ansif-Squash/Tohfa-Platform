@@ -99,8 +99,18 @@ export class RbacService {
     return this.document()?.roles.find((entry) => entry.code === role)?.colorHex ?? '#0F6E56';
   }
 
-  firstAllowedPath(routes: readonly { path: string; permission: string }[]): string {
-    const allowed = routes.find((r) => this.can(r.permission));
+  firstAllowedPath(
+    routes: readonly {
+      path: string;
+      permission: string;
+      anyPermissions?: readonly string[];
+    }[],
+  ): string {
+    const allowed = routes.find(
+      (r) =>
+        this.can(r.permission) ||
+        (r.anyPermissions ?? []).some((code) => this.can(code)),
+    );
     return allowed ? `/${allowed.path}` : '/farmer-applications';
   }
 }

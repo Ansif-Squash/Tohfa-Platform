@@ -156,7 +156,11 @@ export class ShellComponent {
   /** Recomputes whenever the active roles change (e.g. after login). */
   readonly visibleNav = computed<readonly NavRoute[]>(() => {
     this.rbac.activeRoles();
-    return NAV.filter((item) => this.rbac.can(item.permission));
+    return NAV.filter(
+      (item) =>
+        this.rbac.can(item.permission) ||
+        (item.anyPermissions ?? []).some((code) => this.rbac.can(code)),
+    );
   });
 
   onRoleChange(role: RoleCode): void {

@@ -48,12 +48,14 @@ export default tseslint.config(
   },
   {
     // CLI-shaped code: scripts, the migrator, seeds and tests talk to stdout.
+    // karma.conf.js is CommonJS by design (Karma loads it with require()).
     files: [
       'scripts/**/*.ts',
       'db/**/*.{js,ts}',
       'apps/api/src/db/migrate.ts',
       '**/*.test.ts',
       '**/test/**/*.ts',
+      'apps/admin-web/karma.conf.js',
     ],
     rules: {
       'no-console': 'off',

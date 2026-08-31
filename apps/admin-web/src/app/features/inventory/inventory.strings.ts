@@ -1,0 +1,136 @@
+/**
+ * Centralised strings for the S-28 warehouse/inventory screens.
+ *
+ * apps/admin-web has no i18n catalogue (reported as a specification gap in the
+ * S-28 notes): user-facing English strings for these screens live here so they
+ * can be moved into a catalogue in one place when one lands.
+ */
+export const INVENTORY_STRINGS = {
+  stockLedger: {
+    title: 'Stock Ledger',
+    subtitle: 'Append-only record of every stock movement. Quantities are derived from this ledger (BR-37).',
+    filterWarehouse: 'Warehouse',
+    allWarehouses: 'All warehouses',
+    filterBatchId: 'Batch ID (UUID)',
+    filterMovementType: 'Movement type',
+    allMovementTypes: 'All movement types',
+    filterFrom: 'From',
+    filterTo: 'To',
+    apply: 'Apply',
+    reset: 'Reset',
+    export: 'Export CSV',
+    columns: {
+      performedAt: 'Date / Time',
+      batchId: 'Batch',
+      txnType: 'Type',
+      qtyDeltaKg: 'Qty Δ (kg)',
+      balanceAfterKg: 'Balance (kg)',
+      ref: 'Reference',
+      remarks: 'Remarks',
+    },
+    empty: 'No ledger entries match the current filters.',
+    loadMore: 'Load more',
+    warehouseLockedHint: 'Your warehouse is fixed by your role assignment.',
+  },
+  batches: {
+    title: 'Inventory Batches',
+    subtitle: 'Batches consolidated across farmers per warehouse. Quantities are ledger-derived (BR-37).',
+    filterWarehouse: 'Warehouse',
+    filterGrade: 'Grade',
+    allGrades: 'All grades',
+    filterStatus: 'Status',
+    allStatuses: 'All statuses',
+    columns: {
+      batchCode: 'Batch Code',
+      crop: 'Crop',
+      grade: 'Grade',
+      warehouseId: 'Warehouse',
+      qtyReceivedKg: 'Received (kg)',
+      qtyAvailableKg: 'Available (kg)',
+      status: 'Status',
+      receivedOn: 'Received On',
+      expiryOn: 'Expiry',
+    },
+    empty: 'No batches match the current filters.',
+    openDetail: 'Open',
+  },
+  batchDetail: {
+    title: 'Batch Detail',
+    back: 'Back to batches',
+    sectionSummary: 'Summary',
+    sectionMovements: 'Movement History',
+    derivedNote:
+      'Available quantity is derived from the append-only stock ledger; it is never edited directly (BR-37).',
+    fields: {
+      batchCode: 'Batch Code',
+      warehouse: 'Warehouse',
+      crop: 'Crop',
+      grade: 'Grade',
+      qtyReceivedKg: 'Received (kg)',
+      qtyAvailableKg: 'Available (kg)',
+      status: 'Status',
+      storageLocation: 'Storage Location',
+      receivedOn: 'Received On',
+      expiryOn: 'Expiry',
+      goodsReceiptId: 'Goods Receipt',
+    },
+    notFound: 'Batch not found (or outside your warehouse scope).',
+  },
+  allocations: {
+    title: 'Allocation Dashboard',
+    subtitle: 'The 70/10/10/10 channel split of stock (BR-12). Values are read from the allocation API.',
+    filterWarehouse: 'Warehouse',
+    filterChannel: 'Channel',
+    allChannels: 'All channels',
+    buckets: {
+      ONLINE: 'Online',
+      LIVE_MARKET: 'Live Market',
+      RESERVE: 'Reserve',
+      BUFFER: 'Buffer',
+    },
+    metrics: {
+      allocated: 'Allocated (kg)',
+      consumed: 'Consumed (kg)',
+      reserved: 'Reserved (kg)',
+      available: 'Available (kg)',
+    },
+    reservedGapNote:
+      'Reserved quantities come from the allocation API response; where the API omits them for a bucket they are shown as not exposed.',
+    empty: 'No allocations recorded for the current filters.',
+    perBatchHeading: 'Per-batch allocations',
+    perBatchColumns: {
+      allocationDate: 'Date',
+      crop: 'Crop',
+      grade: 'Grade',
+      channel: 'Channel',
+      allocatedQtyKg: 'Allocated (kg)',
+      consumedQtyKg: 'Consumed (kg)',
+      availableQtyKg: 'Available (kg)',
+      computedBy: 'Computed By',
+    },
+  },
+  lowStock: {
+    title: 'Low Stock',
+    subtitle: 'Batches ordered by remaining quantity, lowest first. Status flags come from the batch API.',
+    thresholdGapNote:
+      'Specification gap: no endpoint currently exposes the low-stock threshold (root CLAUDE.md §2.7 forbids constants in components), so batches are ranked by remaining quantity instead of filtered by an invented cut-off.',
+    criticalStatuses: 'Critical (API status)',
+    columns: {
+      batchCode: 'Batch Code',
+      crop: 'Crop',
+      grade: 'Grade',
+      qtyAvailableKg: 'Available (kg)',
+      status: 'Status',
+    },
+    empty: 'No batches in scope.',
+  },
+  warehouseSelect: {
+    assignedSingle: 'Assigned warehouse',
+    assignedMultiple: 'Assigned warehouses',
+  },
+  common: {
+    loading: 'Loading…',
+    loadFailed: 'Could not load data. Check your connection and permissions.',
+    notPermitted: 'Your role does not grant access to this screen.',
+  },
+} as const;
