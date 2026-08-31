@@ -36,7 +36,11 @@ export interface JobPayloads {
    * the ledger (wallet_transactions). Idempotent.
    */
   'daily-cash-reconciliation': { targetDate?: string };
-  // TODO(STORY-ORD-11): 'cart-lock-reaper': { }
+  /**
+   * BR-22b: sweeps expired carts past their locked_until window, flips HELD lines
+   * to EXPIRED, decrements allocations.reserved_qty and marks cart EXPIRED. Idempotent.
+   */
+  'cart-lock-reaper': { batchSize?: number };
   // TODO(STORY-FIN-09): 'payout-settlement-poll': { }
 }
 
@@ -79,6 +83,14 @@ export const JOB_REGISTRY: { [N in JobName]: JobDefinition<N> } = {
     defaultPayload: {},
     // 01:00 IST every day
     repeat: { pattern: '0 1 * * *', tz: 'Asia/Kolkata' },
+  },
+  'cart-lock-reaper': {
+    name: 'cart-lock-reaper',
+    description:
+      'BR-22b: sweeps carts past locked_until, returns reserved allocation quantities, and expires carts. Idempotent.',
+    defaultPayload: { batchSize: 500 },
+    // Every 5 minutes
+    repeat: { pattern: '*/5 * * * *', tz: 'Asia/Kolkata' },
   },
 };
 

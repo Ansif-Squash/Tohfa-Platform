@@ -22,6 +22,7 @@ import { initSentry, reportError } from '../obs/sentry.js';
 import { certificationsRepo } from '../modules/certifications/certifications.repo.js';
 import { counterOffersService } from '../modules/listings/counter-offers.service.js';
 import { topupRepo } from '../modules/topup/topup.repo.js';
+import { cartRepo } from '../modules/cart/cart.repo.js';
 
 type Handler<N extends JobName> = (payload: JobPayloads[N], job: Job) => Promise<void>;
 
@@ -187,7 +188,7 @@ export const dailyCashReconciliation: Handler<'daily-cash-reconciliation'> = asy
     if (runId !== undefined) {
       await pool.query(
         `UPDATE job_runs
-            SET status = 'COMPLETED',
+            SET status = 'SUCCEEDED',
                 finished_at = now(),
                 items_scanned = $2,
                 items_processed = $2,
@@ -214,10 +215,61 @@ export const dailyCashReconciliation: Handler<'daily-cash-reconciliation'> = asy
   }
 };
 
+export const cartLockReaper: Handler<'cart-lock-reaper'> = async (payload) => {
+  logger.info({ payload }, 'cart-lock-reaper: starting');
+
+  const runResult = await pool.query<{ id: string }>(
+    `INSERT INTO job_runs (job_name, status, started_at)
+     VALUES ('cart-lock-reaper', 'RUNNING', now())
+     RETURNING id`,
+  );
+  const runId = runResult.rows[0]?.id;
+
+  try {
+    const result = await cartRepo.reapExpiredCarts(pool, payload.batchSize ?? 500);
+
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'SUCCEEDED',
+                finished_at = now(),
+                items_scanned = $2,
+                items_processed = $3,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, result.scanned, result.releasedLines],
+      );
+    }
+
+    logger.info(
+      {
+        scanned: result.scanned,
+        expiredCarts: result.expiredCarts,
+        releasedLines: result.releasedLines,
+      },
+      'cart-lock-reaper: completed',
+    );
+  } catch (error) {
+    if (runId !== undefined) {
+      await pool.query(
+        `UPDATE job_runs
+            SET status = 'FAILED',
+                finished_at = now(),
+                error = $2,
+                updated_at = now()
+          WHERE id = $1`,
+        [runId, (error as Error).message],
+      );
+    }
+    throw error;
+  }
+};
+
 const HANDLERS: { [N in JobName]: Handler<N> } = {
   'certificate-expiry-sweep': certificateExpirySweep,
   'counter-offer-expiry-sweep': counterOfferExpirySweep,
   'daily-cash-reconciliation': dailyCashReconciliation,
+  'cart-lock-reaper': cartLockReaper,
 };
 
 // Start Sentry before any job can fail so worker errors are reportable.

@@ -49,6 +49,7 @@ import {
   topupRouter,
   webhookRouter,
 } from './modules/topup/topup.routes.js';
+import { cartRouter } from './modules/cart/cart.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -87,6 +88,7 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/wallets', router: walletsRouter },
   { prefix: '/v1/wallets', router: topupRouter },
   { prefix: '/v1/webhooks', router: webhookRouter },
+  { prefix: '/v1/cart', router: cartRouter },
 ];
 
 /**

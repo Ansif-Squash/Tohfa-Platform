@@ -496,6 +496,6 @@ describeIfDatabase('Admin Cash Top-up & Daily Reconciliation (BR-18, BR-19, S-33
         WHERE job_name = 'daily-cash-reconciliation'
         ORDER BY started_at DESC LIMIT 1`,
     );
-    expect(jobRunRes.rows[0]!.status).toBe('COMPLETED');
+    expect(jobRunRes.rows[0]!.status).toBe('SUCCEEDED');
   });
 });
