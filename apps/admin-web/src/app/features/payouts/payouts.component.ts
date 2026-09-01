@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RbacService } from '../../core/rbac.service';
-import { AgeBucket, PayoutDue, PayoutsService, PayoutResponse } from './payouts.service';
+import { PayoutsService, type AgeBucket, type PayoutDue } from './payouts.service';
 
 @Component({
   selector: 'tohfa-payouts',

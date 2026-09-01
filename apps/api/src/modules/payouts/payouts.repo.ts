@@ -4,7 +4,6 @@ import type {
   PayoutDue,
   PayoutDuesTotals,
   PayoutDuesQuery,
-  PayoutResponse,
 } from './payouts.schema.js';
 
 // ---------------------------------------------------------------------------
