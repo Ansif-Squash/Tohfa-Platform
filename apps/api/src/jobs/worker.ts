@@ -334,6 +334,7 @@ async function shutdown(signal: string): Promise<void> {
 // `import.meta.url` check keeps this file importable from tests without
 // spawning a worker as a side effect.
 if (process.env['TOHFA_WORKER_AUTOSTART'] !== 'false') {
+  initSentry();
   registerRepeatableJobs()
     .then((names) => logger.info({ jobs: names }, 'repeatable jobs registered'))
     .catch((error: unknown) => logger.error({ err: error }, 'failed to register repeatable jobs'));

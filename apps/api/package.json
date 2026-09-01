@@ -13,6 +13,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run --exclude \"**/*.e2e.test.ts\"",
     "test:watch": "vitest",
+    "test:smoke": "vitest run src/app.e2e.test.ts",
     "test:e2e": "vitest run e2e.test",
     "test:contract": "vitest run contract.test",
     "db:migrate": "tsx src/db/migrate.ts",
