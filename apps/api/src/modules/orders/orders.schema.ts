@@ -28,9 +28,13 @@ export const orderStatuses = [
   'CONFIRMED',
   'PACKED',
   'READY_FOR_PICKUP',
+  'DISPATCHED',
   'OUT_FOR_DELIVERY',
+  'DELIVERED',
+  'PICKED_UP',
   'COMPLETED',
   'CANCELLED',
+  'RETURNED',
 ] as const;
 export type OrderStatus = (typeof orderStatuses)[number];
 
