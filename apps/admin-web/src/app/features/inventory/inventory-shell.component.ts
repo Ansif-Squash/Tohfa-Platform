@@ -229,9 +229,9 @@ import { StockLedgerListComponent } from './stock-ledger-list.component';
                   {{ b.status }}
                 </span>
               </td>
-              <td>{{ b.qtyReceived }} kg</td>
+              <td>{{ b.qtyReceivedKg ?? b.qtyReceived ?? '0.000' }} kg</td>
               <td>
-                <strong>{{ b.qtyAvailable }} kg</strong>
+                <strong>{{ b.qtyAvailableKg ?? b.qtyAvailable ?? '0.000' }} kg</strong>
               </td>
               <td>{{ b.receivedOn | date: 'mediumDate' }}</td>
               <td>

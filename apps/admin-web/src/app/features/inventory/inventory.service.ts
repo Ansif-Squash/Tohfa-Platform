@@ -50,13 +50,15 @@ export interface BatchSummary {
   grade: 'GRADE_1' | 'GRADE_2' | 'GRADE_3' | 'REJECT';
   sourceFarmerId?: string;
   farmerName?: string;
-  qtyReceived: string;
-  qtyAvailable: string;
+  qtyReceived?: string;
+  qtyAvailable?: string;
+  qtyReceivedKg?: string;
+  qtyAvailableKg?: string;
   status: 'ACTIVE' | 'DEPLETED' | 'EXPIRED' | 'WRITTEN_OFF';
   receivedOn: string;
   expiryOn?: string | null;
   storageLocation?: string | null;
-  createdAt: string;
+  createdAt?: string;
   movements?: StockLedgerEntry[];
 }
 
@@ -76,15 +78,21 @@ export interface AllocationItem {
   batchCode?: string;
   cropId?: string;
   cropName?: string;
+  grade?: string;
   warehouseId: string;
   warehouseName?: string;
   channel: AllocationChannel;
-  allocatedQty: string;
-  consumedQty: string;
-  reservedQty: string;
-  availableQty: string;
+  allocatedQty?: string;
+  consumedQty?: string;
+  reservedQty?: string;
+  availableQty?: string;
+  allocatedQtyKg?: string;
+  consumedQtyKg?: string;
+  reservedQtyKg?: string;
+  availableQtyKg?: string;
+  allocationDate?: string;
   computedBy: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface ListAllocationsResponse {

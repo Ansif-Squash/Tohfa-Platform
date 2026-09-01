@@ -331,9 +331,10 @@ import {
           </thead>
           <tbody>
             <tr *ngFor="let item of allocations()">
-              <td>{{ item.createdAt | date: 'mediumDate' }}</td>
+              <td>{{ item.allocationDate || (item.createdAt | date: 'mediumDate') || '—' }}</td>
               <td>
                 <code>{{ item.batchCode || item.batchId }}</code>
+                <span *ngIf="item.cropName" style="margin-left: 6px; font-weight: 500;">({{ item.cropName }})</span>
               </td>
               <td>
                 <span
@@ -348,11 +349,11 @@ import {
                   {{ item.channel }}
                 </span>
               </td>
-              <td>{{ item.allocatedQty }} kg</td>
-              <td>{{ item.consumedQty }} kg</td>
-              <td>{{ item.reservedQty }} kg</td>
+              <td>{{ item.allocatedQtyKg ?? item.allocatedQty ?? '0.000' }} kg</td>
+              <td>{{ item.consumedQtyKg ?? item.consumedQty ?? '0.000' }} kg</td>
+              <td>{{ item.reservedQtyKg ?? item.reservedQty ?? '0.000' }} kg</td>
               <td>
-                <strong>{{ item.availableQty }} kg</strong>
+                <strong>{{ item.availableQtyKg ?? item.availableQty ?? '0.000' }} kg</strong>
               </td>
             </tr>
             <tr *ngIf="allocations().length === 0">
@@ -417,10 +418,26 @@ export class AllocationDashboardComponent implements OnInit {
 
   private computeBucket(channel: string) {
     const items = this.allocations().filter((a) => a.channel === channel);
-    const allocated = items.reduce((sum, a) => sum + Number(a.allocatedQty), 0);
-    const consumed = items.reduce((sum, a) => sum + Number(a.consumedQty), 0);
-    const reserved = items.reduce((sum, a) => sum + Number(a.reservedQty), 0);
-    const available = items.reduce((sum, a) => sum + Number(a.availableQty), 0);
+    const parseQty = (val: unknown) => {
+      const n = Number(val);
+      return isNaN(n) ? 0 : n;
+    };
+    const allocated = items.reduce(
+      (sum, a) => sum + parseQty(a.allocatedQtyKg ?? a.allocatedQty),
+      0,
+    );
+    const consumed = items.reduce(
+      (sum, a) => sum + parseQty(a.consumedQtyKg ?? a.consumedQty),
+      0,
+    );
+    const reserved = items.reduce(
+      (sum, a) => sum + parseQty(a.reservedQtyKg ?? a.reservedQty),
+      0,
+    );
+    const available = items.reduce(
+      (sum, a) => sum + parseQty(a.availableQtyKg ?? a.availableQty),
+      0,
+    );
 
     return {
       allocated: allocated.toFixed(3),
