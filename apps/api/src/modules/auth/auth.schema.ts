@@ -3,7 +3,8 @@ import { z } from 'zod';
 const mobileRegex = /^\+[1-9][0-9]{7,14}$/;
 const otpCodeRegex = /^[0-9]{6}$/;
 
-export const registerCustomerBody = z.object({
+export const 
+registerCustomerBody = z.object({
   mobile: z.string().regex(mobileRegex, { message: 'Must be a valid E.164 mobile number (+91...)' }),
   fullName: z.string().trim().min(2).max(120),
   email: z.string().email().optional(),
