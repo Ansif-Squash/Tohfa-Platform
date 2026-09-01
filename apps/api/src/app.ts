@@ -43,6 +43,8 @@ import {
   adminStockLedgerRouter,
 } from './modules/inventory/inventory.routes.js';
 import { catalogRouter } from './modules/catalog/catalog.routes.js';
+import { walletsRouter } from './modules/wallet/wallet.routes.js';
+import { topupRouter, webhookRouter } from './modules/topup/topup.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -77,6 +79,9 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/admin/allocations', router: adminAllocationsRouter },
   { prefix: '/v1/admin/allocation-config', router: adminAllocationConfigRouter },
   { prefix: '/v1/catalog', router: catalogRouter },
+  { prefix: '/v1/wallets', router: walletsRouter },
+  { prefix: '/v1/wallets', router: topupRouter },
+  { prefix: '/v1/webhooks', router: webhookRouter },
 ];
 
 /**
@@ -131,6 +136,8 @@ export function createApp(): Express {
       exposedHeaders: [CORRELATION_HEADER],
     }),
   );
+  // Webhook raw body parser MUST mount before global express.json() for exact HMAC verification
+  app.use('/v1/webhooks/razorpay', express.raw({ type: 'application/json' }));
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
