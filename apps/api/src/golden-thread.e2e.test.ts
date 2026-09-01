@@ -23,7 +23,7 @@
  */
 import type { Express } from 'express';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { RoleCode, ScopeLevel } from '@tohfa/shared-types';
 import { createApp } from './app.js';
 import { signAccessToken } from './auth/jwt.js';
@@ -109,7 +109,7 @@ describeIfDatabase('S-39 — Golden Thread Full Lifecycle E2E Suite', () => {
   let superAdmin2Token: string;
   let superAdmin2UserId: string;
 
-  let tohfaAdminToken: string;
+  let _tohfaAdminToken: string;
   let tohfaAdminUserId: string;
 
   let farmerAdminToken: string;
@@ -221,7 +221,7 @@ describeIfDatabase('S-39 — Golden Thread Full Lifecycle E2E Suite', () => {
        VALUES ($1, $2, 'Tohfa Platform Admin', 'ADMIN', 'ACTIVE') ON CONFLICT DO NOTHING`,
       [tohfaAdminUserId, `+919830${String(ts).slice(-6)}`],
     );
-    tohfaAdminToken = signAccessToken({
+    _tohfaAdminToken = signAccessToken({
       sub: tohfaAdminUserId,
       roles: [{ code: RoleCode.TOHFA_ADMIN }],
       customerId: null,

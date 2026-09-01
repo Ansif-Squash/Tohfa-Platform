@@ -59,7 +59,7 @@ async function runDemoSeed() {
     const beetrootId = cropMap.get('beetroot') || cropRes.rows[2]?.id || carrotId;
 
     const superAdminUserId = '00000000-0000-0000-0000-000000000001';
-    const tohfaAdminUserId = '00000000-0000-0000-0000-000000000002';
+    const _tohfaAdminUserId = '00000000-0000-0000-0000-000000000002';
 
     // -------------------------------------------------------------------------
     // 2. Seed 12 Demo Farmers Across Lifecycle & Certification States

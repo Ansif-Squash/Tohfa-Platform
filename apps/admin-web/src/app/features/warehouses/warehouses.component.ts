@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { WarehousesService, WarehouseItem } from './warehouses.service';
+import { WarehousesService, type WarehouseItem } from './warehouses.service';
 
 @Component({
   selector: 'tohfa-warehouses',
