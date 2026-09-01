@@ -133,6 +133,25 @@ export const ScopeLevel = {
 } as const;
 export type ScopeLevel = (typeof ScopeLevel)[keyof typeof ScopeLevel];
 
+/** Invoice classification. */
+export const InvoiceType = {
+  SALE_RETAIL: 'SALE_RETAIL',
+  SALE_B2B: 'SALE_B2B',
+  PURCHASE_FARMER: 'PURCHASE_FARMER',
+  PAYOUT: 'PAYOUT',
+  SUBSCRIPTION: 'SUBSCRIPTION',
+} as const;
+export type InvoiceType = (typeof InvoiceType)[keyof typeof InvoiceType];
+
+/** Invoice lifecycle state. */
+export const InvoiceStatus = {
+  DRAFT: 'DRAFT',
+  ISSUED: 'ISSUED',
+  CANCELLED: 'CANCELLED',
+  CREDIT_NOTED: 'CREDIT_NOTED',
+} as const;
+export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
+
 /** Every enum's runtime value list, handy for Zod `z.enum(...)`. */
 export const enumValues = {
   Grade: Object.values(Grade),
@@ -143,6 +162,8 @@ export const enumValues = {
   AllocationChannel: Object.values(AllocationChannel),
   WalletTxnType: Object.values(WalletTxnType),
   ApplicationStatus: Object.values(ApplicationStatus),
+  InvoiceType: Object.values(InvoiceType),
+  InvoiceStatus: Object.values(InvoiceStatus),
   RoleCode: Object.values(RoleCode),
   ScopeLevel: Object.values(ScopeLevel),
 } as const;

@@ -59,6 +59,7 @@ import {
   payoutDuesRouter,
   payoutsRouter,
 } from './modules/payouts/payouts.routes.js';
+import { invoicesRouter } from './modules/invoices/invoices.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -103,6 +104,7 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/orders', router: orderTrackingRouter },
   { prefix: '/v1/admin/payout-dues', router: payoutDuesRouter },
   { prefix: '/v1/admin/payouts', router: payoutsRouter },
+  { prefix: '/v1/invoices', router: invoicesRouter },
 ];
 
 /**
