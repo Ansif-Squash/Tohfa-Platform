@@ -2334,19 +2334,19 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Order' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422':
-          description: Wallet balance insufficient.
+        '402':
+          description: Wallet balance insufficient (BR-17a).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
               example:
-                type: https://api.tohfa.in/problems/insufficient-wallet-balance
+                type: https://docs.tohfa.in/problems/wallet-insufficient
                 title: Wallet balance is insufficient
-                status: 422
+                status: 402
                 detail: Order total is INR 412.50 and the wallet holds INR 180.00.
                 code: WALLET_INSUFFICIENT
                 correlationId: 01J9F1B2C3D4E5F6G7H8J9K5
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
         '500': { $ref: '#/components/responses/ServerError' }
     get:
       tags: [Cart & Orders]
