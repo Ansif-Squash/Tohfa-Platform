@@ -180,6 +180,12 @@ export class AdminInventoryService {
     return this.http.get<{ items: Warehouse[] }>('/v1/warehouses');
   }
 
+  getSystemConfig(key: string): Observable<{ key: string; value: number | string | boolean | null }> {
+    return this.http.get<{ key: string; value: number | string | boolean | null }>(
+      `/v1/admin/config/${key}`,
+    );
+  }
+
   exportStockLedgerCsv(items: StockLedgerEntry[]): void {
     const headers = ['ID', 'Batch ID', 'Warehouse ID', 'Movement Type', 'Quantity (kg)', 'Balance After (kg)', 'Remarks', 'Date'];
     const rows = items.map((e) => [

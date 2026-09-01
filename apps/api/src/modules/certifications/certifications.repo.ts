@@ -79,8 +79,8 @@ export const certificationsRepo: CertificationsRepo = {
     // If documentUrl is given but no documentId, create farmer_documents row
     if (documentId === null && params.documentUrl !== undefined) {
       const docResult = await db.query<{ id: string }>(
-        `INSERT INTO farmer_documents (farmer_id, doc_type, file_url, verification_status)
-         VALUES ($1, 'CERTIFICATE', $2, 'UNVERIFIED')
+        `INSERT INTO farmer_documents (farmer_id, doc_type, storage_key, mime_type, verification_status)
+         VALUES ($1, 'CERTIFICATE', $2, 'application/pdf', 'UNVERIFIED')
          RETURNING id`,
         [params.farmerId, params.documentUrl],
       );
@@ -117,7 +117,7 @@ export const certificationsRepo: CertificationsRepo = {
     const result = await db.query<CertificationRow>(
       `SELECT c.id, c.farmer_id, c.farm_id, c.cert_type, c.cert_number, c.issuing_body,
               c.issued_on::text, c.expires_on::text, c.document_id,
-              fd.file_url AS document_url, c.verification_status, c.verified_by,
+              fd.storage_key AS document_url, c.verification_status, c.verified_by,
               c.verified_at, c.verification_notes, c.portal_checked_url,
               c.created_at, c.updated_at
          FROM certifications c
@@ -141,7 +141,7 @@ export const certificationsRepo: CertificationsRepo = {
     const result = await db.query<CertificationRow>(
       `SELECT c.id, c.farmer_id, c.farm_id, c.cert_type, c.cert_number, c.issuing_body,
               c.issued_on::text, c.expires_on::text, c.document_id,
-              fd.file_url AS document_url, c.verification_status, c.verified_by,
+              fd.storage_key AS document_url, c.verification_status, c.verified_by,
               c.verified_at, c.verification_notes, c.portal_checked_url,
               c.created_at, c.updated_at
          FROM certifications c

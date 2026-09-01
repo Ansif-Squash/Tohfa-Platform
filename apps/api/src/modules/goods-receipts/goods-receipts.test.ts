@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RoleCode, ScopeLevel } from '@tohfa/shared-types';
 import { AppError } from '../../http/problem.js';
 import type { Actor } from '../../auth/requireAuth.js';
+import type { Executor } from '../../db/pool.js';
 import type { ResolvedScope } from '../../rbac/requirePermission.js';
 import { aScope, aSubWarehouseAdmin, anActor, IDS } from '../../test/factories.js';
 import {
@@ -158,9 +159,9 @@ describe('GoodsReceiptsService (Unit & Business Rules S-25)', () => {
     ...overrides,
   });
 
-  const mockTx: any = { query: async () => ({ rows: [] }) };
-  const mockRunTx = async (fn: any) => fn(mockTx);
-  const mockDb: any = { query: async () => ({ rows: [] }) };
+  const mockTx = { query: async () => ({ rows: [] }) } as unknown as Executor;
+  const mockRunTx = async <T>(fn: (tx: Executor) => Promise<T>): Promise<T> => fn(mockTx);
+  const mockDb = { query: async () => ({ rows: [] }) } as unknown as Executor;
 
   const createTestService = (overrides?: Partial<GoodsReceiptsRepo>) =>
     createGoodsReceiptsService(createMockRepo(overrides), mockRunTx, mockDb);

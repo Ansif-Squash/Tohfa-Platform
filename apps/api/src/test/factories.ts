@@ -10,8 +10,13 @@
  * makes every test that uses it accidentally a validation test.
  */
 import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
+import { config as loadDotenv } from 'dotenv';
 import { describe } from 'vitest';
 import { RoleCode, ScopeLevel } from '@tohfa/shared-types';
+import { REPO_ROOT } from '../paths.js';
+
+loadDotenv({ path: join(REPO_ROOT, '.env') });
 import type { Actor } from '../auth/requireAuth.js';
 import type { RoleAssignment } from '../auth/jwt.js';
 import type { ResolvedScope } from '../rbac/requirePermission.js';

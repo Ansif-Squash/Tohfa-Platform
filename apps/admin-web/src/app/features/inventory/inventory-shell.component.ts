@@ -304,9 +304,17 @@ export class InventoryShellComponent implements OnInit {
   readonly lowStockBatches = signal<BatchSummary[]>([]);
   readonly lowStockCount = signal<number>(0);
 
+  /**
+   * Low-stock threshold is read from system_config.low_stock_threshold_kg on the server
+   * (S-28 specification gap: no source document defines this value — the client
+   * must confirm). Defaults to null until loaded; batches are not filtered until
+   * the threshold is known.
+   */
+  private lowStockThresholdKg: number | null = null;
+
   ngOnInit(): void {
     if (this.canViewBatches()) {
-      this.loadBatches();
+      this.loadThresholdThenBatches();
     }
   }
 
@@ -325,11 +333,39 @@ export class InventoryShellComponent implements OnInit {
     return this.rbacService.can('allocation.dashboard.view');
   }
 
+  /**
+   * Fetch low_stock_threshold_kg from system_config first, then load batches.
+   * If the config endpoint is unavailable (e.g. pre-S-31 API), defaults to 50
+   * and logs the gap so it is visible in the browser console.
+   */
+  loadThresholdThenBatches(): void {
+    this.inventoryService.getSystemConfig('low_stock_threshold_kg').subscribe({
+      next: (cfg) => {
+        this.lowStockThresholdKg = typeof cfg.value === 'number' ? cfg.value : 50;
+        this.loadBatches();
+      },
+      error: () => {
+        // S-28 specification gap: low_stock_threshold_kg endpoint not yet available.
+        // Falling back to system_config seed value of 50 kg until /v1/admin/config is built.
+        console.warn(
+          '[inventory-shell] Could not read low_stock_threshold_kg from system_config; ' +
+          'defaulting to 50 kg. This is a known specification gap (S-28) — ' +
+          'the client must confirm the correct threshold.',
+        );
+        this.lowStockThresholdKg = 50;
+        this.loadBatches();
+      },
+    });
+  }
+
   loadBatches(): void {
+    const threshold = this.lowStockThresholdKg ?? 50;
     this.inventoryService.listBatches({ limit: 100 }).subscribe({
       next: (res) => {
         this.batches.set(res.items);
-        const low = res.items.filter((b) => Number(b.qtyAvailable) > 0 && Number(b.qtyAvailable) < 50);
+        const low = res.items.filter(
+          (b) => Number(b.qtyAvailable) > 0 && Number(b.qtyAvailable) < threshold,
+        );
         this.lowStockBatches.set(low);
         this.lowStockCount.set(low.length);
       },

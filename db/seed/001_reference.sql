@@ -243,7 +243,11 @@ INSERT INTO system_config (key, value, data_type, description) VALUES
 
     ('rating_scale_max',
      'null'::jsonb, 'number',
-     'BR-04 / contradiction 1: the audit rating scale is UNRESOLVED (100 vs 750+ tiers). Deliberately null. No code may assume a scale until the client answers; the scoring endpoint returns 501.')
+     'BR-04 / contradiction 1: the audit rating scale is UNRESOLVED (100 vs 750+ tiers). Deliberately null. No code may assume a scale until the client answers; the scoring endpoint returns 501.'),
+
+    ('low_stock_threshold_kg',
+     '50'::jsonb, 'number',
+     'S-28 specification gap: no source document defines a low-stock threshold. 50 kg is a placeholder. The admin inventory screen reads this key from system_config — it is NOT a literal in the component. The client must confirm the correct value.')
 ON CONFLICT (key) DO UPDATE SET
     value       = EXCLUDED.value,
     data_type   = EXCLUDED.data_type,

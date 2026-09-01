@@ -266,7 +266,7 @@ describe('CatalogService (Unit & Business Rules S-29)', () => {
         listing_id: 'lst-123',
       };
 
-      const serialized = serializeProduct(rawRowWithSensitiveFields as any);
+      const serialized = serializeProduct(rawRowWithSensitiveFields as unknown as RawCatalogProductRow);
 
       // Exactly the 10 permitted keys
       const keys = Object.keys(serialized).sort();
@@ -326,11 +326,11 @@ describe('CatalogService (Unit & Business Rules S-29)', () => {
     it('REJECT-grade stock is never sellable and never appears in catalog', async () => {
       const { service, repo } = createTestService();
       // Add a REJECT item
-      (repo.products as any).push({
+      (repo.products as RawCatalogProductRow[]).push({
         crop_id: '99999999-0000-4000-8000-000000000001',
         name: 'Damaged Cabbage',
         category_id: IDS.categoryVeg,
-        grade: 'REJECT',
+        grade: 'REJECT' as unknown as ProductGrade,
         price_per_kg: '10.00',
         available_qty: '50.000',
         unit: 'kg',

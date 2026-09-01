@@ -66,7 +66,7 @@ export const routes: Routes = [
 
       {
         path: 'listings',
-        canActivate: [permissionGuard('listing.approve')],
+        canActivate: [permissionGuard('listing.queue.view_pending')],
         loadComponent: async () =>
           (await import('./features/listings/listings-queue.component')).ListingsQueueComponent,
       },

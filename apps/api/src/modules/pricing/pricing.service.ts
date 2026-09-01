@@ -105,35 +105,46 @@ export function createPricingService(
 
     async createFairPrice(actor, body) {
       const result = await runTx(async (tx) => {
-        const { fairPrice, affectedRetailPrices } = await repo.createFairPrice(
-          tx,
-          {
-            cropId: body.cropId,
-            grade: body.grade,
-            ceilingPrice: body.ceilingPrice,
-            frequency: body.frequency,
-            effectiveFrom: body.effectiveFrom,
-            ...(body.notes !== undefined ? { notes: body.notes } : {}),
-          },
-          actor.userId,
-        );
+        try {
+          const { fairPrice, affectedRetailPrices } = await repo.createFairPrice(
+            tx,
+            {
+              cropId: body.cropId,
+              grade: body.grade,
+              ceilingPrice: body.ceilingPrice,
+              frequency: body.frequency,
+              effectiveFrom: body.effectiveFrom,
+              ...(body.notes !== undefined ? { notes: body.notes } : {}),
+            },
+            actor.userId,
+          );
 
-        await writeAuditLog(tx, {
-          actorId: actor.userId,
-          ...(actor.roles[0]?.code ? { actorRole: actor.roles[0].code } : {}),
-          actionCode: 'pricing.fair_price.set',
-          entityType: 'fair_price',
-          entityId: fairPrice.id,
-          after: {
-            cropId: fairPrice.crop_id,
-            grade: fairPrice.grade,
-            ceilingPrice: fairPrice.ceiling_price,
-            effectiveFrom: fairPrice.effective_from,
-          },
-          changedFields: ['ceiling_price', 'effective_from'],
-        });
+          await writeAuditLog(tx, {
+            actorId: actor.userId,
+            ...(actor.roles[0]?.code ? { actorRole: actor.roles[0].code } : {}),
+            actionCode: 'pricing.fair_price.set',
+            entityType: 'fair_price',
+            entityId: fairPrice.id,
+            after: {
+              cropId: fairPrice.crop_id,
+              grade: fairPrice.grade,
+              ceilingPrice: fairPrice.ceiling_price,
+              effectiveFrom: fairPrice.effective_from,
+            },
+            changedFields: ['ceiling_price', 'effective_from'],
+          });
 
-        return { fairPrice, affectedRetailPrices };
+          return { fairPrice, affectedRetailPrices };
+        } catch (err: any) {
+          if (err.code === '23505' || err.code === '23P01') {
+            throw new AppError('CONFLICT', {
+              status: 409,
+              detail: 'A fair price ceiling for this crop, grade, and effective window already exists.',
+              cause: err,
+            });
+          }
+          throw err;
+        }
       });
 
       const mapped = mapFairPriceResponse(result.fairPrice);

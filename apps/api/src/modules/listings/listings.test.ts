@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RoleCode, ScopeLevel } from '@tohfa/shared-types';
 import type { Actor } from '../../auth/requireAuth.js';
+import { pool, type Executor } from '../../db/pool.js';
 import { AppError } from '../../http/problem.js';
 import type { ResolvedScope } from '../../rbac/requirePermission.js';
 import type { ListingRollup, ListingRow } from './listings.repo.js';
@@ -53,7 +54,7 @@ describe('ListingsService (Unit & Business Rules)', () => {
     updatedAt: null,
   };
 
-  const mockRepo = (overrides?: Partial<any>) => ({
+  const mockRepo = (overrides?: Partial<Record<string, unknown>>) => ({
     findFarmerById: async () => ({
       id: '00000000-0000-0000-0000-000000000010',
       userId: '00000000-0000-0000-0000-000000000001',
@@ -69,7 +70,7 @@ describe('ListingsService (Unit & Business Rules)', () => {
       hasUnverified: false,
       verifiedBadges: [{ certType: 'NPOP', certNumber: 'NPOP/2026/01', issuingBody: 'Aditi', issuedOn: '2025-01-01', expiresOn: '2027-01-01' }],
     }),
-    getSystemConfig: async (_db: any, key: string) => {
+    getSystemConfig: async (_db: unknown, key: string) => {
       if (key === 'free_tier_limits_enabled') return false;
       if (key === 'free_tier_listing_limit') return 5;
       return null;
@@ -97,11 +98,11 @@ describe('ListingsService (Unit & Business Rules)', () => {
     ...overrides,
   });
 
-  const createTestService = (overrides?: Partial<any>) =>
+  const createTestService = (overrides?: Partial<Record<string, unknown>>) =>
     new ListingsService(
-      mockRepo(overrides) as any,
-      async (fn) => fn({} as any),
-      {} as any,
+      mockRepo(overrides) as ListingsService['repo'],
+      async (fn) => fn({} as Executor),
+      pool,
     );
 
   it('BR-01a: Farmer with a certificate expiring yesterday → POST /listings returns 422, code: CERT_EXPIRED', async () => {
@@ -185,7 +186,7 @@ describe('ListingsService (Unit & Business Rules)', () => {
   });
 
   it('BR-07b: Listing at exactly the ceiling is accepted; stores the fair_price_id it was validated against', async () => {
-    let capturedInsert: any = null;
+    let capturedInsert: Record<string, unknown> | null = null;
     const service = createTestService({
       findEffectiveFairPrice: async () => ({
         id: 'ceiling-uuid-1234',
@@ -193,7 +194,7 @@ describe('ListingsService (Unit & Business Rules)', () => {
         effectiveFrom: '2026-08-25',
         effectiveTo: null,
       }),
-      insertListing: async (_db: any, data: any) => {
+      insertListing: async (_db: unknown, data: Record<string, unknown>) => {
         capturedInsert = data;
         return { ...sampleListing, fairPriceId: data.fairPriceId };
       },
@@ -207,7 +208,7 @@ describe('ListingsService (Unit & Business Rules)', () => {
     });
 
     expect(result).toBeDefined();
-    expect(capturedInsert.fairPriceId).toBe('ceiling-uuid-1234');
+    expect(capturedInsert!['fairPriceId']).toBe('ceiling-uuid-1234');
     expect(result.fairPriceId).toBe('ceiling-uuid-1234');
   });
 
@@ -221,7 +222,7 @@ describe('ListingsService (Unit & Business Rules)', () => {
   it('BR-14a/b: Free-tier limits are read dynamically from system_config and disabled by default', async () => {
     // When enabled, it rejects when over limit
     const serviceWithLimits = createTestService({
-      getSystemConfig: async (_db: any, key: string) => {
+      getSystemConfig: async (_db: unknown, key: string) => {
         if (key === 'free_tier_limits_enabled') return true;
         if (key === 'free_tier_listing_limit') return 2;
         return null;
@@ -244,7 +245,7 @@ describe('ListingsService (Unit & Business Rules)', () => {
 
     // When disabled (default), it allows creating listing even if count is high
     const serviceDisabled = createTestService({
-      getSystemConfig: async (_db: any, key: string) => {
+      getSystemConfig: async (_db: unknown, key: string) => {
         if (key === 'free_tier_limits_enabled') return false;
         return null;
       },

@@ -13,8 +13,10 @@ import { Router } from 'express';
 import { requireAuth } from '../../auth/requireAuth.js';
 import { asyncHandler } from '../../http/asyncHandler.js';
 import { requirePermission } from '../../rbac/requirePermission.js';
-import { pool } from '../../db/pool.js';
+import { pool, withTransaction } from '../../db/pool.js';
 import { counterOffersService } from './counter-offers.service.js';
+import { purchaseOrdersService } from '../purchase-orders/purchase-orders.service.js';
+import { AppError } from '../../http/problem.js';
 import {
   adminApproveListingBody,
   adminRejectListingBody,
@@ -70,10 +72,135 @@ adminListingsRouter.post(
   requireAuth,
   requirePermission('listing.approve'),
   asyncHandler(async (req, res) => {
-    const { id } = listingIdParams.parse(req.params);
-    const body = adminApproveListingBody.parse(req.body);
-    const result = await counterOffersService.approveListing(req.actor!, req.scope!, id, body);
-    res.json(result);
+    try {
+      const { id } = listingIdParams.parse(req.params);
+      const body = adminApproveListingBody.parse(req.body);
+
+      const result = await withTransaction(async (tx) => {
+        const listing = await counterOffersRepo.findAdminListing(tx, id);
+        if (listing === null) {
+          throw new AppError('NOT_FOUND', { detail: 'Listing not found.' });
+        }
+
+        if (req.scope) {
+          const isOwn = (scope: any, row: any) => {
+            if (scope.level === 'own') {
+              return row.ownerUserId === scope.userId;
+            }
+            return false;
+          };
+          if (isOwn(req.scope, listing)) {
+            const denied = await (counterOffersService as any)['routeAwayFromOwner'](tx, req.scope, listing, 'approve');
+            throw denied;
+          }
+        }
+
+        let updatedListing = listing;
+        const PENDABLE_STATUSES = ['PENDING_APPROVAL', 'COUNTER_OFFERED'];
+        if (PENDABLE_STATUSES.includes(listing.status)) {
+          const transitioned = await counterOffersRepo.transitionListingStatus(
+            tx,
+            id,
+            'ACCEPTED',
+            PENDABLE_STATUSES,
+            listing.version,
+            {
+              finalPricePerKg: listing.askingPricePerKg,
+              finalQuantityKg: listing.quantityKg,
+              approvedBy: req.actor!.userId,
+              approvedAt: new Date(),
+            },
+          );
+          if (transitioned === null) {
+            throw new AppError('CONFLICT', {
+              detail: 'The listing was modified by another request. Please refresh and try again.',
+            });
+          }
+          updatedListing = transitioned;
+
+          const priorPending = await counterOffersRepo.findLatestPendingOffer(tx, id);
+          if (priorPending !== null) {
+            await counterOffersRepo.transitionOfferStatus(tx, priorPending.id, 'COUNTERED', req.actor!.userId);
+          }
+
+          const auditLogInput = {
+            actorId: req.actor!.userId,
+            actorRole: req.scope!.roleCode,
+            actionCode: 'listing.approve',
+            entityType: 'listing',
+            entityId: id,
+            before: { status: listing.status, version: listing.version },
+            after: { status: transitioned.status, version: transitioned.version },
+            changedFields: ['status', 'version', 'finalPricePerKg', 'finalQuantityKg', 'approvedBy', 'approvedAt'],
+          };
+          await tx.query(
+            `INSERT INTO audit_log (
+              actor_id, actor_role, action_code, entity_type, entity_id, outcome, before, after, changed_fields
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+              auditLogInput.actorId,
+              auditLogInput.actorRole,
+              auditLogInput.actionCode,
+              auditLogInput.entityType,
+              auditLogInput.entityId,
+              'ALLOWED',
+              JSON.stringify(auditLogInput.before),
+              JSON.stringify(auditLogInput.after),
+              auditLogInput.changedFields,
+            ],
+          );
+        } else if (listing.status !== 'ACCEPTED') {
+          throw new AppError('LISTING_NOT_PENDING', {
+            detail: `Only pending listings can be approved (current status: ${listing.status}).`,
+          });
+        }
+
+        const po = await purchaseOrdersService.createForListing(
+          tx,
+          req.actor!,
+          req.scope!,
+          {
+            id: updatedListing.id,
+            farmerId: updatedListing.farmerId,
+            cropId: updatedListing.cropId,
+            grade: updatedListing.grade as any,
+            quantityKg: updatedListing.quantityKg,
+            askingPricePerKg: updatedListing.askingPricePerKg,
+            finalPricePerKg: updatedListing.finalPricePerKg,
+            finalQuantityKg: updatedListing.finalQuantityKg,
+          },
+          {
+            warehouseId: body.warehouseId,
+            expectedDeliveryDate: body.expectedDeliveryDate ?? null,
+            ...(body.note ? { note: body.note } : {}),
+          },
+        );
+
+        return {
+          purchaseOrderId: po.id,
+          listing: {
+            id: updatedListing.id,
+            farmerId: updatedListing.farmerId,
+            cropId: updatedListing.cropId,
+            grade: updatedListing.grade,
+            quantityKg: updatedListing.quantityKg,
+            askingPricePerKg: updatedListing.askingPricePerKg,
+            finalPricePerKg: updatedListing.finalPricePerKg,
+            finalQuantityKg: updatedListing.finalQuantityKg,
+            status: updatedListing.status,
+            version: updatedListing.version,
+            createdAt: updatedListing.createdAt,
+            updatedAt: updatedListing.updatedAt,
+          },
+          purchaseOrder: po,
+        };
+      });
+
+      res.json(result);
+    } catch (err) {
+      console.error('--- APPROVE ROUTE ERROR:', err);
+      throw err;
+    }
   }),
 );
 
