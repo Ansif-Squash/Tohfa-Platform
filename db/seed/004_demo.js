@@ -143,6 +143,61 @@ async function runDemoSeed() {
           ],
         );
       }
+
+      // Farmer Application (for Admin Applications Queue)
+      const appId = `11000000-0000-0000-0000-${String(f.num).padStart(12, '0')}`;
+      await client.query(
+        `INSERT INTO farmer_applications
+           (id, mobile, full_name, preferred_locale, status, is_draft, current_step, completed_steps, step1_personal, step2_farm_details, step3_location, step4_documents, user_id, farmer_id, submitted_at, created_at)
+         VALUES
+           ($1, $2, $3, 'en', $4, false, 5, '{1,2,3,4,5}', $5, $6, $7, $8, $9, $10, now() - ($11 * INTERVAL '1 day'), now() - (($11 + 5) * INTERVAL '1 day'))
+         ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
+        [
+          appId,
+          `+91987000${String(f.num).padStart(4, '0')}`,
+          f.name,
+          f.status,
+          JSON.stringify({
+            fullName: f.name,
+            dob: '1985-05-15',
+            gender: 'MALE',
+            aadhaarLast4: '4321',
+            farmingExperienceYears: 10 + f.num,
+            village: 'Kodanad',
+            taluk: 'Kotagiri',
+            district: 'The Nilgiris',
+            pincode: '643217',
+          }),
+          JSON.stringify({
+            farms: [
+              {
+                name: `${f.name}'s Organic Farm`,
+                totalAreaAcres: 3.5 + f.num * 0.5,
+                organicSince: '2020-01-01',
+                waterSource: 'Rainfed & Borewell',
+                primaryCrops: ['Carrot', 'Potato'],
+              },
+            ],
+          }),
+          JSON.stringify({
+            gpsCaptured: true,
+            latitude: 11.41 + f.num * 0.005,
+            longitude: 76.69 + f.num * 0.005,
+            village: 'Kodanad',
+            taluk: 'Kotagiri',
+            district: 'The Nilgiris',
+          }),
+          JSON.stringify({
+            documents: [
+              { docType: 'ID_PROOF', fileUrl: 'https://storage.tohfa.in/docs/id_proof.pdf', fileName: 'id_proof.pdf' },
+              { docType: 'FARM_DOC', fileUrl: 'https://storage.tohfa.in/docs/patta.pdf', fileName: 'patta.pdf' },
+            ],
+          }),
+          uId,
+          fId,
+          f.num,
+        ],
+      );
     }
 
     // -------------------------------------------------------------------------

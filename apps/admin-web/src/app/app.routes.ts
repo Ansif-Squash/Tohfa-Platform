@@ -57,7 +57,7 @@ export const routes: Routes = [
         path: 'warehouses',
         canActivate: [permissionGuard('warehouse.all.view')],
         loadComponent: async () =>
-          (await import('./shared/data-table/data-table.component')).DataTableComponent,
+          (await import('./features/warehouses/warehouses.component')).WarehousesComponent,
       },
 
       {
