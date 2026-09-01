@@ -96,5 +96,8 @@ jobs:
       - name: RBAC drift check
         run: pnpm rbac:check
 
+      - name: Production smoke test gate
+        run: pnpm test:smoke
+
       - name: E2E tests
         run: pnpm test:e2e

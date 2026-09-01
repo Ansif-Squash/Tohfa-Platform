@@ -161,11 +161,11 @@ import { AdminInventoryService, type BatchSummary } from './inventory.service';
           </div>
           <div class="meta-item">
             <span class="meta-label">Available Quantity</span>
-            <span class="meta-value meta-value-highlight">{{ b.qtyAvailable }} kg</span>
+            <span class="meta-value meta-value-highlight">{{ b.qtyAvailableKg ?? b.qtyAvailable ?? '0.000' }} kg</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Initial Received</span>
-            <span class="meta-value">{{ b.qtyReceived }} kg</span>
+            <span class="meta-value">{{ b.qtyReceivedKg ?? b.qtyReceived ?? '0.000' }} kg</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Received On</span>

@@ -368,9 +368,9 @@ export function createFarmerApplicationsService(
         let userId = app.user_id;
         if (userId === null) {
           const userRes = await tx.query<{ id: string }>(
-            `INSERT INTO users (mobile, full_name, preferred_locale)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (mobile) DO UPDATE SET full_name = EXCLUDED.full_name
+            `INSERT INTO users (mobile, full_name, preferred_locale, user_type, status)
+             VALUES ($1, $2, $3, 'FARMER', 'ACTIVE')
+             ON CONFLICT (mobile) WHERE deleted_at IS NULL DO UPDATE SET full_name = EXCLUDED.full_name
              RETURNING id`,
             [app.mobile, app.full_name, app.preferred_locale],
           );
@@ -378,8 +378,8 @@ export function createFarmerApplicationsService(
         }
 
         await tx.query(
-          `INSERT INTO user_roles (user_id, role_code)
-           VALUES ($1, 'FARMER')
+          `INSERT INTO user_roles (user_id, role_id)
+           VALUES ($1, (SELECT id FROM roles WHERE code = 'FARMER'))
            ON CONFLICT DO NOTHING`,
           [userId],
         );
@@ -392,6 +392,10 @@ export function createFarmerApplicationsService(
              kyc_status, application_status, is_market_blocked, market_block_reason
            )
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'VERIFIED', 'APPROVED', true, 'No organic certifications uploaded (BR-01, BR-02)')
+           ON CONFLICT (user_id) DO UPDATE SET
+             application_status = 'APPROVED',
+             kyc_status = 'VERIFIED',
+             tohfa_farmer_id = EXCLUDED.tohfa_farmer_id
            RETURNING id`,
           [
             userId,
@@ -401,11 +405,31 @@ export function createFarmerApplicationsService(
             personal['addressLine1'] ?? null,
             personal['village'] ?? null,
             personal['taluk'] ?? null,
-            personal['district'] ?? null,
+            personal['district'] ?? 'The Nilgiris',
             personal['aadhaarLast4'] ?? null,
           ],
         );
         const farmerId = farmerRes.rows[0]!.id;
+
+        // Auto-create farm from step 2 if present
+        const farmDetails = (app.step2_farm_details as Record<string, unknown>) ?? {};
+        const farmList = (farmDetails['farms'] as Array<Record<string, unknown>>) ?? [];
+        for (let i = 0; i < farmList.length; i++) {
+          const farm = farmList[i]!;
+          await tx.query(
+            `INSERT INTO farms (farmer_id, name, area_acres, village, district, is_primary)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT DO NOTHING`,
+            [
+              farmerId,
+              farm['name'] ?? `${app.full_name}'s Farm`,
+              farm['totalAreaAcres'] ?? 1.0,
+              personal['village'] ?? 'Kodanad',
+              personal['district'] ?? 'The Nilgiris',
+              i === 0,
+            ],
+          );
+        }
 
         const updated = await repo.transitionStatus(
           tx,

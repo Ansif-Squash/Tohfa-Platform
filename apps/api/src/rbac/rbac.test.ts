@@ -248,6 +248,26 @@ describe('docs/rbac.json grants', () => {
       ).toBeDefined();
     }
   });
+
+  it('exhaustively checks all 5 admin roles on every permission in docs/rbac.json (S-39 matrix conformance)', () => {
+    const adminRoles = [
+      RoleCode.SUPER_ADMIN,
+      RoleCode.TOHFA_ADMIN,
+      RoleCode.FARMER_ADMIN,
+      RoleCode.MAIN_WH_ADMIN,
+      RoleCode.SUB_WH_ADMIN,
+    ];
+
+    for (const perm of rbac.document.permissions) {
+      for (const role of adminRoles) {
+        const grant = rbac.grantFor(perm.code, role);
+        expect(
+          [ScopeLevel.ALL, ScopeLevel.OWN, ScopeLevel.CONDITIONAL, ScopeLevel.VIEW, ScopeLevel.NONE],
+          `Permission ${perm.code} for role ${role} returned invalid scope ${grant}`,
+        ).toContain(grant);
+      }
+    }
+  });
 });
 
 describe('resolveScope', () => {

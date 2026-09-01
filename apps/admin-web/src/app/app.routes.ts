@@ -17,6 +17,7 @@ export const NAV: readonly NavRoute[] = [
   { path: 'inventory', label: 'Inventory & Stock', permission: 'inventory.stock_ledger.view_own' },
   { path: 'allocations', label: 'Allocations', permission: 'allocation.dashboard.view' },
   { path: 'fulfilment', label: 'Fulfilment', permission: 'order.list.view_all' },
+  { path: 'payouts', label: 'Farmer Payouts', permission: 'payout.dues.view' },
   { path: 'wallet/cash-topup', label: 'Cash Top-up', permission: 'wallet.cash_topup.process' },
 ];
 
@@ -56,7 +57,7 @@ export const routes: Routes = [
         path: 'warehouses',
         canActivate: [permissionGuard('warehouse.all.view')],
         loadComponent: async () =>
-          (await import('./shared/data-table/data-table.component')).DataTableComponent,
+          (await import('./features/warehouses/warehouses.component')).WarehousesComponent,
       },
 
       {
@@ -111,6 +112,13 @@ export const routes: Routes = [
         loadComponent: async () =>
           (await import('./features/fulfilment/fulfilment.component'))
             .FulfilmentComponent,
+      },
+
+      {
+        path: 'payouts',
+        canActivate: [permissionGuard('payout.dues.view')],
+        loadComponent: async () =>
+          (await import('./features/payouts/payouts.component')).PayoutsComponent,
       },
 
       {
