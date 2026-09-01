@@ -48,3 +48,21 @@ export const webhookResponseSchema = z.object({
   duplicate: z.boolean().optional(),
 });
 export type WebhookResponse = z.infer<typeof webhookResponseSchema>;
+
+export const customerIdParamSchema = z.object({
+  customerId: z.string().uuid(),
+});
+export type CustomerIdParam = z.infer<typeof customerIdParamSchema>;
+
+export const cashTopupCreateSchema = z.object({
+  amount: moneySchema,
+  warehouseId: z.string().uuid(),
+  fiscalCashTag: z.string().min(3).max(60),
+  remarks: z.string().max(300).optional(),
+});
+export type CashTopupCreateInput = {
+  amount: Money;
+  warehouseId: string;
+  fiscalCashTag: string;
+  remarks?: string | undefined;
+};

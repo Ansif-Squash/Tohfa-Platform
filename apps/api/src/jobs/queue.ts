@@ -31,7 +31,16 @@ export interface JobPayloads {
    * to the admin queue. idempotent by construction (guarded PENDING update).
    */
   'counter-offer-expiry-sweep': { batchSize: number };
-  // TODO(STORY-ORD-11): 'cart-lock-reaper': { }
+  /**
+   * Daily reconciliation summing yesterday's CASH topups per warehouse against
+   * the ledger (wallet_transactions). Idempotent.
+   */
+  'daily-cash-reconciliation': { targetDate?: string };
+  /**
+   * BR-22b: sweeps expired carts past their locked_until window, flips HELD lines
+   * to EXPIRED, decrements allocations.reserved_qty and marks cart EXPIRED. Idempotent.
+   */
+  'cart-lock-reaper': { batchSize?: number };
   // TODO(STORY-FIN-09): 'payout-settlement-poll': { }
 }
 
@@ -66,6 +75,22 @@ export const JOB_REGISTRY: { [N in JobName]: JobDefinition<N> } = {
     defaultPayload: { batchSize: 500 },
     // Every 15 minutes — a lapsed offer must stop blocking a listing promptly.
     repeat: { pattern: '*/15 * * * *', tz: 'Asia/Kolkata' },
+  },
+  'daily-cash-reconciliation': {
+    name: 'daily-cash-reconciliation',
+    description:
+      'Daily cash reconciliation summing yesterday CASH topups per warehouse against ledger. Idempotent.',
+    defaultPayload: {},
+    // 01:00 IST every day
+    repeat: { pattern: '0 1 * * *', tz: 'Asia/Kolkata' },
+  },
+  'cart-lock-reaper': {
+    name: 'cart-lock-reaper',
+    description:
+      'BR-22b: sweeps carts past locked_until, returns reserved allocation quantities, and expires carts. Idempotent.',
+    defaultPayload: { batchSize: 500 },
+    // Every 5 minutes
+    repeat: { pattern: '*/5 * * * *', tz: 'Asia/Kolkata' },
   },
 };
 

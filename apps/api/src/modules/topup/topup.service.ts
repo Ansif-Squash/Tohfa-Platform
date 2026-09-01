@@ -9,14 +9,17 @@ import { paymentGateway, type PaymentGateway } from '../../payments/index.js';
 import { walletService, type WalletService } from '../wallet/wallet.service.js';
 import {
   topupRepo,
+  type TopupRecord,
   type TopupRepo,
   type TopupWithPayment,
 } from './topup.repo.js';
 import type {
+  CashTopupCreateInput,
   CreateTopupInput,
   TopupIntentResponse,
   WebhookResponse,
 } from './topup.schema.js';
+import type { WalletTransactionResponse } from '../wallet/wallet.schema.js';
 
 export interface TopupService {
   createTopup(
@@ -25,6 +28,14 @@ export interface TopupService {
     input: CreateTopupInput,
     idempotencyKey?: string,
   ): Promise<TopupIntentResponse>;
+
+  processCashTopup(
+    actor: Actor,
+    scope: ResolvedScope,
+    customerId: string,
+    input: CashTopupCreateInput,
+    idempotencyKey?: string,
+  ): Promise<WalletTransactionResponse>;
 
   processRazorpayWebhook(
     rawBody: Buffer | string,
@@ -110,6 +121,112 @@ export function createTopupService(opts: {
         razorpayKeyId,
         presetAmounts,
       };
+    },
+
+    async processCashTopup(actor, scope, customerId, input, idempotencyKey) {
+      if (!input.fiscalCashTag || input.fiscalCashTag.trim().length === 0) {
+        throw new AppError('FISCAL_TAG_REQUIRED', {
+          status: 422,
+          detail: 'Fiscal cash tag is mandatory for cash top-up.',
+        });
+      }
+
+      if (scope.warehouseIds && scope.warehouseIds.length > 0 && !scope.warehouseIds.includes(input.warehouseId)) {
+        throw new AppError('WAREHOUSE_SCOPE_VIOLATION', {
+          status: 403,
+          detail: 'Actor cannot process cash top-ups for other warehouses.',
+        });
+      }
+
+      const cap = await repo.getCashTopupCap(db);
+      if (Number(input.amount) > Number(cap)) {
+        throw new AppError('CASH_LIMIT_EXCEEDED', {
+          status: 422,
+          detail: `Cash top-up is capped at INR ${cap} per transaction.`,
+        });
+      }
+
+      const wallet = await repo.findCustomerWallet(db, customerId);
+      if (!wallet) {
+        throw new AppError('NOT_FOUND', {
+          status: 404,
+          detail: 'Customer wallet not found.',
+        });
+      }
+
+      const { topup, walletTxn } = await withTransaction(async (tx) => {
+        let createdTopup: TopupRecord;
+        try {
+          createdTopup = await repo.createCashTopup(tx, {
+            walletId: wallet.id,
+            customerId,
+            warehouseId: input.warehouseId,
+            processedBy: actor.userId,
+            amount: input.amount,
+            fiscalCashTag: input.fiscalCashTag,
+          });
+        } catch (err: any) {
+          if (err.code === '23505') {
+            throw new AppError('CONFLICT', {
+              status: 409,
+              detail: `Fiscal cash tag ${input.fiscalCashTag} has already been used.`,
+            });
+          }
+          if (err.code === '23514') {
+            throw new AppError('CASH_LIMIT_EXCEEDED', {
+              status: 422,
+              detail: 'Cash top-up amount exceeds allowable ceiling.',
+            });
+          }
+          throw err;
+        }
+
+        const txn = await walletSvc.move(
+          scope,
+          {
+            walletId: wallet.id,
+            direction: 'CREDIT',
+            type: 'TOPUP_CASH',
+            amount: input.amount,
+            refType: 'TOPUP',
+            refId: createdTopup.id,
+            idempotencyKey: idempotencyKey || `cash_topup_${createdTopup.id}`,
+            remarks: input.remarks ?? `Cash Top-up via tag ${input.fiscalCashTag}`,
+            createdBy: actor.userId,
+          },
+          tx,
+        );
+
+        await repo.updateTopupWalletTxn(tx, createdTopup.id, txn.id);
+
+        await writeAuditLog(tx, {
+          actorId: actor.userId,
+          actorRole: scope.roleCode,
+          actionCode: 'wallet.cash_topup.process',
+          entityType: 'topup',
+          entityId: createdTopup.id,
+          warehouseId: input.warehouseId,
+          after: {
+            status: 'SUCCESS',
+            channel: 'CASH',
+            amount: input.amount,
+            fiscalCashTag: input.fiscalCashTag,
+            warehouseId: input.warehouseId,
+            walletTxnId: txn.id,
+          },
+        });
+
+        return { topup: createdTopup, walletTxn: txn };
+      });
+
+      // BR-18c: SMS dispatch outcome outside credit transaction
+      try {
+        await repo.updateTopupSmsStatus(db, topup.id, { sentAt: new Date() });
+      } catch (smsErr: any) {
+        await repo.updateTopupSmsStatus(db, topup.id, { error: smsErr?.message ?? 'SMS dispatch error' });
+      }
+
+      return walletTxn;
     },
 
     async processRazorpayWebhook(rawBody, signature, _eventId) {
