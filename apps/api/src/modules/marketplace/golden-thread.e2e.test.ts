@@ -224,6 +224,11 @@ describeIfDatabase('S-30 — Golden Thread End-to-End Supply Chain', () => {
     }
 
     await pool.query(
+      `DELETE FROM fair_prices WHERE crop_id = $1 AND grade = 'GRADE_1'`,
+      [IDS.cropCarrot],
+    );
+
+    await pool.query(
       `INSERT INTO fair_prices (crop_id, grade, ceiling_price, effective_from, set_by)
        VALUES ($1, 'GRADE_1', 80.00, CURRENT_DATE, $2)
        ON CONFLICT (crop_id, grade, effective_from) DO UPDATE SET ceiling_price = 80.00`,

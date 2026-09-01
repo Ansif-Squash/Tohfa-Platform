@@ -51,6 +51,10 @@ import {
 } from './modules/topup/topup.routes.js';
 import { cartRouter } from './modules/cart/cart.routes.js';
 import { ordersRouter } from './modules/orders/orders.routes.js';
+import {
+  adminFulfilmentRouter,
+  orderTrackingRouter,
+} from './modules/orders/fulfilment.routes.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -85,12 +89,14 @@ export const API_MOUNTS: ReadonlyArray<{
   { prefix: '/v1/admin/allocations', router: adminAllocationsRouter },
   { prefix: '/v1/admin/allocation-config', router: adminAllocationConfigRouter },
   { prefix: '/v1/admin', router: adminTopupRouter },
+  { prefix: '/v1/admin/orders', router: adminFulfilmentRouter },
   { prefix: '/v1/catalog', router: catalogRouter },
   { prefix: '/v1/wallets', router: walletsRouter },
   { prefix: '/v1/wallets', router: topupRouter },
   { prefix: '/v1/webhooks', router: webhookRouter },
   { prefix: '/v1/cart', router: cartRouter },
   { prefix: '/v1/orders', router: ordersRouter },
+  { prefix: '/v1/orders', router: orderTrackingRouter },
 ];
 
 /**
