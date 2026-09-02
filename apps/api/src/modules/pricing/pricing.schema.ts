@@ -22,6 +22,7 @@ export const fairPriceCreateSchema = z.object({
   frequency: z.enum(['DAILY', 'WEEKLY']).default('WEEKLY'),
   effectiveFrom: z.string().regex(dateRegex, { message: 'Must be YYYY-MM-DD' }),
   notes: z.string().max(300).optional(),
+  
 });
 export type FairPriceCreate = z.infer<typeof fairPriceCreateSchema>;
 

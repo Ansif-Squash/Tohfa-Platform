@@ -122,9 +122,10 @@ export async function databaseReady(table: string): Promise<boolean> {
   if (!hasDatabase) return false;
   try {
     const { pool } = await import('../db/pool.js');
+    const target = table.includes('.') ? table : `public.${table}`;
     const result = await pool.query<{ present: boolean }>(
       'SELECT to_regclass($1) IS NOT NULL AS present',
-      [table],
+      [target],
     );
     return result.rows[0]?.present === true;
   } catch {
