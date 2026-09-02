@@ -9,18 +9,13 @@ import {
   type FarmerApplicationRow,
   type FarmerApplicationsRepo,
 } from './farmer-applications.repo.js';
-import {
-  step1PersonalSchema,
-  step2FarmDetailsSchema,
-  step3LocationSchema,
-  step4DocumentsSchema,
-  step5ReviewSchema,
-  type ApproveApplicationBody,
-  type CreateFarmerApplicationBody,
-  type ListAdminApplicationsQuery,
-  type RejectApplicationBody,
-  type RequestInfoApplicationBody,
-  type UpdateFarmerProfileBody,
+import type {
+  ApproveApplicationBody,
+  CreateFarmerApplicationBody,
+  ListAdminApplicationsQuery,
+  RejectApplicationBody,
+  RequestInfoApplicationBody,
+  UpdateFarmerProfileBody,
 } from './farmer-applications.schema.js';
 
 const VALID_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = {
@@ -123,15 +118,37 @@ export function createFarmerApplicationsService(
 
       let stepData: Record<string, unknown> = {};
       if (step === 1) {
-        stepData = step1PersonalSchema.parse(payload);
+        stepData = payload && typeof payload === 'object' && !Array.isArray(payload) ? { ...(payload as Record<string, unknown>) } : {};
       } else if (step === 2) {
-        stepData = step2FarmDetailsSchema.parse(payload);
+        if (Array.isArray(payload)) {
+          stepData = { farms: payload };
+        } else if (payload && typeof payload === 'object') {
+          const p = payload as Record<string, unknown>;
+          if (Array.isArray(p['farms'])) {
+            stepData = { ...p };
+          } else {
+            stepData = { farms: [p] };
+          }
+        } else {
+          stepData = { farms: [] };
+        }
       } else if (step === 3) {
-        stepData = step3LocationSchema.parse(payload);
+        stepData = payload && typeof payload === 'object' && !Array.isArray(payload) ? { ...(payload as Record<string, unknown>) } : {};
       } else if (step === 4) {
-        stepData = step4DocumentsSchema.parse(payload);
+        if (Array.isArray(payload)) {
+          stepData = { documents: payload };
+        } else if (payload && typeof payload === 'object') {
+          const p = payload as Record<string, unknown>;
+          if (Array.isArray(p['documents'])) {
+            stepData = { ...p };
+          } else {
+            stepData = { documents: [p] };
+          }
+        } else {
+          stepData = { documents: [] };
+        }
       } else if (step === 5) {
-        stepData = step5ReviewSchema.parse(payload);
+        stepData = payload && typeof payload === 'object' && !Array.isArray(payload) ? { ...(payload as Record<string, unknown>) } : {};
       }
 
       const completedSet = new Set(app.completed_steps);

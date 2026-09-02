@@ -115,10 +115,19 @@ export const approveApplicationBody = z.object({
 });
 export type ApproveApplicationBody = z.infer<typeof approveApplicationBody>;
 
-export const rejectApplicationBody = z.object({
-  reasonCode: z.enum(['DOCUMENTS_INVALID', 'LAND_NOT_VERIFIED', 'DUPLICATE_APPLICANT', 'OUTSIDE_SERVICE_AREA', 'OTHER']),
-  reason: z.string().trim().min(5).max(500),
-});
+export const rejectApplicationBody = z
+  .object({
+    reasonCode: z
+      .enum(['DOCUMENTS_INVALID', 'LAND_NOT_VERIFIED', 'DUPLICATE_APPLICANT', 'OUTSIDE_SERVICE_AREA', 'OTHER'])
+      .optional(),
+    reason: z.string().trim().min(1).max(500).optional(),
+    rejectionReason: z.string().trim().min(1).max(500).optional(),
+    note: z.string().trim().min(1).max(500).optional(),
+  })
+  .transform((data) => ({
+    reasonCode: data.reasonCode ?? 'OTHER',
+    reason: data.reason || data.rejectionReason || data.note || 'Application rejected by administrator.',
+  }));
 export type RejectApplicationBody = z.infer<typeof rejectApplicationBody>;
 
 export const requestInfoApplicationBody = z.object({
