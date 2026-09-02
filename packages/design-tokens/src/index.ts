@@ -4,7 +4,7 @@
  * The typed façade over `tokens.json`. Apps import from here, never from the
  * JSON directly, so that a token rename becomes a compile error everywhere.
  */
-import raw from './tokens.json';
+import raw from './tokens.json' with { type: 'json' };
 
 export type ColorName = keyof typeof raw.color;
 export type NeutralName = keyof typeof raw.neutral;
@@ -66,4 +66,4 @@ export function neutral(name: NeutralName): string {
 }
 
 export { raw as tokensJson };
-export { toCssVariables, toCssBlock } from './css';
+export { toCssVariables, toCssBlock } from './css.js';

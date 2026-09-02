@@ -7,7 +7,7 @@
  */
 // Imported from the JSON, not from `./index`, to keep this module free of a
 // circular dependency (index re-exports these functions).
-import tokens from './tokens.json';
+import tokens from './tokens.json' with { type: 'json' };
 
 /** Flat map of custom-property name -> value, e.g. `--tohfa-color-tohfa-teal`. */
 export function toCssVariables(): Record<string, string> {

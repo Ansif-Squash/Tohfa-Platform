@@ -55,7 +55,7 @@ export function createWalletService(
 ): WalletService {
   const repo = deps.repo ?? walletRepo;
   const db = deps.db ?? pool;
-  const runTx = deps.runTx ?? withTransaction;
+  const runTx = deps.runTx ?? (deps.db ? <T>(fn: (executor: Executor) => Promise<T>) => fn(deps.db!) : withTransaction);
 
   return {
     async getWalletForActor(actor): Promise<WalletResponse> {

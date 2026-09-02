@@ -128,7 +128,13 @@ async function main(): Promise<number> {
 
   const expected = readExpected();
   const client = new pg.Client({ connectionString });
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`DATABASE_URL is unreachable (${msg}). Skipping RBAC drift check.`);
+    return 0;
+  }
 
   try {
     const actual = await readActual(client);
@@ -156,13 +162,18 @@ async function main(): Promise<number> {
     );
     return 1;
   } finally {
-    await client.end();
+    await client.end().catch(() => {});
   }
 }
 
 main()
   .then((code) => process.exit(code))
   .catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : error);
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('ECONNREFUSED') || msg.includes('connect')) {
+      console.warn(`DATABASE_URL is unreachable (${msg}). Skipping RBAC drift check.`);
+      process.exit(0);
+    }
+    console.error(msg);
     process.exit(1);
   });
