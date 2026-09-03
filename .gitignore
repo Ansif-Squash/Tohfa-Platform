@@ -32,5 +32,10 @@ apps/*/.expo/
 npm-debug.log*
 pnpm-debug.log*
 
+# Lockfiles (pnpm is the single source of truth)
+package-lock.json
+yarn.lock
+
 # Internal build manual
 AI_BUILD_MANUAL.md
+

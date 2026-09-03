@@ -3,6 +3,7 @@
  * HTTP entrypoint. Boots the app, then drains cleanly on SIGTERM so in-flight
  * requests finish before the container goes away.
  */
+
 import { createApp } from './app.js';
 import { config } from './config.js';
 import { closePool } from './db/pool.js';
