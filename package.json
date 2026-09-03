@@ -8,7 +8,10 @@
     "node": ">=20.11"
   },
   "scripts": {
-    "dev": "docker compose up -d --wait postgres redis && concurrently -n api,admin -c green,cyan \"pnpm --filter @tohfa/api exec tsx src/server.ts\" \"pnpm --filter @tohfa/admin-web start\"",
+    "build:packages": "tsc -b packages/shared-types packages/design-tokens",
+    "predev": "pnpm build:packages",
+    "predev:api": "pnpm build:packages",
+    "dev": "docker compose up -d --wait postgres redis && concurrently -n api,admin -c green,cyan \"pnpm dev:api\" \"pnpm --filter @tohfa/admin-web start\"",
     "dev:api": "pnpm --filter @tohfa/api dev",
     "dev:worker": "pnpm --filter @tohfa/api dev:worker",
     "build": "tsc -b tsconfig.json",
