@@ -36,7 +36,7 @@ export const rootLogger: Logger = pino({
   },
   ...(config.isProduction || config.isTest
     ? {}
-    : { transport: { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:HH:MM:ss' } } }),
+    : { transport: { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:HH:MM:ss', sync: true } } }),
 });
 
 /** Run `fn` with a correlation context; all logs inside inherit `traceId`. */

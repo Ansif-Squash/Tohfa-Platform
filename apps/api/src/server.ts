@@ -22,6 +22,7 @@ initSentry();
 const app = createApp();
 
 const server = app.listen(config.PORT, () => {
+  console.warn(`[API] 🚀 Tohfa API listening on http://localhost:${config.PORT} (${config.NODE_ENV})`);
   logger.info(
     {
       port: config.PORT,
