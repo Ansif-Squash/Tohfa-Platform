@@ -7,7 +7,7 @@
   "main": "./dist/server.js",
   "scripts": {
     "predev": "pnpm --filter @tohfa/shared-types --filter @tohfa/design-tokens build",
-    "dev": "tsx watch src/server.ts",
+    "dev": "node --import tsx --watch src/server.ts",
     "dev:worker": "tsx watch src/jobs/worker.ts",
     "start": "node dist/server.js",
     "build": "tsc -b",
