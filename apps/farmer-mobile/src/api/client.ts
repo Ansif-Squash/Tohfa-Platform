@@ -13,6 +13,17 @@ import type { ErrorCode, Problem } from '@tohfa/shared-types';
  */
 export const API_BASE_URL = 'http://10.0.2.2:3000';
 
+export function resolveUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (normalizedPath === '/healthz' || normalizedPath.startsWith('/v1/')) {
+    return `${API_BASE_URL}${normalizedPath}`;
+  }
+  return `${API_BASE_URL}/v1${normalizedPath}`;
+}
+
 export class ApiError extends Error {
   constructor(readonly problem: Problem) {
     super(problem.detail ?? problem.title);
@@ -51,7 +62,7 @@ function correlationId(): string {
   return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'x-correlation-id': correlationId(),
@@ -64,7 +75,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(resolveUrl(path), {
       method: options.method ?? 'GET',
       headers,
       ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
@@ -73,6 +84,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   } catch (error) {
     throw new NetworkError(error);
   }
+
 
   if (response.status === 204) return undefined as T;
 
