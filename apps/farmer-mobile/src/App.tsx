@@ -1,52 +1,45 @@
-/**
- * Farmer app root.
- *
- * Intentionally a single screen: it proves the toolchain, the design tokens,
- * the i18n layer and the API client all wire together. Navigation lands with
- * STORY-MOB-02 (react-navigation) once the Day-0 toolchain spike is signed off
- * — see README.md.
- */
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { ApiError, NetworkError, api } from './api/client';
+import React, { useState } from 'react';
+import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Icon } from './components/Icon';
 import { LOCALES, setLocale, t, type Locale } from './i18n';
-import { colors, radius, spacing, typography, weights, MIN_TOUCH_TARGET } from './theme';
+import { ApplicationStatusScreen } from './screens/auth/ApplicationStatusScreen';
+import { ForgotPasswordScreen } from './screens/auth/ForgotPasswordScreen';
+import { LoginScreen } from './screens/auth/LoginScreen';
+import { OtpScreen } from './screens/auth/OtpScreen';
+import { ResetPasswordScreen } from './screens/auth/ResetPasswordScreen';
+import { SplashScreen } from './screens/auth/SplashScreen';
+import { AddCertificationScreen } from './screens/certifications/AddCertificationScreen';
+import { CertificationsScreen } from './screens/certifications/CertificationsScreen';
+import { DashboardScreen } from './screens/dashboard/DashboardScreen';
+import { ProfileScreen } from './screens/profile/ProfileScreen';
+import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
+import { WalletScreen } from './screens/wallet/WalletScreen';
+import { colors, spacing, typography, weights } from './theme';
 
-interface HealthResponse {
-  status: string;
-  uptimeSeconds: number;
-}
+export type ScreenName =
+  | 'Splash'
+  | 'Login'
+  | 'Register'
+  | 'Otp'
+  | 'ForgotPassword'
+  | 'ResetPassword'
+  | 'ApplicationStatus'
+  | 'MainTabs'
+  | 'Certifications'
+  | 'AddCertification';
+
+type TabName = 'Home' | 'Wallet' | 'Profile';
 
 export default function App(): React.JSX.Element {
+  const [screen, setScreen] = useState<ScreenName>('Splash');
+  const [currentTab, setCurrentTab] = useState<TabName>('Home');
+  const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
-  const [message, setMessage] = useState<string>('');
 
-  const check = useCallback(async () => {
-    setStatus('loading');
-    try {
-      const health = await api.get<HealthResponse>('/healthz');
-      setStatus('ok');
-      setMessage(`API up, ${health.uptimeSeconds}s`);
-    } catch (error) {
-      setStatus('error');
-      if (error instanceof NetworkError) setMessage(t('common.offline'));
-      else if (error instanceof ApiError) setMessage(error.problem.title);
-      else setMessage(t('error.generic'));
-    }
-  }, []);
-
-  useEffect(() => {
-    void check();
-  }, [check]);
+  function navigate(nextScreen: ScreenName, nextParams: Record<string, string | number | undefined> = {}) {
+    setParams(nextParams);
+    setScreen(nextScreen);
+  }
 
   const switchLocale = (next: Locale): void => {
     setLocale(next);
@@ -59,35 +52,148 @@ export default function App(): React.JSX.Element {
 
       <View style={styles.header}>
         <Text style={styles.headerText}>{t('app.name')}</Text>
+        <View style={styles.localeRow}>
+          {LOCALES.map((code) => (
+            <Pressable
+              key={code}
+              accessibilityRole="button"
+              style={[styles.localeChip, locale === code && styles.localeChipActive]}
+              onPress={() => switchLocale(code)}
+            >
+              <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
+                {code.toUpperCase()}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.title}>{t('home.title')}</Text>
-
-        {status === 'loading' ? (
-          <ActivityIndicator color={colors.primary} />
+      <View style={styles.content}>
+        {screen === 'Splash' ? (
+          <SplashScreen onNavigate={(s, p) => navigate(s, p)} />
+        ) : screen === 'Login' ? (
+          <LoginScreen onNavigate={(s, p) => navigate(s, p)} />
+        ) : screen === 'Register' ? (
+          <RegistrationFlowScreen onNavigate={(s, p) => navigate(s, p)} />
+        ) : screen === 'Otp' ? (
+          <OtpScreen
+            mobile={String(params['mobile'] ?? '')}
+            resendAvailableAt={
+              typeof params['resendAvailableAt'] === 'string'
+                ? params['resendAvailableAt']
+                : undefined
+            }
+            attemptsRemaining={
+              typeof params['attemptsRemaining'] === 'number'
+                ? params['attemptsRemaining']
+                : undefined
+            }
+            onNavigate={(s, p) => navigate(s, p)}
+          />
+        ) : screen === 'ForgotPassword' ? (
+          <ForgotPasswordScreen onNavigate={(s) => navigate(s)} />
+        ) : screen === 'ResetPassword' ? (
+          <ResetPasswordScreen
+            token={String(params['token'] ?? '')}
+            onNavigate={(s) => navigate(s)}
+          />
+        ) : screen === 'ApplicationStatus' ? (
+          <ApplicationStatusScreen
+            applicationId={String(params['applicationId'] ?? 'DEMO-APP-001')}
+            onNavigate={(s) => navigate(s)}
+          />
+        ) : screen === 'Certifications' ? (
+          <CertificationsScreen
+            onNavigateToAddCertification={() => navigate('AddCertification')}
+          />
+        ) : screen === 'AddCertification' ? (
+          <AddCertificationScreen
+            onSuccess={() => navigate('Certifications')}
+            onCancel={() => navigate('Certifications')}
+          />
         ) : (
-          <Text style={styles.body}>{message}</Text>
+          /* MainTabs layout */
+          <View style={styles.mainTabsContainer}>
+            <View style={styles.tabScreenContainer}>
+              {currentTab === 'Home' ? (
+                <DashboardScreen
+                  onNavigateToCertifications={() => navigate('Certifications')}
+                  onNavigateToWallet={() => setCurrentTab('Wallet')}
+                  onNavigateToProfile={() => setCurrentTab('Profile')}
+                />
+              ) : currentTab === 'Wallet' ? (
+                <WalletScreen />
+              ) : (
+                <ProfileScreen
+                  onNavigateToCertifications={() => navigate('Certifications')}
+                />
+              )}
+            </View>
+
+            {/* Bottom Tab Bar */}
+            <View style={styles.bottomTabBar}>
+              <Pressable
+                style={styles.tabItem}
+                onPress={() => setCurrentTab('Home')}
+                accessibilityRole="tab"
+              >
+                <Icon
+                  name="home"
+                  size={24}
+                  color={currentTab === 'Home' ? colors.primary : colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.tabItemText,
+                    currentTab === 'Home' && styles.tabItemTextActive,
+                  ]}
+                >
+                  {t('dashboard.title')}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.tabItem}
+                onPress={() => setCurrentTab('Wallet')}
+                accessibilityRole="tab"
+              >
+                <Icon
+                  name="account_balance_wallet"
+                  size={24}
+                  color={currentTab === 'Wallet' ? colors.primary : colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.tabItemText,
+                    currentTab === 'Wallet' && styles.tabItemTextActive,
+                  ]}
+                >
+                  {t('wallet.title')}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.tabItem}
+                onPress={() => setCurrentTab('Profile')}
+                accessibilityRole="tab"
+              >
+                <Icon
+                  name="person"
+                  size={24}
+                  color={currentTab === 'Profile' ? colors.primary : colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.tabItemText,
+                    currentTab === 'Profile' && styles.tabItemTextActive,
+                  ]}
+                >
+                  {t('profile.title')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
         )}
-
-        <Pressable style={styles.button} onPress={() => void check()} accessibilityRole="button">
-          <Text style={styles.buttonText}>{t('common.retry')}</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.localeRow}>
-        {LOCALES.map((code) => (
-          <Pressable
-            key={code}
-            accessibilityRole="button"
-            style={[styles.localeChip, locale === code && styles.localeChipActive]}
-            onPress={() => switchLocale(code)}
-          >
-            <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
-              {code.toUpperCase()}
-            </Text>
-          </Pressable>
-        ))}
       </View>
     </SafeAreaView>
   );
@@ -99,42 +205,52 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryPressed,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerText: {
     color: colors.white,
     fontSize: typography.title,
     fontWeight: weights.bold,
   },
-  card: {
-    margin: spacing.lg,
-    padding: spacing.xl,
-    backgroundColor: colors.white,
-    borderRadius: radius.cardMax,
-    gap: spacing.md,
-  },
-  title: { fontSize: typography.headline, fontWeight: weights.semibold, color: colors.onSurface },
-  body: { fontSize: typography.body, color: colors.onSurface },
-  button: {
-    minHeight: MIN_TOUCH_TARGET,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  buttonText: { color: colors.white, fontSize: typography.bodyLarge, fontWeight: weights.medium },
-  localeRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  localeRow: { flexDirection: 'row', gap: 6 },
   localeChip: {
-    minHeight: MIN_TOUCH_TARGET,
-    minWidth: MIN_TOUCH_TARGET,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  localeChipActive: { backgroundColor: colors.white },
+  localeText: { color: colors.white, fontSize: 12, fontWeight: '600' },
+  localeTextActive: { color: colors.primaryPressed, fontSize: 12, fontWeight: '700' },
+  content: { flex: 1 },
+  mainTabsContainer: { flex: 1 },
+  tabScreenContainer: { flex: 1 },
+  bottomTabBar: {
+    flexDirection: 'row',
+    height: 56,
+    borderTopWidth: 1,
+    borderTopColor: colors.surfacePressed,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  tabItem: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
+    height: '100%',
   },
-  localeChipActive: { backgroundColor: colors.primary },
-  localeText: { color: colors.primary, fontWeight: weights.medium },
-  localeTextActive: { color: colors.white, fontWeight: weights.semibold },
+  tabItemText: {
+    fontSize: typography.caption,
+    color: colors.onSurfaceVariant,
+    fontWeight: weights.medium,
+  },
+  tabItemTextActive: {
+    color: colors.primary,
+    fontWeight: weights.bold,
+  },
 });
+
