@@ -203,6 +203,45 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
         zoneId: r.zone_id ?? undefined,
       }));
 
+      let effectiveRoles = roleAssignments;
+      if (effectiveRoles.length === 0) {
+        if (user.user_type === 'FARMER') {
+          effectiveRoles = [
+            {
+              code: 'FARMER' as RoleCode,
+              warehouseId: undefined,
+              zoneId: undefined,
+            },
+          ];
+        } else {
+          effectiveRoles = [
+            {
+              code: 'CUSTOMER' as RoleCode,
+              warehouseId: undefined,
+              zoneId: undefined,
+            },
+          ];
+        }
+      }
+
+
+      let farmerId: string | null = null;
+      let customerId: string | null = null;
+      if (user.user_type === 'FARMER' || effectiveRoles.some((r) => r.code === 'FARMER')) {
+        const farmerRes = await pool.query<{ id: string }>(
+          `SELECT id FROM farmers WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1`,
+          [user.id],
+        );
+        farmerId = farmerRes.rows[0]?.id ?? null;
+      }
+      if (user.user_type === 'CUSTOMER' || effectiveRoles.some((r) => r.code === 'CUSTOMER')) {
+        const customerRes = await pool.query<{ id: string }>(
+          `SELECT id FROM customers WHERE user_id = $1 LIMIT 1`,
+          [user.id],
+        );
+        customerId = customerRes.rows[0]?.id ?? null;
+      }
+
       const sessionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const session = await repo.createSession(pool, {
         userId: user.id,
@@ -214,15 +253,16 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
       const tokenPair = signTokenPair(
         {
           sub: user.id,
-          roles: roleAssignments.length > 0 ? roleAssignments : [{ code: 'CUSTOMER' as RoleCode }],
-          farmerId: null,
-          customerId: user.id,
+          roles: effectiveRoles,
+          farmerId,
+          customerId,
         },
         {
           sub: user.id,
           jti: session.id,
         },
       );
+
 
       const refreshTokenHash = hashValue(tokenPair.refreshToken);
       await repo.createRefreshToken(pool, {
@@ -280,12 +320,61 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
         };
       }
 
-      const effectiveRoles =
-        input.roleCode !== undefined
-          ? roleAssignments.filter((r) => r.code === input.roleCode)
-          : roleAssignments.length > 0
-            ? roleAssignments
-            : [{ code: 'CUSTOMER' as RoleCode }];
+      let effectiveRoles = roleAssignments;
+      if (input.roleCode !== undefined) {
+        const filtered = roleAssignments.filter((r) => r.code === input.roleCode);
+        if (filtered.length > 0) {
+          effectiveRoles = filtered;
+        } else if (user.user_type === input.roleCode) {
+          effectiveRoles = [
+            {
+              code: input.roleCode as RoleCode,
+              warehouseId: undefined,
+              zoneId: undefined,
+            },
+          ];
+        } else {
+          throw new AppError('UNAUTHENTICATED', {
+            detail: `User does not hold the ${input.roleCode} role.`,
+          });
+        }
+      } else if (effectiveRoles.length === 0) {
+        if (user.user_type === 'FARMER') {
+          effectiveRoles = [
+            {
+              code: 'FARMER' as RoleCode,
+              warehouseId: undefined,
+              zoneId: undefined,
+            },
+          ];
+        } else {
+          effectiveRoles = [
+            {
+              code: 'CUSTOMER' as RoleCode,
+              warehouseId: undefined,
+              zoneId: undefined,
+            },
+          ];
+        }
+      }
+
+
+      let farmerId: string | null = null;
+      let customerId: string | null = null;
+      if (user.user_type === 'FARMER' || effectiveRoles.some((r) => r.code === 'FARMER')) {
+        const farmerRes = await pool.query<{ id: string }>(
+          `SELECT id FROM farmers WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1`,
+          [user.id],
+        );
+        farmerId = farmerRes.rows[0]?.id ?? null;
+      }
+      if (user.user_type === 'CUSTOMER' || effectiveRoles.some((r) => r.code === 'CUSTOMER')) {
+        const customerRes = await pool.query<{ id: string }>(
+          `SELECT id FROM customers WHERE user_id = $1 LIMIT 1`,
+          [user.id],
+        );
+        customerId = customerRes.rows[0]?.id ?? null;
+      }
 
       const sessionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const session = await repo.createSession(pool, {
@@ -301,14 +390,15 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
         {
           sub: user.id,
           roles: effectiveRoles,
-          farmerId: null,
-          customerId: user.id,
+          farmerId,
+          customerId,
         },
         {
           sub: user.id,
           jti: session.id,
         },
       );
+
 
       const refreshTokenHash = hashValue(tokenPair.refreshToken);
       await repo.createRefreshToken(pool, {
@@ -374,12 +464,29 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
         zoneId: r.zone_id ?? undefined,
       }));
 
+      let farmerId: string | null = null;
+      let customerId: string | null = null;
+      if (user.user_type === 'FARMER' || roleAssignments.some((r) => r.code === 'FARMER')) {
+        const farmerRes = await pool.query<{ id: string }>(
+          `SELECT id FROM farmers WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1`,
+          [user.id],
+        );
+        farmerId = farmerRes.rows[0]?.id ?? null;
+      }
+      if (user.user_type === 'CUSTOMER' || roleAssignments.some((r) => r.code === 'CUSTOMER')) {
+        const customerRes = await pool.query<{ id: string }>(
+          `SELECT id FROM customers WHERE user_id = $1 LIMIT 1`,
+          [user.id],
+        );
+        customerId = customerRes.rows[0]?.id ?? null;
+      }
+
       const newPair = signTokenPair(
         {
           sub: user.id,
           roles: roleAssignments.length > 0 ? roleAssignments : [{ code: 'CUSTOMER' as RoleCode }],
-          farmerId: null,
-          customerId: user.id,
+          farmerId,
+          customerId,
         },
         {
           sub: user.id,
