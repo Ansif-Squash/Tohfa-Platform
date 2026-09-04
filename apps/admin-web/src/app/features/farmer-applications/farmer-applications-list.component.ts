@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TohfaTableComponent } from '../../shared/tohfa-table.component';
 import {
   AdminFarmerApplicationsService,
   type FarmerApplicationSummary,
@@ -10,7 +11,7 @@ import {
 @Component({
   selector: 'tohfa-farmer-applications-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TohfaTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
@@ -23,11 +24,12 @@ import {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        color:blue;
       }
       .title {
         font-size: var(--tohfa-font-size-headline);
-        font-weight: var(--tohfa-font-weight-bold);
-        color: var(--tohfa-on-surface);
+        font-weight: 800;
+        color: #14532D;
       }
       .filters {
         display: flex;
@@ -43,25 +45,6 @@ import {
         border-radius: var(--tohfa-radius-button);
         background: #fff;
         font-size: var(--tohfa-font-size-body);
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #fff;
-        border-radius: var(--tohfa-radius-card);
-        overflow: hidden;
-        box-shadow: var(--tohfa-shadow-card);
-      }
-      th,
-      td {
-        padding: var(--tohfa-space-md) var(--tohfa-space-lg);
-        text-align: left;
-        border-bottom: 1px solid rgba(4, 52, 44, 0.08);
-      }
-      th {
-        background: var(--tohfa-surface-variant);
-        font-weight: var(--tohfa-font-weight-bold);
-        color: var(--tohfa-on-surface);
       }
       .status-badge {
         display: inline-block;
@@ -102,17 +85,12 @@ import {
         color: #fff;
         font-weight: var(--tohfa-font-weight-semibold);
       }
-      .empty {
-        padding: var(--tohfa-space-xl);
-        text-align: center;
-        color: rgba(4, 52, 44, 0.6);
-      }
     `,
   ],
   template: `
     <div class="container">
       <div class="header">
-        <h1 class="title">Farmer Registration Applications</h1>
+        <h1 class="title">Farmer Registration Application</h1>
       </div>
 
       <div class="filters">
@@ -127,35 +105,33 @@ import {
         </select>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Applicant Name</th>
-            <th>Mobile</th>
-            <th>Status</th>
-            <th>Progress</th>
-            <th>Submitted At</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of applications()">
-            <td><strong>{{ item.fullName }}</strong></td>
-            <td>{{ item.mobile }}</td>
-            <td>
-              <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
-            </td>
-            <td>Step {{ item.currentStep }} of 5</td>
-            <td>{{ item.submittedAt ? (item.submittedAt | date: 'mediumDate') : 'In Draft' }}</td>
-            <td>
-              <a class="btn" [routerLink]="['/farmer-applications', item.id]">Review</a>
-            </td>
-          </tr>
-          <tr *ngIf="applications().length === 0">
-            <td colspan="6" class="empty">No farmer applications found in queue.</td>
-          </tr>
-        </tbody>
-      </table>
+      <tohfa-table
+        [rows]="applications()"
+        [colspan]="6"
+        emptyMessage="No farmer applications found in queue."
+      >
+        <ng-template #header>
+          <th>Applicant Name</th>
+          <th>Mobile</th>
+          <th>Status</th>
+          <th>Progress</th>
+          <th>Submitted At</th>
+          <th>Action</th>
+        </ng-template>
+
+        <ng-template #row let-item>
+          <td><strong>{{ item.fullName }}</strong></td>
+          <td>{{ item.mobile }}</td>
+          <td>
+            <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
+          </td>
+          <td>Step {{ item.currentStep }} of 5</td>
+          <td>{{ item.submittedAt ? (item.submittedAt | date: 'mediumDate') : 'In Draft' }}</td>
+          <td>
+            <a class="btn" [routerLink]="['/farmer-applications', item.id]">Review</a>
+          </td>
+        </ng-template>
+      </tohfa-table>
     </div>
   `,
 })
