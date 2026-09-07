@@ -95,6 +95,16 @@ async function runDemoSeed() {
         [uId, `+91987000${String(f.num).padStart(4, '0')}`, `farmer${f.num}@tohfa.demo`, DEMO_PASSWORD_HASH, f.name],
       );
 
+      // Assign FARMER role
+      await client.query(
+        `INSERT INTO user_roles (user_id, role_id, role_code)
+         VALUES ($1, (SELECT id FROM roles WHERE code = 'FARMER'), 'FARMER')
+         ON CONFLICT (user_id, role_id, COALESCE(warehouse_id, '00000000-0000-0000-0000-000000000000'::uuid)) WHERE valid_to IS NULL
+         DO NOTHING`,
+        [uId],
+      );
+
+
       // Farmer
       await client.query(
         `INSERT INTO farmers (id, user_id, tohfa_farmer_id, zone_id, application_status, kyc_status, is_market_blocked, rejection_reason, market_block_reason)

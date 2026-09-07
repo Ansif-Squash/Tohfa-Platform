@@ -19,6 +19,10 @@ export const colors = {
   accent: semantic('accent'),
   white: neutral('white'),
   brand: hex('tohfaTeal'),
+  surfaceVariant: neutral('grey100'),
+  surfacePressed: neutral('grey300'),
+  onSurfaceVariant: neutral('grey500'),
+  textMuted: neutral('grey700'),
 } as const;
 
 /** Point values map 1:1 to React Native `dp`. */
@@ -42,7 +46,14 @@ export const weights = {
 
 export const lineHeights = tokens.lineHeight;
 export const spacing = tokens.spacing;
-export const radius = tokens.radius;
+export const radius = {
+  ...tokens.radius,
+  card: tokens.radius.cardMin,
+  sm: 6,
+  md: 8,
+  lg: tokens.radius.cardMin,
+} as const;
+
 
 /**
  * Minimum tappable size. Farmers use this outdoors, one-handed, often with wet
@@ -61,3 +72,16 @@ export const theme = {
 } as const;
 
 export type Theme = typeof theme;
+
+export function useTheme() {
+  return {
+    ...theme,
+    colors: {
+      ...colors,
+      grey100: neutral('grey100'),
+      grey300: neutral('grey300'),
+      grey500: neutral('grey500'),
+      grey700: neutral('grey700'),
+    },
+  };
+}
