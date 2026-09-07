@@ -15,13 +15,7 @@ import {
   updateMyFarmerProfile,
   type FarmerProfile,
 } from '../../api/farmer';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { ErrorState } from '../../components/ErrorState';
-import { Icon } from '../../components/Icon';
-import { Skeleton } from '../../components/Skeleton';
-
-import { Input } from '../../components/Input';
+import { Button, Card, ErrorState, Icon, Input, Skeleton } from '@tohfa/mobile-ui';
 import { LOCALES, setLocale, t, type Locale } from '../../i18n';
 import {
   MIN_TOUCH_TARGET,

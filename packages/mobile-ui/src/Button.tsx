@@ -6,7 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import type { ViewStyle, TextStyle } from 'react-native';
-import { theme } from '../theme';
+import { useTheme } from './theme';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'outline';
 
@@ -31,6 +31,8 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   testID,
 }) => {
+  const theme = useTheme();
+
   const getVariantStyles = (): { button: ViewStyle; text: TextStyle } => {
     switch (variant) {
       case 'secondary':
@@ -72,6 +74,12 @@ export const Button: React.FC<ButtonProps> = ({
       accessibilityLabel={title}
       style={[
         styles.baseButton,
+        {
+          minHeight: theme.minTouchTarget,
+          borderRadius: theme.radius.button,
+          paddingHorizontal: theme.spacing.lg,
+          paddingVertical: theme.spacing.md,
+        },
         vStyles.button,
         disabled && styles.disabledButton,
         style,
@@ -81,7 +89,19 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={vStyles.text.color} size="small" />
       ) : (
-        <Text style={[styles.baseText, vStyles.text, disabled && styles.disabledText, textStyle]}>
+        <Text
+          style={[
+            styles.baseText,
+            {
+              fontSize: theme.typography.body,
+              fontWeight: theme.weights.semibold,
+              lineHeight: Math.round(theme.typography.body * theme.lineHeights.body),
+            },
+            vStyles.text,
+            disabled && styles.disabledText,
+            textStyle,
+          ]}
+        >
           {title}
         </Text>
       )}
@@ -91,19 +111,11 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   baseButton: {
-    minHeight: theme.minTouchTarget,
-    borderRadius: theme.radius.button,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   },
-  baseText: {
-    fontSize: theme.typography.body,
-    fontWeight: theme.weights.semibold,
-    lineHeight: Math.round(theme.typography.body * theme.lineHeights.body),
-  },
+  baseText: {},
   disabledButton: {
     opacity: 0.5,
   },

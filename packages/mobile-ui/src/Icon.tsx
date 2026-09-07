@@ -6,21 +6,24 @@
 import React from 'react';
 import { Text, StyleSheet } from 'react-native';
 import type { TextStyle } from 'react-native';
-import { colors } from '../theme';
+import { useTheme } from './theme';
 
 export interface IconProps {
   name: string;
-  size?: number;
-  color?: string;
-  style?: TextStyle;
+  size?: number | undefined;
+  color?: string | undefined;
+  style?: TextStyle | undefined;
 }
 
 export const Icon: React.FC<IconProps> = ({
   name,
   size = 24,
-  color = colors.onSurface,
+  color,
   style,
 }) => {
+  const theme = useTheme();
+  const iconColor = color ?? theme.colors.onSurface;
+
   return (
     <Text
       accessibilityRole="text"
@@ -29,7 +32,7 @@ export const Icon: React.FC<IconProps> = ({
         styles.iconText,
         {
           fontSize: size,
-          color,
+          color: iconColor,
           lineHeight: size,
         },
         style,

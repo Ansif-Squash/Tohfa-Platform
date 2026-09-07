@@ -202,6 +202,9 @@ importers:
       '@tohfa/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
+      '@tohfa/mobile-ui':
+        specifier: workspace:*
+        version: link:../../packages/mobile-ui
       '@tohfa/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -224,6 +227,9 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@types/node@20.19.43)(less@4.2.0)(sass@1.71.1)(terser@5.50.0)
 
   apps/farmer-mobile:
     dependencies:
@@ -236,6 +242,9 @@ importers:
       '@tohfa/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
+      '@tohfa/mobile-ui':
+        specifier: workspace:*
+        version: link:../../packages/mobile-ui
       '@tohfa/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -264,6 +273,25 @@ importers:
 
   packages/design-tokens:
     devDependencies:
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+
+  packages/mobile-ui:
+    dependencies:
+      '@tohfa/design-tokens':
+        specifier: workspace:*
+        version: link:../design-tokens
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.79
+        version: 18.3.31
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      react-native:
+        specifier: 0.74.5
+        version: 0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0)
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
@@ -9752,9 +9780,7 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - '@babel/preset-env'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.87': {}
 

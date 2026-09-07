@@ -66,9 +66,9 @@ describe('Farmer Mobile Accessibility Pass (S-46)', () => {
   it('verifies core controls have accessibilityRole or accessibilityLabel in source', () => {
     const srcDir = path.resolve(__dirname, '../');
     const filesToCheck = [
-      'components/Button.tsx',
-      'components/Input.tsx',
-      'components/ErrorState.tsx',
+      '../../../packages/mobile-ui/src/Button.tsx',
+      '../../../packages/mobile-ui/src/Input.tsx',
+      '../../../packages/mobile-ui/src/ErrorState.tsx',
       'screens/listings/ListingsScreen.tsx',
       'screens/listings/CreateListingScreen.tsx',
     ];

@@ -3,24 +3,34 @@ import { View, StyleSheet, Text, ScrollView } from 'react-native';
 import { useTheme } from '../../theme';
 import { t } from '../../i18n';
 import { Badge, Button, Card, ErrorState, Input } from '@tohfa/mobile-ui';
-import { verifyOtp, requestOtp, renderOtpState, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
+import {
+  verifyOtp,
+  sendOtp,
+  renderOtpState,
+  fetchMe,
+} from '../../api/auth';
 import { ApiError } from '../../api/client';
 
-interface OtpScreenProps {
+export interface OtpScreenProps {
   mobile: string;
+  challengeId?: string | undefined;
   resendAvailableAt?: string | undefined;
   attemptsRemaining?: number | undefined;
-  onNavigate: (screen: 'ApplicationStatus' | 'MainTabs' | 'Login', params?: Record<string, string | number | undefined> | undefined) => void;
+  purpose?: 'REGISTRATION' | 'LOGIN' | 'PASSWORD_RESET' | undefined;
+  onNavigate: (screen: 'Home' | 'Login') => void;
 }
 
 export const OtpScreen: React.FC<OtpScreenProps> = ({
   mobile,
+  challengeId: initialChallengeId,
   resendAvailableAt: initialResendAvailableAt,
   attemptsRemaining: initialAttemptsRemaining = 3,
+  purpose = 'REGISTRATION',
   onNavigate,
 }) => {
   const theme = useTheme();
   const [code, setCode] = useState('');
+  const [challengeId, setChallengeId] = useState<string | undefined>(initialChallengeId);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -49,10 +59,26 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
     setErrorMsg(null);
 
     try {
-      await verifyOtp({ mobile, code: code.trim(), purpose: 'LOGIN' });
+      if (!challengeId) {
+        // If challengeId is missing, request a fresh one
+        const otpRes = await sendOtp({ mobile, purpose });
+        setChallengeId(otpRes.challengeId);
+        setResendAvailableAt(otpRes.resendAvailableAt);
+        setAttemptsRemaining(otpRes.attemptsRemaining);
+        setErrorMsg('Please enter the verification code sent to your mobile.');
+        setLoading(false);
+        return;
+      }
+
+      await verifyOtp({ challengeId, code: code.trim() });
       const me = await fetchMe();
-      const route = resolveRouteAfterAuth(me);
-      onNavigate(route.name, route.params);
+
+      // Instant activation: customer directly navigates to Home
+      if (me.status === 'ACTIVE') {
+        onNavigate('Home');
+      } else {
+        onNavigate('Home');
+      }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.is('OTP_INVALID') || err.is('OTP_EXPIRED')) {
@@ -63,7 +89,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
           setAttemptsRemaining(0);
           setErrorMsg(t('error.OTP_LOCKED'));
         } else {
-          setErrorMsg(t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) || t('error.generic'));
+          setErrorMsg(err.problem.detail || t('error.generic'));
         }
       } else {
         setErrorMsg(t('error.generic'));
@@ -78,17 +104,22 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await requestOtp({ mobile, purpose: 'LOGIN' });
-      // BR-32: Read server fields directly from resend response
+      const res = await sendOtp({ mobile, purpose });
+      // BR-32: Update state directly from server response fields
+      setChallengeId(res.challengeId);
       setResendAvailableAt(res.resendAvailableAt);
       setAttemptsRemaining(res.attemptsRemaining);
       setCode('');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.is('OTP_RESEND_TOO_SOON')) {
-          setErrorMsg(t('error.OTP_RESEND_TOO_SOON'));
+          const meta = err.problem.meta as { resendAvailableAt?: string } | undefined;
+          if (meta?.resendAvailableAt) {
+            setResendAvailableAt(meta.resendAvailableAt);
+          }
+          setErrorMsg(err.problem.detail || 'Please wait before resending OTP.');
         } else {
-          setErrorMsg(t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) || t('error.generic'));
+          setErrorMsg(err.problem.detail || t('error.generic'));
         }
       } else {
         setErrorMsg(t('error.generic'));
@@ -99,20 +130,24 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.surface }]} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.surface }]}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <Card style={styles.card}>
         {otpState.isLocked ? (
           <View style={styles.lockedContainer}>
-            <Badge label={t('auth.otp.lockedTitle')} variant="danger" />
+            <Badge label="Locked" variant="danger" />
             <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-              {t('auth.otp.lockedTitle')}
+              {t('auth.otp.locked')}
             </Text>
-            <Text style={[styles.subtitle, { color: theme.colors.grey700 }]}>
-              {t('auth.otp.lockedSubtitle')}
+            <Text style={[styles.subtitle, { color: theme.colors.onSurface }]}>
+              {t('auth.otp.locked')}
             </Text>
 
             <Button
-              title={t('auth.otp.resendNow')}
+              title={t('auth.otp.resend')}
               onPress={handleResend}
               loading={resendLoading}
               style={styles.actionBtn}
@@ -124,21 +159,21 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
               <Text style={[styles.title, { color: theme.colors.onSurface }]}>
                 {t('auth.otp.title')}
               </Text>
-              {/* BR-32: attempts indicator comes from attemptsRemaining */}
+              {/* BR-32: attempts indicator strictly from attemptsRemaining */}
               <Badge
                 label={t('auth.otp.attemptsRemaining', { count: otpState.attemptsRemaining })}
                 variant={otpState.attemptsRemaining <= 1 ? 'danger' : 'info'}
               />
             </View>
 
-            <Text style={[styles.subtitle, { color: theme.colors.grey700 }]}>
+            <Text style={[styles.subtitle, { color: theme.colors.onSurface }]}>
               {t('auth.otp.subtitle', { mobile })}
             </Text>
 
             {errorMsg ? <ErrorState message={errorMsg} onRetry={() => setErrorMsg(null)} /> : null}
 
             <Input
-              label="OTP Code"
+              label={t('auth.otp.label')}
               value={code}
               onChangeText={setCode}
               keyboardType="number-pad"
@@ -147,24 +182,24 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
             />
 
             <Button
-              title={t('common.continue')}
+              title={t('auth.otp.submit')}
               onPress={handleVerify}
               loading={loading}
               disabled={code.length < 4}
               style={styles.actionBtn}
             />
 
-            {/* BR-32: Resend timer counts down from resendAvailableAt */}
+            {/* BR-32: Resend cooldown strictly driven by resendAvailableAt */}
             <View style={styles.resendRow}>
               {otpState.canResend ? (
                 <Button
-                  title={t('auth.otp.resendNow')}
+                  title={t('auth.otp.resend')}
                   variant="outline"
                   onPress={handleResend}
                   loading={resendLoading}
                 />
               ) : (
-                <Text style={[styles.timerText, { color: theme.colors.grey700 }]}>
+                <Text style={[styles.timerText, { color: theme.colors.onSurface }]}>
                   {t('auth.otp.resendIn', { seconds: otpState.secondsUntilResend })}
                 </Text>
               )}
@@ -200,6 +235,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
+    opacity: 0.8,
   },
   actionBtn: {
     marginTop: 8,
