@@ -11,9 +11,13 @@ import { SplashScreen } from './screens/auth/SplashScreen';
 import { AddCertificationScreen } from './screens/certifications/AddCertificationScreen';
 import { CertificationsScreen } from './screens/certifications/CertificationsScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
+import { CounterOfferScreen } from './screens/listings/CounterOfferScreen';
+import { CreateListingScreen } from './screens/listings/CreateListingScreen';
+import { ListingsScreen } from './screens/listings/ListingsScreen';
 import { ProfileScreen } from './screens/profile/ProfileScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
+import { type Listing } from './api/listings';
 import { colors, spacing, typography, weights } from './theme';
 
 export type ScreenName =
@@ -26,13 +30,16 @@ export type ScreenName =
   | 'ApplicationStatus'
   | 'MainTabs'
   | 'Certifications'
-  | 'AddCertification';
+  | 'AddCertification'
+  | 'CreateListing'
+  | 'CounterOffer';
 
-type TabName = 'Home' | 'Wallet' | 'Profile';
+type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
 export default function App(): React.JSX.Element {
   const [screen, setScreen] = useState<ScreenName>('Splash');
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
@@ -111,6 +118,30 @@ export default function App(): React.JSX.Element {
             onSuccess={() => navigate('Certifications')}
             onCancel={() => navigate('Certifications')}
           />
+        ) : screen === 'CreateListing' ? (
+          <CreateListingScreen
+            onSuccess={() => {
+              setCurrentTab('Listings');
+              navigate('MainTabs');
+            }}
+            onCancel={() => {
+              setCurrentTab('Listings');
+              navigate('MainTabs');
+            }}
+            onNavigateToCertifications={() => navigate('Certifications')}
+          />
+        ) : screen === 'CounterOffer' && selectedListing ? (
+          <CounterOfferScreen
+            listing={selectedListing}
+            onSuccess={() => {
+              setCurrentTab('Listings');
+              navigate('MainTabs');
+            }}
+            onCancel={() => {
+              setCurrentTab('Listings');
+              navigate('MainTabs');
+            }}
+          />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>
@@ -118,8 +149,18 @@ export default function App(): React.JSX.Element {
               {currentTab === 'Home' ? (
                 <DashboardScreen
                   onNavigateToCertifications={() => navigate('Certifications')}
+                  onNavigateToCreateListing={() => navigate('CreateListing')}
+                  onNavigateToListings={() => setCurrentTab('Listings')}
                   onNavigateToWallet={() => setCurrentTab('Wallet')}
                   onNavigateToProfile={() => setCurrentTab('Profile')}
+                />
+              ) : currentTab === 'Listings' ? (
+                <ListingsScreen
+                  onNavigateToCreateListing={() => navigate('CreateListing')}
+                  onNavigateToCounterOffer={(item) => {
+                    setSelectedListing(item);
+                    navigate('CounterOffer');
+                  }}
                 />
               ) : currentTab === 'Wallet' ? (
                 <WalletScreen />
@@ -149,6 +190,26 @@ export default function App(): React.JSX.Element {
                   ]}
                 >
                   {t('dashboard.title')}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.tabItem}
+                onPress={() => setCurrentTab('Listings')}
+                accessibilityRole="tab"
+              >
+                <Icon
+                  name="inventory_2"
+                  size={24}
+                  color={currentTab === 'Listings' ? colors.primary : colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.tabItemText,
+                    currentTab === 'Listings' && styles.tabItemTextActive,
+                  ]}
+                >
+                  {t('listings.title')}
                 </Text>
               </Pressable>
 

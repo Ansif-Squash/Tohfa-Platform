@@ -9,9 +9,9 @@ import type { TextInputProps, ViewStyle } from 'react-native';
 import { theme } from '../theme';
 
 export interface InputProps extends TextInputProps {
-  label?: string;
-  error?: string;
-  containerStyle?: ViewStyle;
+  label?: string | undefined;
+  error?: string | undefined;
+  containerStyle?: ViewStyle | undefined;
 }
 
 export const Input: React.FC<InputProps> = ({
