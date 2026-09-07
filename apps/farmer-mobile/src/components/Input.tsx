@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+ import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -37,6 +37,7 @@ export const Input: React.FC<InputProps> = ({
           setIsFocused(true);
           onFocus?.(e);
         }}
+        accessibilityLabel={label}
         placeholderTextColor={theme.colors.onSurface}
         style={[
           styles.input,

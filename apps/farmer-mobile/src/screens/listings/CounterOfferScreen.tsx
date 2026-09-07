@@ -20,6 +20,7 @@ import {
   type CounterOffer,
   type Listing,
 } from '../../api/listings';
+import { NetworkError } from '../../api/client';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -109,6 +110,13 @@ export function CounterOfferScreen({
       await acceptCounterOffer(listing.id, offer.id);
       onSuccess?.();
     } catch (err: unknown) {
+      if (
+        err instanceof NetworkError ||
+        (typeof err === 'object' && err !== null && (err as { name?: string }).name === 'NetworkError')
+      ) {
+        setErrorMessage('You are offline. Unable to accept counter-offer. Please check your connection.');
+        return;
+      }
       const anyErr = err as { status?: number; detail?: string; message?: string };
       if (anyErr.status === 409) {
         setConflictWarning(true);
@@ -129,6 +137,13 @@ export function CounterOfferScreen({
       await rejectCounterOffer(listing.id, offer.id, rejectionReason.trim() || undefined);
       onSuccess?.();
     } catch (err: unknown) {
+      if (
+        err instanceof NetworkError ||
+        (typeof err === 'object' && err !== null && (err as { name?: string }).name === 'NetworkError')
+      ) {
+        setErrorMessage('You are offline. Unable to reject counter-offer. Please check your connection.');
+        return;
+      }
       const anyErr = err as { status?: number; detail?: string; message?: string };
       if (anyErr.status === 409) {
         setConflictWarning(true);
@@ -153,6 +168,13 @@ export function CounterOfferScreen({
       });
       onSuccess?.();
     } catch (err: unknown) {
+      if (
+        err instanceof NetworkError ||
+        (typeof err === 'object' && err !== null && (err as { name?: string }).name === 'NetworkError')
+      ) {
+        setErrorMessage('You are offline. Your counter-offer was not submitted. Your entered terms remain saved.');
+        return;
+      }
       const anyErr = err as { status?: number; code?: string; detail?: string; message?: string };
       if (anyErr.status === 409) {
         setConflictWarning(true);

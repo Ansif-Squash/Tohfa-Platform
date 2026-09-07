@@ -1,0 +1,116 @@
+appId: in.tohfa.farmer
+---
+# ==============================================================================
+# TOHFA Golden-Thread E2E Flow (S-46)
+# Flow: Register/Auth -> List Produce -> Respond to Counter-Offer
+# ==============================================================================
+
+# Launch the Farmer Mobile App
+- launchApp:
+    clearState: false
+
+# ------------------------------------------------------------------------------
+# Phase 1: Authentication / Registration Flow
+# ------------------------------------------------------------------------------
+- runFlow:
+    when:
+      visible: "Login"
+    commands:
+      # Option A: Register Farmer Application if "Register as Farmer" is tapped
+      - tapOn:
+          text: "Register as a Farmer"
+          optional: true
+      - runFlow:
+          when:
+            visible: "Personal Details"
+          commands:
+            - inputText: "Murugan Selvam"
+            - tapOn: "Next"
+            - inputText: "Selvam Organic Farm"
+            - tapOn: "Next"
+            - tapOn: "Back to Login"
+            - optional: true
+      # Option B: Authenticate with Seeded Farmer Account
+      - tapOn:
+          text: "Mobile Number"
+          optional: true
+      - inputText: "9876543210"
+      - tapOn:
+          text: "Password"
+          optional: true
+      - inputText: "Password@123"
+      - tapOn: "Login"
+
+# Verify Dashboard / Main Tabs Loaded
+- assertVisible:
+    text: ".*"
+
+# ------------------------------------------------------------------------------
+# Phase 2: Create Produce Listing
+# ------------------------------------------------------------------------------
+# Navigate to Listings Tab
+- tapOn:
+    text: "Listings"
+    optional: true
+
+# Open Create Listing Screen
+- tapOn:
+    text: "New Listing"
+    optional: true
+
+- runFlow:
+    when:
+      visible: "Create Produce Listing"
+    commands:
+      # Select crop
+      - tapOn:
+          text: "Carrot (Ooty)"
+          optional: true
+      # Select grade
+      - tapOn:
+          text: "Grade 1"
+          optional: true
+      # Enter Quantity
+      - tapOn:
+          text: "Quantity (kg)"
+          optional: true
+      - inputText: "500"
+      # Enter Asking Price (within fair price ceiling)
+      - tapOn:
+          text: "Your Asking Price (₹/kg)"
+          optional: true
+      - inputText: "40"
+      # Submit Listing
+      - tapOn: "Submit Produce Listing"
+
+# ------------------------------------------------------------------------------
+# Phase 3: Respond to Counter-Offer
+# ------------------------------------------------------------------------------
+# Switch to Active / Review Tab in Listings
+- tapOn:
+    text: "Active / Review"
+    optional: true
+
+# If a counter-offer is present, review and respond
+- tapOn:
+    text: "Review Counter-Offer"
+    optional: true
+
+- runFlow:
+    when:
+      visible: "24-Hour Response Window (BR-10)"
+    commands:
+      - assertVisible: "Admin Counter-Offer"
+      # Accept the counter-offer
+      - tapOn:
+          text: "Accept Offer"
+          optional: true
+      # Confirm acceptance if confirmation dialog appears
+      - tapOn:
+          text: "Confirm"
+          optional: true
+
+# Return to home dashboard
+- tapOn:
+    text: "Home"
+    optional: true

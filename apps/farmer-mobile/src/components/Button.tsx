@@ -68,6 +68,8 @@ export const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.8}
       disabled={disabled || loading}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
       style={[
         styles.baseButton,
         vStyles.button,

@@ -8,7 +8,8 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "maestro test .maestro/golden-thread.yaml"
   },
   "dependencies": {
     "@babel/runtime": "^8.0.0",
