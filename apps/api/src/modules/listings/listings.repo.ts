@@ -28,6 +28,18 @@ export interface ListingRow {
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string | null;
+  counterRoundsUsed?: number;
+  activeCounterOffer?: {
+    id: string;
+    listingId: string;
+    round: number;
+    offeredBy: 'ADMIN' | 'FARMER';
+    pricePerKg: string;
+    quantityKg: string;
+    message: string | null;
+    status: string;
+    expiresAt: string;
+  } | null;
 }
 
 export interface ListingRollup {
@@ -461,6 +473,15 @@ export const listingsRepo = {
       rejection_reason: string | null;
       created_at: string;
       updated_at: string | null;
+      counter_rounds_used: number;
+      active_offer_id: string | null;
+      active_offer_round: number | null;
+      active_offer_offered_by: 'ADMIN' | 'FARMER' | null;
+      active_offer_price: string | null;
+      active_offer_qty: string | null;
+      active_offer_msg: string | null;
+      active_offer_status: string | null;
+      active_offer_expires_at: string | null;
     }>(
       `SELECT pl.id, pl.listing_number, pl.farmer_id, pl.farm_id, pl.farm_crop_id,
               pl.crop_id, cm.name AS crop_name, pl.grade, pl.quantity_kg::text,
@@ -470,10 +491,20 @@ export const listingsRepo = {
               pl.photo_keys, pl.certification_badges, pl.version,
               pl.approved_by, pl.approved_at::text, pl.rejected_by,
               pl.rejected_at::text, pl.rejection_reason,
-              pl.created_at::text, pl.updated_at::text
+              pl.created_at::text, pl.updated_at::text,
+              (SELECT COUNT(*)::int FROM counter_offers WHERE listing_id = pl.id AND actor = 'FARMER') AS counter_rounds_used,
+              co.id AS active_offer_id,
+              co.round AS active_offer_round,
+              co.actor AS active_offer_offered_by,
+              co.price_per_kg::text AS active_offer_price,
+              co.quantity_kg::text AS active_offer_qty,
+              co.message AS active_offer_msg,
+              co.status AS active_offer_status,
+              co.expires_at::text AS active_offer_expires_at
        FROM produce_listings pl
        JOIN crop_master cm ON cm.id = pl.crop_id
        JOIN fair_prices fp ON fp.id = pl.fair_price_id
+       LEFT JOIN counter_offers co ON co.listing_id = pl.id AND co.status = 'PENDING'
        WHERE ${conditions.join(' AND ')}
        ORDER BY pl.created_at DESC
        LIMIT $${idx}`,
@@ -511,6 +542,20 @@ export const listingsRepo = {
       rejectionReason: row.rejection_reason,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      counterRoundsUsed: row.counter_rounds_used ?? 0,
+      activeCounterOffer: row.active_offer_id
+        ? {
+            id: row.active_offer_id,
+            listingId: row.id,
+            round: row.active_offer_round ?? 1,
+            offeredBy: row.active_offer_offered_by ?? 'ADMIN',
+            pricePerKg: row.active_offer_price ?? '0.00',
+            quantityKg: row.active_offer_qty ?? '0.000',
+            message: row.active_offer_msg,
+            status: row.active_offer_status ?? 'PENDING',
+            expiresAt: row.active_offer_expires_at ?? '',
+          }
+        : null,
     }));
 
     return { items, nextCursor, hasMore };

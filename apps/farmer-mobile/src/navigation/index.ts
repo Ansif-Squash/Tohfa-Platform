@@ -20,6 +20,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   ListingDetail: { id: string };
   CreateListing: undefined;
+  CounterOffer: { listingId: string; offerId?: string };
   Certifications: undefined;
   AddCertification: undefined;
 };
@@ -38,6 +39,8 @@ export const deepLinkingConfig = {
         },
       },
       ListingDetail: 'listings/:id',
+      CreateListing: 'listings/new',
+      CounterOffer: 'listings/:listingId/counter-offers/:offerId',
       ApplicationStatus: 'application/:applicationId',
       Certifications: 'certifications',
       AddCertification: 'certifications/new',

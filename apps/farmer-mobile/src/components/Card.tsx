@@ -1,17 +1,18 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import type { ViewStyle } from 'react-native';
+import type { ViewStyle, StyleProp } from 'react-native';
 import { theme } from '../theme';
 
 export interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
-  testID?: string;
+  style?: StyleProp<ViewStyle> | undefined;
+  testID?: string | undefined;
+  accessibilityRole?: string | undefined;
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, testID }) => {
+export const Card: React.FC<CardProps> = ({ children, style, testID, accessibilityRole }) => {
   return (
-    <View style={[styles.card, style]} testID={testID}>
+    <View style={[styles.card, style]} testID={testID} accessibilityRole={accessibilityRole as any}>
       {children}
     </View>
   );

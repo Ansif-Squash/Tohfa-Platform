@@ -49,6 +49,9 @@ export const spacing = tokens.spacing;
 export const radius = {
   ...tokens.radius,
   card: tokens.radius.cardMin,
+  sm: 6,
+  md: 8,
+  lg: tokens.radius.cardMin,
 } as const;
 
 
