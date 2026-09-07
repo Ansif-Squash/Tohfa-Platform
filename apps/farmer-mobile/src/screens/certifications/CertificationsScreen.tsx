@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   SafeAreaView,
@@ -17,7 +16,10 @@ import {
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { EmptyState } from '../../components/EmptyState';
+import { ErrorState } from '../../components/ErrorState';
 import { Icon } from '../../components/Icon';
+import { Skeleton } from '../../components/Skeleton';
 import { t } from '../../i18n';
 import { colors, radius, spacing, typography, weights } from '../../theme';
 
@@ -138,9 +140,33 @@ export function CertificationsScreen({
   if (loading) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.title}>{t('certifications.title')}</Text>
+              <Text style={styles.subtitle}>{t('certifications.subtitle')}</Text>
+            </View>
+          </View>
+          <View style={styles.skeletonList}>
+            <Skeleton height={140} width="100%" style={styles.skeletonCard} />
+            <Skeleton height={140} width="100%" style={styles.skeletonCard} />
+            <Skeleton height={140} width="100%" style={styles.skeletonCard} />
+          </View>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && certs.length === 0) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            setLoading(true);
+            void loadCerts();
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -179,15 +205,11 @@ export function CertificationsScreen({
             />
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Icon name="verified_user" size={48} color={colors.onSurfaceVariant} />
-              <Text style={styles.emptyText}>{t('certifications.empty')}</Text>
-              <Button
-                title={t('certifications.add')}
-                variant="primary"
-                onPress={() => onNavigateToAddCertification?.()}
-              />
-            </View>
+            <EmptyState
+              title={t('certifications.empty') || 'No certificates found'}
+              message="Upload your organic farming certificate to unlock marketplace produce listing."
+              iconName="verified_user"
+            />
           }
         />
 
@@ -300,5 +322,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.onSurfaceVariant,
     fontSize: typography.body,
+  },
+  skeletonList: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  skeletonCard: {
+    borderRadius: radius.card,
   },
 });

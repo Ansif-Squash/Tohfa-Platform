@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { setOnAuthFailure } from './api/client';
 import { Icon } from './components/Icon';
 import { LOCALES, setLocale, t, type Locale } from './i18n';
 import { ApplicationStatusScreen } from './screens/auth/ApplicationStatusScreen';
@@ -47,6 +48,15 @@ export default function App(): React.JSX.Element {
     setParams(nextParams);
     setScreen(nextScreen);
   }
+
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      setScreen('Login');
+    });
+    return () => {
+      setOnAuthFailure(null);
+    };
+  }, []);
 
   const switchLocale = (next: Locale): void => {
     setLocale(next);

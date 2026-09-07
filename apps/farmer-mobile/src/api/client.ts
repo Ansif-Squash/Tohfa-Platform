@@ -6,6 +6,7 @@
  * on `error.problem.code` — never on the message text.
  */
 import type { ErrorCode, Problem } from '@tohfa/shared-types';
+import { tokenStorage } from '../storage/tokenStorage';
 
 /**
  * TODO(STORY-MOB-01): move to react-native-config so the URL comes from the
@@ -44,22 +45,85 @@ export class NetworkError extends Error {
 }
 
 let accessToken: string | null = null;
+let refreshPromise: Promise<string | null> | null = null;
+let onAuthFailureCallback: (() => void) | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
 }
 
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
+export function setOnAuthFailure(callback: (() => void) | null): void {
+  onAuthFailureCallback = callback;
+}
+
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
-  body?: unknown;
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE' | undefined;
+  body?: unknown | undefined;
   /** Required on every non-idempotent write. See docs/rules.md. */
-  idempotencyKey?: string;
-  signal?: AbortSignal;
+  idempotencyKey?: string | undefined;
+  signal?: AbortSignal | undefined;
+  _isRetry?: boolean | undefined;
 }
 
 function correlationId(): string {
   // RN has no crypto.randomUUID on older Androids; this is only a log key.
   return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Collapses concurrent 401s into a single POST /auth/refresh call.
+ * Other in-flight requests queue behind this promise.
+ */
+export async function refreshAuthTokens(): Promise<string | null> {
+  if (refreshPromise !== null) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const tokens = await tokenStorage.getTokens();
+      if (!tokens?.refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const refreshUrl = resolveUrl('/auth/refresh');
+      const response = await fetch(refreshUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'x-correlation-id': correlationId(),
+        },
+        body: JSON.stringify({ refreshToken: tokens.refreshToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Token refresh rejected with status ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { accessToken: string; refreshToken: string };
+      setAccessToken(payload.accessToken);
+      await tokenStorage.setTokens({
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken,
+      });
+      return payload.accessToken;
+    } catch {
+      // Genuinely failed refresh: clear Keychain/tokens without clearing registration draft
+      setAccessToken(null);
+      await tokenStorage.clearTokens();
+      onAuthFailureCallback?.();
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -85,6 +149,21 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     throw new NetworkError(error);
   }
 
+  // Handle mid-session 401 token expiry with collapsed refresh and single retry
+  const isAuthEndpoint =
+    path.includes('/auth/login') ||
+    path.includes('/auth/refresh') ||
+    path.includes('/auth/otp');
+
+  if (response.status === 401 && !options._isRetry && !isAuthEndpoint) {
+    const newAccessToken = await refreshAuthTokens();
+    if (newAccessToken !== null) {
+      return request<T>(path, {
+        ...options,
+        _isRetry: true,
+      });
+    }
+  }
 
   if (response.status === 204) return undefined as T;
 

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   SafeAreaView,
@@ -18,7 +17,9 @@ import {
 } from '../../api/farmer';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { ErrorState } from '../../components/ErrorState';
 import { Icon } from '../../components/Icon';
+import { Skeleton } from '../../components/Skeleton';
 
 import { Input } from '../../components/Input';
 import { LOCALES, setLocale, t, type Locale } from '../../i18n';
@@ -48,7 +49,7 @@ export function ProfileScreen({
   const [saving, setSaving] = useState<boolean>(false);
   const [changeRequested, setChangeRequested] = useState<boolean>(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown | null>(null);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -59,8 +60,8 @@ export function ProfileScreen({
       setExperience(res.farmingExperienceYears ? String(res.farmingExperienceYears) : '');
       setAddress(res.address ?? '');
       setSelectedLocale((res.preferredLocale as Locale) || 'ta');
-    } catch {
-      setError(t('error.generic'));
+    } catch (err: unknown) {
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -105,9 +106,25 @@ export function ProfileScreen({
   if (loading) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.skeletonContainer}>
+          <Skeleton height={28} width="50%" style={styles.skeletonItem} />
+          <Skeleton height={160} width="100%" style={styles.skeletonCard} />
+          <Skeleton height={220} width="100%" style={styles.skeletonCard} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            setLoading(true);
+            void loadProfile();
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -128,7 +145,11 @@ export function ProfileScreen({
 
         {error ? (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{error}</Text>
+            <Text style={styles.errorBannerText}>
+              {typeof error === 'string'
+                ? error
+                : (error as Error)?.message || t('error.generic')}
+            </Text>
           </View>
         ) : null}
 
@@ -327,5 +348,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.cardMax,
     padding: spacing.lg,
     gap: spacing.md,
+  },
+  skeletonContainer: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  skeletonItem: {
+    borderRadius: radius.sm,
+  },
+  skeletonCard: {
+    borderRadius: radius.card,
   },
 });

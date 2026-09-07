@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -21,7 +20,9 @@ import {
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { ErrorState } from '../../components/ErrorState';
 import { Icon } from '../../components/Icon';
+import { Skeleton } from '../../components/Skeleton';
 import { t, type TranslationKey } from '../../i18n';
 
 import {
@@ -86,9 +87,26 @@ export function DashboardScreen({
   if (loading) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.skeletonContainer}>
+          <Skeleton height={28} width="60%" style={styles.skeletonItem} />
+          <Skeleton height={18} width="35%" style={styles.skeletonItem} />
+          <Skeleton height={140} width="100%" style={styles.skeletonCard} />
+          <Skeleton height={180} width="100%" style={styles.skeletonCard} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            setLoading(true);
+            void loadData();
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -409,5 +427,15 @@ const styles = StyleSheet.create({
     fontWeight: weights.medium,
     color: colors.onSurface,
     textAlign: 'center',
+  },
+  skeletonContainer: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  skeletonItem: {
+    borderRadius: radius.sm,
+  },
+  skeletonCard: {
+    borderRadius: radius.card,
   },
 });
