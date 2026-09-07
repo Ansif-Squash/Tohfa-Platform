@@ -13,196 +13,322 @@ import { PayoutsService, type AgeBucket, type PayoutDue } from './payouts.servic
     `
       :host {
         display: block;
-        padding: var(--tohfa-space-xl);
+        padding: var(--tohfa-space-xxl, 48px);
+        font-family: 'Manrope', sans-serif;
       }
+
       .page-header {
-        margin-bottom: var(--tohfa-space-xl);
+        margin-bottom: var(--tohfa-space-xl, 32px);
       }
       .page-header h1 {
-        margin: 0 0 var(--tohfa-space-xs) 0;
-        font-size: var(--tohfa-font-size-headline);
-        color: var(--tohfa-on-surface);
+        margin: 0 0 4px 0;
+        font-size: var(--tohfa-font-size-h1, 30px);
+        font-weight: 700;
+        color: var(--tohfa-neutral-900, #1f2937);
+        letter-spacing: -0.01em;
       }
       .page-header p {
         margin: 0;
-        color: var(--tohfa-neutral-grey700);
-        font-size: var(--tohfa-font-size-body);
+        color: var(--tohfa-neutral-600, #6b7280);
+        font-size: var(--tohfa-font-size-body, 14px);
       }
+
+      /* ---------- KPI cards ---------- */
       .kpi-cards {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: var(--tohfa-space-lg);
-        margin-bottom: var(--tohfa-space-xl);
+        gap: var(--tohfa-space-lg, 16px);
+        margin-bottom: var(--tohfa-space-xl, 32px);
       }
       .kpi-card {
-        background: var(--tohfa-surface-container-lowest, #fff);
-        border: 1px solid var(--tohfa-neutral-grey200, #e2e8f0);
+        position: relative;
+        background: var(--tohfa-white, #ffffff);
+        border: 1px solid var(--tohfa-neutral-300, #e5e7eb);
         border-radius: var(--tohfa-radius-lg, 12px);
-        padding: var(--tohfa-space-lg);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        padding: var(--tohfa-space-lg, 16px) var(--tohfa-space-lg, 16px) var(--tohfa-space-lg, 16px) 20px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(17, 24, 39, 0.05);
       }
+      .kpi-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--accent, var(--tohfa-primary, #2f7d32));
+      }
+      .kpi-card.accent { --accent: var(--tohfa-info, #2563eb); }
       .kpi-label {
         font-size: var(--tohfa-font-size-caption, 12px);
-        color: var(--tohfa-neutral-grey600, #718096);
+        color: var(--tohfa-neutral-600, #6b7280);
         text-transform: uppercase;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        margin-bottom: var(--tohfa-space-xs);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
       }
       .kpi-value {
         font-size: 28px;
         font-weight: 700;
-        color: var(--tohfa-on-surface, #1a202c);
+        color: var(--tohfa-neutral-900, #1f2937);
       }
       .kpi-value.accent {
-        color: #2b6cb0;
+        color: var(--tohfa-info, #2563eb);
       }
+        .kpi-value.green {
+        color: green;
+      }
+
+      /* ---------- Filter bar ---------- */
       .filter-bar {
         display: flex;
-        gap: var(--tohfa-space-md);
+        gap: 8px;
         align-items: center;
-        margin-bottom: var(--tohfa-space-lg);
+        margin-bottom: var(--tohfa-space-lg, 16px);
         flex-wrap: wrap;
       }
       .filter-btn {
-        padding: var(--tohfa-space-sm) var(--tohfa-space-md);
-        border: 1px solid var(--tohfa-neutral-grey300, #cbd5e0);
-        background: #fff;
-        border-radius: var(--tohfa-radius-full, 9999px);
+        padding: 8px 16px;
+        border: 1.5px solid var(--tohfa-neutral-300, #e5e7eb);
+        background: var(--tohfa-white, #ffffff);
+        border-radius: var(--tohfa-radius-full, 999px);
         cursor: pointer;
         font-size: 13px;
-        font-weight: 500;
-        color: #4a5568;
+        font-weight: 600;
+        color: var(--tohfa-neutral-700, #4b5563);
         transition: all 0.15s ease;
       }
-      .filter-btn.active {
-        background: #2b6cb0;
-        color: #fff;
-        border-color: #2b6cb0;
+      .filter-btn:hover {
+        border-color: var(--tohfa-neutral-400, #d1d5db);
+        background: var(--tohfa-neutral-50, #f9fafb);
       }
+      .filter-btn.active {
+        background: var(--tohfa-primary, #2f7d32);
+        color: #fff;
+        border-color: var(--tohfa-primary, #2f7d32);
+      }
+      .filter-btn.critical.active {
+        background: var(--tohfa-error, #dc2626);
+        border-color: var(--tohfa-error, #dc2626);
+      }
+
+      /* ---------- Table ---------- */
       .table-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
+        background: var(--tohfa-white, #ffffff);
+        border: 1px solid var(--tohfa-neutral-300, #e5e7eb);
+        border-radius: var(--tohfa-radius-lg, 12px);
         overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 1px 3px rgba(17, 24, 39, 0.05);
       }
       table {
         width: 100%;
         border-collapse: collapse;
         text-align: left;
-        font-size: 14px;
+        font-size: var(--tohfa-font-size-body, 14px);
       }
       th {
-        background: #f7fafc;
-        padding: 12px 16px;
-        font-weight: 600;
-        color: #4a5568;
-        border-bottom: 1px solid #e2e8f0;
+        background: var(--tohfa-neutral-50, #f9fafb);
+        padding: var(--tohfa-space-md, 12px) var(--tohfa-space-lg, 16px);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--tohfa-neutral-600, #6b7280);
+        border-bottom: 1px solid var(--tohfa-neutral-300, #e5e7eb);
       }
       td {
-        padding: 14px 16px;
-        border-bottom: 1px solid #edf2f7;
-        color: #2d3748;
+        padding: var(--tohfa-space-md, 12px) var(--tohfa-space-lg, 16px);
+        border-bottom: 1px solid var(--tohfa-neutral-100, #f3f4f6);
+        color: var(--tohfa-neutral-900, #1f2937);
+        vertical-align: middle;
       }
       tr:last-child td {
         border-bottom: none;
       }
       tr:hover td {
-        background: #f8fafc;
+        background: var(--tohfa-primary-pale, #f4fbf4);
       }
-      .badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 6px;
+      .farmer-id {
+        font-size: 12px;
+        color: var(--tohfa-neutral-500, #9ca3af);
+        margin-top: 2px;
+      }
+      .po-code {
+        font-family: 'Manrope', monospace;
         font-size: 12px;
         font-weight: 600;
+        background: var(--tohfa-neutral-100, #f3f4f6);
+        color: var(--tohfa-neutral-700, #4b5563);
+        padding: 3px 8px;
+        border-radius: var(--tohfa-radius-sm, 6px);
       }
-      .badge-D0_7 { background: #c6f6d5; color: #22543d; }
-      .badge-D8_15 { background: #fefcbf; color: #744210; }
-      .badge-D16_30 { background: #feebc8; color: #7b341e; }
-      .badge-D30_PLUS { background: #fed7d7; color: #742a2a; }
+
+      /* ---------- Ageing badges ---------- */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 11px;
+        border-radius: var(--tohfa-radius-full, 999px);
+        font-size: 11px;
+        font-weight: 700;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+      .badge-D0_7 {
+        background: var(--tohfa-success-light, #f0fdf4);
+        color: var(--tohfa-success, #16a34a);
+        border-color: rgba(22, 163, 74, 0.22);
+      }
+      .badge-D8_15 {
+        background: var(--tohfa-warning-light, #fffbeb);
+        color: var(--tohfa-warning, #d97706);
+        border-color: rgba(217, 119, 6, 0.22);
+      }
+      .badge-D16_30 {
+        background: #fff1e6;
+        color: #c2410c;
+        border-color: rgba(194, 65, 12, 0.22);
+      }
+      .badge-D30_PLUS {
+        background: var(--tohfa-error-light, #fef2f2);
+        color: var(--tohfa-error, #dc2626);
+        border-color: rgba(220, 38, 38, 0.22);
+      }
+
+      /* ---------- Buttons ---------- */
       .btn {
-        padding: 8px 14px;
-        border-radius: 8px;
+        padding: 8px 16px;
+        border-radius: var(--tohfa-radius-sm, 6px);
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 700;
         cursor: pointer;
         border: none;
-        transition: all 0.15s ease;
+        transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+      }
+      .btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
       }
       .btn-primary {
-        background: #2b6cb0;
+        background: var(--tohfa-primary, #2f7d32);
         color: #fff;
+        box-shadow: 0 1px 2px rgba(27, 94, 32, 0.25);
       }
-      .btn-primary:hover {
-        background: #2c5282;
+      .btn-primary:hover:not(:disabled) {
+        background: var(--tohfa-primary-dark, #1b5e20);
+        box-shadow: 0 4px 10px rgba(27, 94, 32, 0.3);
+        transform: translateY(-1px);
       }
       .btn-secondary {
-        background: #edf2f7;
-        color: #4a5568;
+        background: var(--tohfa-neutral-100, #f3f4f6);
+        color: var(--tohfa-neutral-800, #374151);
+        border: 1px solid var(--tohfa-neutral-300, #e5e7eb);
       }
       .btn-secondary:hover {
-        background: #e2e8f0;
+        background: var(--tohfa-neutral-200, #eceff3);
       }
+
+      /* ---------- Modal ---------- */
       .modal-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.45);
+        background: rgba(17, 24, 39, 0.5);
+        backdrop-filter: blur(2px);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 100;
       }
       .modal-box {
-        background: #fff;
-        border-radius: 12px;
-        padding: 24px;
+        background: var(--tohfa-white, #ffffff);
+        border-radius: var(--tohfa-radius-xl, 16px);
+        padding: var(--tohfa-space-xl, 32px);
         width: 100%;
         max-width: 480px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
       }
       .modal-box h2 {
-        margin: 0 0 16px 0;
+        margin: 0 0 var(--tohfa-space-lg, 16px) 0;
         font-size: 20px;
+        font-weight: 700;
+        color: var(--tohfa-neutral-900, #1f2937);
       }
       .form-group {
-        margin-bottom: 16px;
+        margin-bottom: var(--tohfa-space-lg, 16px);
       }
       .form-group label {
         display: block;
-        font-size: 13px;
-        font-weight: 600;
-        color: #4a5568;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--tohfa-neutral-700, #4b5563);
         margin-bottom: 6px;
       }
-      .form-group input, .form-group select, .form-group textarea {
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
         width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #cbd5e0;
-        border-radius: 8px;
-        font-size: 14px;
+        padding: 9px var(--tohfa-space-md, 12px);
+        border: 1.5px solid var(--tohfa-neutral-300, #e5e7eb);
+        border-radius: var(--tohfa-radius-sm, 6px);
+        font-size: var(--tohfa-font-size-body, 14px);
+        font-family: inherit;
+        color: var(--tohfa-neutral-900, #1f2937);
+        background: var(--tohfa-white, #ffffff);
+        outline: none;
         box-sizing: border-box;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
       }
+      .form-group input:hover,
+      .form-group select:hover,
+      .form-group textarea:hover {
+        border-color: var(--tohfa-neutral-400, #d1d5db);
+      }
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        border-color: var(--tohfa-primary, #2f7d32);
+        box-shadow: 0 0 0 3px rgba(47, 125, 50, 0.14);
+        background: var(--tohfa-primary-pale, #f4fbf4);
+      }
+      .form-group input:disabled {
+        background: var(--tohfa-neutral-100, #f3f4f6);
+        color: var(--tohfa-neutral-500, #9ca3af);
+      }
+
       .dual-approval-notice {
-        background: #fffaf0;
-        border: 1px solid #fbd38d;
-        border-radius: 8px;
-        padding: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        background: var(--tohfa-warning-light, #fffbeb);
+        border: 1px solid rgba(217, 119, 6, 0.3);
+        border-radius: var(--tohfa-radius-md, 8px);
+        padding: var(--tohfa-space-md, 12px);
         font-size: 13px;
-        color: #7b341e;
-        margin-bottom: 16px;
+        line-height: 1.5;
+        color: #92400e;
+        margin-bottom: var(--tohfa-space-lg, 16px);
       }
+      .dual-approval-notice code {
+        background: rgba(217, 119, 6, 0.14);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+
       .modal-actions {
         display: flex;
         justify-content: flex-end;
         gap: 10px;
-        margin-top: 20px;
+        margin-top: var(--tohfa-space-lg, 16px);
       }
+
       .empty-state {
         text-align: center;
-        padding: 40px;
-        color: #718096;
+        padding: var(--tohfa-space-xxl, 48px);
+        color: var(--tohfa-neutral-600, #6b7280);
+        font-weight: 500;
       }
     `,
   ],
@@ -214,9 +340,9 @@ import { PayoutsService, type AgeBucket, type PayoutDue } from './payouts.servic
 
     <!-- KPI Summary -->
     <div class="kpi-cards">
-      <div class="kpi-card">
+      <div class="kpi-card green">
         <div class="kpi-label">Total Outstanding Dues</div>
-        <div class="kpi-value accent">₹{{ totals().totalDue }}</div>
+        <div class="kpi-value green">₹{{ totals().totalDue }}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Farmers Awaiting Payout</div>
@@ -255,7 +381,7 @@ import { PayoutsService, type AgeBucket, type PayoutDue } from './payouts.servic
         16-30 Days
       </button>
       <button
-        class="filter-btn"
+        class="filter-btn critical"
         [class.active]="selectedBucket() === 'D30_PLUS'"
         (click)="setBucket('D30_PLUS')"
       >
@@ -280,11 +406,11 @@ import { PayoutsService, type AgeBucket, type PayoutDue } from './payouts.servic
           <tr *ngFor="let due of dues()">
             <td>
               <strong>{{ due.farmerName }}</strong>
-              <div style="font-size: 12px; color: #718096;" *ngIf="due.tohfaFarmerId">
+              <div class="farmer-id" *ngIf="due.tohfaFarmerId">
                 {{ due.tohfaFarmerId }}
               </div>
             </td>
-            <td><code>{{ due.purchaseOrderId.slice(0, 8) }}...</code></td>
+            <td><span class="po-code">{{ due.purchaseOrderId.slice(0, 8) }}...</span></td>
             <td>{{ due.dueSince }}</td>
             <td>
               <span class="badge badge-{{ due.ageBucket }}">
@@ -340,7 +466,8 @@ import { PayoutsService, type AgeBucket, type PayoutDue } from './payouts.servic
         </div>
 
         <div class="dual-approval-notice" *ngIf="isDualApprovalRequired()">
-          ⚠️ <strong>Dual Approval Required (BR-31):</strong> Amounts exceeding ₹10,000 are created in <code>PENDING_APPROVAL</code> and require a second approval from a Super Admin before release.
+          <span>⚠️</span>
+          <span><strong>Dual Approval Required (BR-31):</strong> Amounts exceeding ₹10,000 are created in <code>PENDING_APPROVAL</code> and require a second approval from a Super Admin before release.</span>
         </div>
 
         <div class="modal-actions">

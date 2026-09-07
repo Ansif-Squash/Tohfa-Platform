@@ -445,14 +445,7 @@ interface ShellNotification {
           {{ formatRole(activeRole()) }}
         </span>
 
-        <select
-          *ngIf="roles().length > 1"
-          class="role-select"
-          [ngModel]="activeRole()"
-          (ngModelChange)="onRoleChange($event)"
-        >
-          <option *ngFor="let role of roles()" [value]="role">{{ role }}</option>
-        </select>
+  
 
         <!-- Notifications -->
         <div class="menu-wrap">
