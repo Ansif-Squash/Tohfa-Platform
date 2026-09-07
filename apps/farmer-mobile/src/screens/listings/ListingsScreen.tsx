@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
@@ -21,7 +20,10 @@ import {
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { EmptyState } from '../../components/EmptyState';
+import { ErrorState } from '../../components/ErrorState';
 import { Icon } from '../../components/Icon';
+import { Skeleton } from '../../components/Skeleton';
 import { t } from '../../i18n';
 import { MIN_TOUCH_TARGET, colors, radius, spacing, typography, weights } from '../../theme';
 
@@ -40,7 +42,7 @@ export function ListingsScreen({
   const [allListings, setAllListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown | null>(null);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
   // Monotonic timer tick for real-time countdown on active counter-offers
@@ -60,8 +62,8 @@ export function ListingsScreen({
       setError(null);
       const res = await getMyListings();
       setAllListings(res.items || []);
-    } catch {
-      setError(t('error.generic') || 'Failed to load listings.');
+    } catch (err: unknown) {
+      setError(err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -350,14 +352,19 @@ export function ListingsScreen({
 
       {/* Main List */}
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.skeletonContainer}>
+          <Skeleton height={140} width="100%" style={styles.skeletonCard} />
+          <Skeleton height={140} width="100%" style={styles.skeletonCard} />
+          <Skeleton height={140} width="100%" style={styles.skeletonCard} />
         </View>
       ) : error ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Button title={t('common.retry') || 'Retry'} variant="outline" onPress={loadListings} />
-        </View>
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            setLoading(true);
+            void loadListings();
+          }}
+        />
       ) : (
         <FlatList
           data={filteredListings}
@@ -373,14 +380,23 @@ export function ListingsScreen({
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Icon name="inventory_2" size={48} color={colors.onSurfaceVariant} />
-              <Text style={styles.emptyText}>
-                {currentTab === 'ACTIVE'
-                  ? t('listings.empty.active') || 'No active listings or pending offers.'
-                  : currentTab === 'SOLD'
-                    ? t('listings.empty.sold') || 'No sold listings yet.'
-                    : t('listings.empty.closed') || 'No closed listings.'}
-              </Text>
+              <EmptyState
+                iconName="inventory_2"
+                title={
+                  currentTab === 'ACTIVE'
+                    ? t('listings.empty.active') || 'No active listings'
+                    : currentTab === 'SOLD'
+                      ? t('listings.empty.sold') || 'No sold listings'
+                      : t('listings.empty.closed') || 'No closed listings'
+                }
+                message={
+                  currentTab === 'ACTIVE'
+                    ? 'Your active listings or pending counter-offers will appear here.'
+                    : currentTab === 'SOLD'
+                      ? 'Listings that have been accepted and finalized will appear here.'
+                      : 'Rejected, expired, or withdrawn listings will appear here.'
+                }
+              />
               {currentTab === 'ACTIVE' ? (
                 <Button
                   title={t('listings.button.new') || 'Create New Listing'}
@@ -657,5 +673,12 @@ const styles = StyleSheet.create({
   },
   emptyAction: {
     marginTop: spacing.md,
+  },
+  skeletonContainer: {
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  skeletonCard: {
+    borderRadius: radius.card,
   },
 });

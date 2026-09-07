@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -22,7 +21,10 @@ import {
 } from '../../api/wallet';
 import { Badge } from '../../components/Badge';
 import { Card } from '../../components/Card';
+import { EmptyState } from '../../components/EmptyState';
+import { ErrorState } from '../../components/ErrorState';
 import { Icon } from '../../components/Icon';
+import { Skeleton } from '../../components/Skeleton';
 import { t, type TranslationKey } from '../../i18n';
 
 import {
@@ -157,9 +159,32 @@ export function WalletScreen(): React.JSX.Element {
   if (loadingWallet) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>{t('wallet.title')}</Text>
+          </View>
+          <View style={styles.skeletonContainer}>
+            <Skeleton height={120} width="100%" style={styles.skeletonCard} />
+            <Skeleton height={44} width="100%" style={styles.skeletonItem} />
+            <Skeleton height={80} width="100%" style={styles.skeletonCard} />
+            <Skeleton height={80} width="100%" style={styles.skeletonCard} />
+          </View>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !wallet) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            setLoadingWallet(true);
+            void loadWallet();
+            void loadTransactions(selectedTab);
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -228,8 +253,10 @@ export function WalletScreen(): React.JSX.Element {
         {/* Transactions Ledger */}
         <View style={styles.ledgerSection}>
           {loadingTxns ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="small" color={colors.primary} />
+            <View style={styles.skeletonContainer}>
+              <Skeleton height={56} width="100%" style={styles.skeletonItem} />
+              <Skeleton height={56} width="100%" style={styles.skeletonItem} />
+              <Skeleton height={56} width="100%" style={styles.skeletonItem} />
             </View>
           ) : (
             <FlatList
@@ -244,9 +271,11 @@ export function WalletScreen(): React.JSX.Element {
                 />
               }
               ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>{t('wallet.transactions.empty')}</Text>
-                </View>
+                <EmptyState
+                  title={t('wallet.transactions.empty') || 'No transactions found'}
+                  message="Produce sales and payouts will appear here."
+                  iconName="account_balance_wallet"
+                />
               }
               contentContainerStyle={styles.listContent}
             />
@@ -407,5 +436,15 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  skeletonContainer: {
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  skeletonItem: {
+    borderRadius: radius.sm,
+  },
+  skeletonCard: {
+    borderRadius: radius.card,
   },
 });

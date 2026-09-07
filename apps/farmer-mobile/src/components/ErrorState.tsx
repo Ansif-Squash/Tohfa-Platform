@@ -4,25 +4,52 @@ import { theme } from '../theme';
 import { Button } from './Button';
 import { Icon } from './Icon';
 import { t } from '../i18n';
+import { NetworkError } from '../api/client';
 
 export interface ErrorStateProps {
-  message?: string;
-  onRetry?: () => void;
+  error?: unknown;
+  message?: string | undefined;
+  title?: string | undefined;
+  isOffline?: boolean | undefined;
+  onRetry?: (() => void) | undefined;
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
-  message = t('error.generic'),
+  error,
+  message,
+  title,
+  isOffline: isOfflineProp,
   onRetry,
 }) => {
+  const isNetwork =
+    isOfflineProp === true ||
+    error instanceof NetworkError ||
+    (typeof error === 'object' && error !== null && (error as { name?: string }).name === 'NetworkError');
+
+  const displayTitle = isNetwork
+    ? (title ?? 'You are offline')
+    : title;
+
+  const displayMessage = isNetwork
+    ? (message ?? 'You are currently offline. Your work and drafts are saved safely on this device. Nothing has been submitted yet.')
+    : (message ?? (error instanceof Error ? error.message : t('error.generic')));
+
+  const retryButtonTitle = isNetwork ? 'Retry Connection' : t('common.retry');
+
   return (
-    <View style={styles.container}>
-      <Icon color={theme.colors.danger} name="error_outline" size={48} />
-      <Text style={styles.message}>{message}</Text>
+    <View style={styles.container} accessibilityRole="alert">
+      <Icon
+        color={isNetwork ? theme.colors.secondary : theme.colors.danger}
+        name={isNetwork ? 'wifi_off' : 'error_outline'}
+        size={48}
+      />
+      {displayTitle ? <Text style={styles.title}>{displayTitle}</Text> : null}
+      <Text style={styles.message}>{displayMessage}</Text>
       {onRetry ? (
         <Button
           onPress={onRetry}
           style={styles.button}
-          title={t('common.retry')}
+          title={retryButtonTitle}
           variant="outline"
         />
       ) : null}
@@ -36,14 +63,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  title: {
+    fontSize: theme.typography.title,
+    fontWeight: theme.weights.bold,
+    color: theme.colors.onSurface,
+    marginTop: theme.spacing.md,
+    textAlign: 'center',
+  },
   message: {
     fontSize: theme.typography.body,
     color: theme.colors.onSurface,
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
   },
   button: {
-    minWidth: 120,
+    minWidth: 140,
   },
 });

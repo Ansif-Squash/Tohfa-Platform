@@ -18,6 +18,7 @@ import {
   type FairPriceCeiling,
   type Grade,
 } from '../../api/listings';
+import { NetworkError } from '../../api/client';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
@@ -162,6 +163,16 @@ export function CreateListingScreen({
       await createListing(input, idempotencyKeyRef.current);
       onSuccess?.();
     } catch (err: unknown) {
+      if (
+        err instanceof NetworkError ||
+        (typeof err === 'object' && err !== null && (err as { name?: string }).name === 'NetworkError')
+      ) {
+        setErrorMessage(
+          'You are offline. Your listing details are preserved on this device. Nothing has been submitted yet.',
+        );
+        return;
+      }
+
       const anyErr = err as { code?: string; detail?: string; message?: string };
       const errCode = anyErr.code || '';
       const detail = anyErr.detail || anyErr.message || '';

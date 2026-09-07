@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Text, ScrollView } from 'react-native';
 import { useTheme } from '../../theme';
 import { t } from '../../i18n';
 import { Card } from '../../components/Card';
@@ -7,6 +7,7 @@ import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { ErrorState } from '../../components/ErrorState';
+import { Skeleton } from '../../components/Skeleton';
 import { fetchApplicationStatus, logout, type ApplicationStatusResponse } from '../../api/auth';
 
 interface ApplicationStatusScreenProps {
@@ -29,19 +30,19 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
   const theme = useTheme();
   const [data, setData] = useState<ApplicationStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [error, setError] = useState<unknown | null>(null);
 
   const loadStatus = useCallback(async () => {
     setLoading(true);
-    setErrorMsg(null);
+    setError(null);
     try {
       const res = await fetchApplicationStatus(applicationId);
       setData(res);
       if (res.status === 'APPROVED') {
         onNavigate('MainTabs');
       }
-    } catch {
-      setErrorMsg(t('error.generic'));
+    } catch (err: unknown) {
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -89,9 +90,16 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
         </Text>
 
         {loading ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loader} />
-        ) : errorMsg ? (
-          <ErrorState message={errorMsg} onRetry={loadStatus} />
+          <View style={styles.skeletonTimeline}>
+            {[1, 2, 3, 4, 5].map((idx) => (
+              <View key={idx} style={styles.skeletonTimelineItem}>
+                <Skeleton width={32} height={32} borderRadius={16} />
+                <Skeleton width="60%" height={20} borderRadius={4} style={styles.skeletonText} />
+              </View>
+            ))}
+          </View>
+        ) : error ? (
+          <ErrorState error={error} onRetry={loadStatus} />
         ) : (
           <>
             <Text style={[styles.infoText, { color: theme.colors.grey700 }]}>
@@ -265,5 +273,16 @@ const styles = StyleSheet.create({
   },
   flexBtn: {
     flex: 1,
+  },
+  skeletonTimeline: {
+    marginVertical: 16,
+    gap: 16,
+  },
+  skeletonTimelineItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  skeletonText: {
+    marginLeft: 12,
   },
 });
