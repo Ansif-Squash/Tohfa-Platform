@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TohfaTableComponent } from '../../shared/tohfa-table.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,7 +19,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
 @Component({
   selector: 'tohfa-goods-receipt-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TohfaTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
@@ -92,30 +93,6 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         color: #fff;
         font-weight: var(--tohfa-font-weight-bold);
       }
-      .table-card {
-        background: #fff;
-        border-radius: var(--tohfa-radius-card-max);
-        box-shadow: 0 1px 3px rgba(4, 52, 44, 0.08);
-        overflow-x: auto;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-      }
-      th,
-      td {
-        padding: var(--tohfa-space-md) var(--tohfa-space-lg);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
-        font-size: var(--tohfa-font-size-body-small);
-      }
-      th {
-        background: var(--tohfa-surface);
-        font-weight: var(--tohfa-font-weight-semibold);
-        font-size: var(--tohfa-font-size-footnote);
-        text-transform: uppercase;
-        color: var(--tohfa-on-surface);
-      }
       .mono-text {
         font-family: var(--tohfa-font-mono);
         font-weight: var(--tohfa-font-weight-bold);
@@ -150,11 +127,6 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
       .action-btns {
         display: flex;
         gap: var(--tohfa-space-xs);
-      }
-      .empty-cell {
-        text-align: center;
-        padding: var(--tohfa-space-xxl);
-        color: var(--tohfa-neutral-grey500);
       }
       /* Drawer Modals */
       .drawer-backdrop {
@@ -309,61 +281,57 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         </button>
       </div>
 
-      <div class="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>{{ s.table.grnNumber }}</th>
-              <th>{{ s.table.poNumber }}</th>
-              <th>{{ s.table.crop }}</th>
-              <th>{{ s.table.grossQty }}</th>
-              <th>{{ s.table.acceptedQty }}</th>
-              <th>{{ s.table.rejectedQty }}</th>
-              <th>{{ s.table.vehicleNumber }}</th>
-              <th>{{ s.table.status }}</th>
-              <th>{{ s.table.actions }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of receipts()">
-              <td class="mono-text">{{ item.grnNumber }}</td>
-              <td class="mono-text">{{ item.poNumber || item.purchaseOrderId.slice(0, 8) }}</td>
-              <td>
-                <strong>{{ item.cropName || 'Produce' }}</strong>
-                <span *ngIf="item.grade"> ({{ item.grade }})</span>
-              </td>
-              <td>{{ item.grossQtyKg }}</td>
-              <td>{{ item.acceptedQtyKg }}</td>
-              <td>{{ item.rejectedQtyKg }}</td>
-              <td>{{ item.vehicleNumber || '—' }}</td>
-              <td>
-                <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
-              </td>
-              <td>
-                <div class="action-btns">
-                  <button
-                    *ngIf="item.status === 'AWAITING_QC' && canPerformQc()"
-                    class="btn-secondary"
-                    (click)="openQcDrawer(item)"
-                  >
-                    Perform QC
-                  </button>
-                  <button
-                    *ngIf="item.status === 'AWAITING_QC' && canCounter()"
-                    class="btn-secondary"
-                    (click)="openCounterDrawer(item)"
-                  >
-                    Counter
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr *ngIf="receipts().length === 0">
-              <td colspan="9" class="empty-cell">{{ s.table.emptyMessage }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <tohfa-table
+        [rows]="receipts()"
+        [colspan]="9"
+        [emptyMessage]="s.table.emptyMessage"
+      >
+        <ng-template #header>
+          <th>{{ s.table.grnNumber }}</th>
+          <th>{{ s.table.poNumber }}</th>
+          <th>{{ s.table.crop }}</th>
+          <th>{{ s.table.grossQty }}</th>
+          <th>{{ s.table.acceptedQty }}</th>
+          <th>{{ s.table.rejectedQty }}</th>
+          <th>{{ s.table.vehicleNumber }}</th>
+          <th>{{ s.table.status }}</th>
+          <th>{{ s.table.actions }}</th>
+        </ng-template>
+
+        <ng-template #row let-item>
+          <td class="mono-text">{{ item.grnNumber }}</td>
+          <td class="mono-text">{{ item.poNumber || item.purchaseOrderId.slice(0, 8) }}</td>
+          <td>
+            <strong>{{ item.cropName || 'Produce' }}</strong>
+            <span *ngIf="item.grade"> ({{ item.grade }})</span>
+          </td>
+          <td>{{ item.grossQtyKg }}</td>
+          <td>{{ item.acceptedQtyKg }}</td>
+          <td>{{ item.rejectedQtyKg }}</td>
+          <td>{{ item.vehicleNumber || '—' }}</td>
+          <td>
+            <span class="status-badge status-{{ item.status }}">{{ item.status }}</span>
+          </td>
+          <td>
+            <div class="action-btns">
+              <button
+                *ngIf="item.status === 'AWAITING_QC' && canPerformQc()"
+                class="btn-secondary"
+                (click)="openQcDrawer(item)"
+              >
+                Perform QC
+              </button>
+              <button
+                *ngIf="item.status === 'AWAITING_QC' && canCounter()"
+                class="btn-secondary"
+                (click)="openCounterDrawer(item)"
+              >
+                Counter
+              </button>
+            </div>
+          </td>
+        </ng-template>
+      </tohfa-table>
 
       <!-- New Intake Drawer -->
       <div class="drawer-backdrop" *ngIf="isReceiveOpen()">

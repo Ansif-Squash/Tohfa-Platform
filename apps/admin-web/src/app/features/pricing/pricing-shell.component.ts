@@ -48,6 +48,7 @@ export type PricingTab = 'fair-prices' | 'bulk-update' | 'retail-prices' | 'hist
         background: transparent;
         border: none;
         border-bottom: 2px solid transparent;
+        border-radius: 0;
         margin-bottom: -2px;
         font-family: var(--tohfa-font-sans);
         font-size: var(--tohfa-font-size-body);
