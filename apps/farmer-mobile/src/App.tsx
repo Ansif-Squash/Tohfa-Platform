@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { setOnAuthFailure } from './api/client';
-import { Icon } from './components/Icon';
+import { Icon } from '@tohfa/mobile-ui';
 import { LOCALES, setLocale, t, type Locale } from './i18n';
 import { ApplicationStatusScreen } from './screens/auth/ApplicationStatusScreen';
 import { ForgotPasswordScreen } from './screens/auth/ForgotPasswordScreen';

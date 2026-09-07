@@ -13,13 +13,7 @@ import {
   getSystemConfig,
   type Certification,
 } from '../../api/farmer';
-import { Badge } from '../../components/Badge';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { EmptyState } from '../../components/EmptyState';
-import { ErrorState } from '../../components/ErrorState';
-import { Icon } from '../../components/Icon';
-import { Skeleton } from '../../components/Skeleton';
+import { Badge, Button, Card, EmptyState, ErrorState, Icon, Skeleton } from '@tohfa/mobile-ui';
 import { t } from '../../i18n';
 import { colors, radius, spacing, typography, weights } from '../../theme';
 

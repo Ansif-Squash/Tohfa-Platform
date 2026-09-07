@@ -71,13 +71,18 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
         challengeId: string;
         expiresAt: string;
         resendAvailableAt: string;
+        attemptsRemaining?: number;
+        _mockCode?: string;
       };
 
       return {
         userId: user.id,
         status: 'PENDING_OTP',
+        challengeId: otpRes.challengeId,
         otpExpiresAt: otpRes.expiresAt,
         resendAvailableAt: otpRes.resendAvailableAt,
+        attemptsRemaining: otpRes.attemptsRemaining ?? config.OTP_MAX_ATTEMPTS,
+        ...(otpRes._mockCode !== undefined ? { _mockCode: otpRes._mockCode } : {}),
       };
     },
 

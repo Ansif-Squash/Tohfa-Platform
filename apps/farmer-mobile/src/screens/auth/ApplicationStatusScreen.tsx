@@ -2,12 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Text, ScrollView } from 'react-native';
 import { useTheme } from '../../theme';
 import { t } from '../../i18n';
-import { Card } from '../../components/Card';
-import { Badge } from '../../components/Badge';
-import { Button } from '../../components/Button';
-import { Icon } from '../../components/Icon';
-import { ErrorState } from '../../components/ErrorState';
-import { Skeleton } from '../../components/Skeleton';
+import { Badge, Button, Card, ErrorState, Icon, Skeleton } from '@tohfa/mobile-ui';
 import { fetchApplicationStatus, logout, type ApplicationStatusResponse } from '../../api/auth';
 
 interface ApplicationStatusScreenProps {

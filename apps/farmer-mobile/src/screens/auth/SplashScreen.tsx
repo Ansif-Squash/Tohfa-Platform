@@ -2,8 +2,7 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme';
 import { t } from '../../i18n';
-import { Button } from '../../components/Button';
-import { Icon } from '../../components/Icon';
+import { Button, Icon } from '@tohfa/mobile-ui';
 import { fetchMe, resolveRouteAfterAuth } from '../../api/auth';
 import { getAccessToken } from '../../storage/tokenStorage';
 
