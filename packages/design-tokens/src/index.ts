@@ -4,17 +4,19 @@
  * The typed façade over `tokens.json`. Apps import from here, never from the
  * JSON directly, so that a token rename becomes a compile error everywhere.
  */
-import raw from './tokens.json' with { type: 'json' };
+import tokensData from './tokens.json' with { type: 'json' };
 
-export type ColorName = keyof typeof raw.color;
-export type NeutralName = keyof typeof raw.neutral;
-export type SemanticColorName = keyof typeof raw.semanticColor;
-export type RoleCodeWithColor = keyof typeof raw.roleColor;
-export type TypeScaleName = keyof typeof raw.typeScale;
-export type FontWeightName = keyof typeof raw.fontWeight;
-export type SpacingName = keyof typeof raw.spacing;
-export type RadiusName = keyof typeof raw.radius;
-export type FontStackName = keyof typeof raw.fontStack;
+const rawObj = ((tokensData as any).default ?? tokensData) as typeof tokensData;
+
+export type ColorName = keyof typeof rawObj.color;
+export type NeutralName = keyof typeof rawObj.neutral;
+export type SemanticColorName = keyof typeof rawObj.semanticColor;
+export type RoleCodeWithColor = keyof typeof rawObj.roleColor;
+export type TypeScaleName = keyof typeof rawObj.typeScale;
+export type FontWeightName = keyof typeof rawObj.fontWeight;
+export type SpacingName = keyof typeof rawObj.spacing;
+export type RadiusName = keyof typeof rawObj.radius;
+export type FontStackName = keyof typeof rawObj.fontStack;
 
 export interface ColorToken {
   readonly hex: string;
@@ -36,7 +38,7 @@ export interface Tokens {
   readonly fontStack: Readonly<Record<FontStackName, string>>;
 }
 
-export const tokens: Tokens = raw as unknown as Tokens;
+export const tokens: Tokens = rawObj as unknown as Tokens;
 
 /** Resolve a semantic name (`primary`) to its hex value (`#0F6E56`). */
 export function semantic(name: SemanticColorName): string {
@@ -65,5 +67,5 @@ export function neutral(name: NeutralName): string {
   return tokens.neutral[name].hex;
 }
 
-export { raw as tokensJson };
+export { rawObj as tokensJson };
 export { toCssVariables, toCssBlock } from './css.js';
