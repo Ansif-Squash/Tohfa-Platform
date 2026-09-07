@@ -4,9 +4,6 @@ import {
   canCounterBack,
   computeRemainingTime,
   formatCountdown,
-  type Listing,
-  type CounterOffer,
-  type CreateListingInput,
 } from '../api/listings';
 
 describe('Farmer Marketing & Listings (S-45)', () => {
