@@ -1,0 +1,1585 @@
+{
+  "info": {
+    "_postman_id": "tohfa-platform-v1-golden-collection",
+    "name": "TOHFA Platform API — Complete Testing Suite",
+    "description": "Complete Postman Collection covering the entire TOHFA golden-thread API, RBAC scopes, business rules (BR-01 through BR-36), and live flows.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/v1",
+      "type": "string"
+    },
+    {
+      "key": "unversionedUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "farmerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "superAdminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "farmerAdminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tohfaAdminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mainWhAdminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "subWhAdminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "defaultWarehouseId",
+      "value": "c674e552-3178-42d6-b4db-2ce2843dbb30",
+      "type": "string"
+    },
+    {
+      "key": "carrotCropId",
+      "value": "5fcda424-f709-48b3-98a6-03dbbd7ec6c7",
+      "type": "string"
+    },
+    {
+      "key": "potatoCropId",
+      "value": "04f80e85-1e32-42f4-86e4-7db25d5863a0",
+      "type": "string"
+    },
+    {
+      "key": "beetrootCropId",
+      "value": "c4f7b93d-7f86-4689-8ac7-69f2d6b7ff40",
+      "type": "string"
+    },
+    {
+      "key": "activeApplicationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activeListingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activeCounterOfferId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activePurchaseOrderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activeGoodsReceiptId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activeOrderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deliveryOtp",
+      "value": "1234",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Health & Discovery",
+      "item": [
+        {
+          "name": "Health Check (Unversioned)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unversionedUrl}}/healthz",
+              "host": [
+                "{{unversionedUrl}}"
+              ],
+              "path": [
+                "healthz"
+              ]
+            },
+            "description": "Liveness and readiness check probe."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Authentication & Identity",
+      "item": [
+        {
+          "name": "Login as Farmer 1 (Ramesh Patel)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "  pm.collectionVariables.set(\"farmerToken\", jsonData.accessToken);",
+                  "  pm.environment.set(\"farmerToken\", jsonData.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"+919870000001\",\n  \"password\": \"Password@123\",\n  \"roleCode\": \"FARMER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as verified Farmer Ramesh Patel. Stores token automatically."
+          }
+        },
+        {
+          "name": "Login as Super Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "  pm.collectionVariables.set(\"superAdminToken\", jsonData.accessToken);",
+                  "  pm.environment.set(\"superAdminToken\", jsonData.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"+919800000001\",\n  \"password\": \"Password@123\",\n  \"roleCode\": \"SUPER_ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as Super Admin. Stores token automatically."
+          }
+        },
+        {
+          "name": "Login as Farmer Desk Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "  pm.collectionVariables.set(\"farmerAdminToken\", jsonData.accessToken);",
+                  "  pm.environment.set(\"farmerAdminToken\", jsonData.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"+919800000003\",\n  \"password\": \"Password@123\",\n  \"roleCode\": \"FARMER_ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as Farmer Desk Admin."
+          }
+        },
+        {
+          "name": "Login as Customer 1 (Ananya Sharma)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "  pm.collectionVariables.set(\"customerToken\", jsonData.accessToken);",
+                  "  pm.environment.set(\"customerToken\", jsonData.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"+919880000001\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as Customer 1. Stores token automatically."
+          }
+        },
+        {
+          "name": "Get Current Authenticated User (GET /auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Inspect caller identity, permissions, and active role."
+          }
+        },
+        {
+          "name": "Send OTP Challenge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"+919871234567\",\n  \"purpose\": \"LOGIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "otp",
+                "send"
+              ]
+            },
+            "description": "Initiates 6-digit SMS OTP challenge (default mock dev OTP: 123456)."
+          }
+        },
+        {
+          "name": "Verify OTP Challenge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challengeId\": \"CHALLENGE_UUID_HERE\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "otp",
+                "verify"
+              ]
+            },
+            "description": "Submits 6-digit OTP code to receive access and refresh token pair."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Farmer Onboarding & Review",
+      "item": [
+        {
+          "name": "1. Create Application Draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "  pm.collectionVariables.set(\"activeApplicationId\", data.id);",
+                  "  pm.environment.set(\"activeApplicationId\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"+919875550001\",\n  \"fullName\": \"Muthusamy Selvan\",\n  \"preferredLocale\": \"ta\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/farmers/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "applications"
+              ]
+            },
+            "description": "Creates a draft farmer registration application."
+          }
+        },
+        {
+          "name": "2. Save Step 1 — Personal Details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Muthusamy Selvan\",\n  \"dob\": \"1982-08-14\",\n  \"gender\": \"MALE\",\n  \"aadhaarLast4\": \"9876\",\n  \"farmingExperienceYears\": 15,\n  \"addressLine1\": \"45 Green Hill Road\",\n  \"village\": \"Kodanad\",\n  \"taluk\": \"Kotagiri\",\n  \"district\": \"The Nilgiris\",\n  \"pincode\": \"643217\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/farmers/applications/{{activeApplicationId}}/steps/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "applications",
+                "{{activeApplicationId}}",
+                "steps",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Save Step 2 — Farm Details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farms\": [\n    {\n      \"name\": \"Nilgiri Green Terrace Farm\",\n      \"totalAreaAcres\": 4.5,\n      \"organicSince\": \"2019-01-01\",\n      \"waterSource\": \"Borewell & Stream\",\n      \"primaryCrops\": [\n        \"Carrot\",\n        \"Potato\",\n        \"Beetroot\"\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/farmers/applications/{{activeApplicationId}}/steps/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "applications",
+                "{{activeApplicationId}}",
+                "steps",
+                "2"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Save Step 3 — Location & Coordinates",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gpsCaptured\": true,\n  \"latitude\": 11.4102,\n  \"longitude\": 76.695,\n  \"village\": \"Kodanad\",\n  \"taluk\": \"Kotagiri\",\n  \"district\": \"The Nilgiris\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/farmers/applications/{{activeApplicationId}}/steps/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "applications",
+                "{{activeApplicationId}}",
+                "steps",
+                "3"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Save Step 4 — Documents",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documents\": [\n    {\n      \"docType\": \"ID_PROOF\",\n      \"fileUrl\": \"https://storage.tohfa.in/docs/id-proof.pdf\",\n      \"fileName\": \"aadhaar-proof.pdf\"\n    },\n    {\n      \"docType\": \"FARM_DOC\",\n      \"fileUrl\": \"https://storage.tohfa.in/docs/patta.pdf\",\n      \"fileName\": \"land-patta.pdf\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/farmers/applications/{{activeApplicationId}}/steps/4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "applications",
+                "{{activeApplicationId}}",
+                "steps",
+                "4"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Submit Application (BR-34)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "submit-app-1"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/applications/{{activeApplicationId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "applications",
+                "{{activeApplicationId}}",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Admin: List Pending Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/farmer-applications?status=SUBMITTED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "farmer-applications"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "SUBMITTED"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "8. Admin: Approve Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"zoneId\": \"03b94b85-0358-4b6f-a6fe-051203c9660f\",\n  \"note\": \"Verified all land patta documents and organic certification.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/farmer-applications/{{activeApplicationId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "farmer-applications",
+                "{{activeApplicationId}}",
+                "approve"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Farmer Profile & Certifications",
+      "item": [
+        {
+          "name": "Get Own Farmer Profile (BR-33 Masked)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "me"
+              ]
+            },
+            "description": "Returns profile with locked and masked Aadhaar and mobile fields."
+          }
+        },
+        {
+          "name": "Update Own Farmer Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address\": \"14/2 Upper Bazaar Road, Ooty\",\n  \"farmingExperienceYears\": 14,\n  \"preferredLocale\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/farmers/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Own Certifications with daysToExpiry (BR-01, BR-02)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/me/certifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "me",
+                "certifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Certification (Starts UNVERIFIED per BR-02)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"certType\": \"PGS\",\n  \"certNumber\": \"PGS-TN-2026-9901\",\n  \"issuingBody\": \"Nilgiris Organic Farmers Federation\",\n  \"issuedOn\": \"2026-01-01\",\n  \"expiresOn\": \"2027-01-01\",\n  \"documentUrl\": \"https://storage.tohfa.in/docs/cert-9901.pdf\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/farmers/me/certifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "farmers",
+                "me",
+                "certifications"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Pricing & Ceilings",
+      "item": [
+        {
+          "name": "List Fair Prices (Authenticated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/fair-prices?cropId={{carrotCropId}}&grade=GRADE_1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "fair-prices"
+              ],
+              "query": [
+                {
+                  "key": "cropId",
+                  "value": "{{carrotCropId}}"
+                },
+                {
+                  "key": "grade",
+                  "value": "GRADE_1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Super Admin: Set Fair Price Ceiling (BR-08)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cropId\": \"5fcda424-f709-48b3-98a6-03dbbd7ec6c7\",\n  \"grade\": \"GRADE_1\",\n  \"ceilingPrice\": \"85.00\",\n  \"frequency\": \"WEEKLY\",\n  \"effectiveFrom\": \"2026-09-10\",\n  \"notes\": \"Updated ceiling for post-monsoon harvest quality\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/fair-prices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "fair-prices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Retail Prices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/retail-prices?cropId={{carrotCropId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "retail-prices"
+              ],
+              "query": [
+                {
+                  "key": "cropId",
+                  "value": "{{carrotCropId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Produce Listings & Counter-Offers",
+      "item": [
+        {
+          "name": "1. Create Listing (Farmer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "  pm.collectionVariables.set(\"activeListingId\", data.id);",
+                  "  pm.environment.set(\"activeListingId\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "listing-postman-1"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cropId\": \"5fcda424-f709-48b3-98a6-03dbbd7ec6c7\",\n  \"grade\": \"GRADE_1\",\n  \"quantityKg\": \"400.000\",\n  \"askingPricePerKg\": \"78.00\",\n  \"availableFrom\": \"2026-09-08\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/listings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings"
+              ]
+            },
+            "description": "Creates listing under the fair price ceiling."
+          }
+        },
+        {
+          "name": "2. Admin: Send Counter-Offer (BR-10, BR-11)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "  pm.collectionVariables.set(\"activeCounterOfferId\", data.id);",
+                  "  pm.environment.set(\"activeCounterOfferId\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pricePerKg\": \"74.00\",\n  \"quantityKg\": \"400.000\",\n  \"message\": \"Negotiated intake rate based on market volume\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/listings/{{activeListingId}}/counter-offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "listings",
+                "{{activeListingId}}",
+                "counter-offers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Farmer: Accept Counter-Offer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{activeListingId}}/counter-offers/{{activeCounterOfferId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{activeListingId}}",
+                "counter-offers",
+                "{{activeCounterOfferId}}",
+                "accept"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Admin: Approve Listing & Generate PO (S-24)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.purchaseOrderId) {",
+                  "  pm.collectionVariables.set(\"activePurchaseOrderId\", data.purchaseOrderId);",
+                  "  pm.environment.set(\"activePurchaseOrderId\", data.purchaseOrderId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"c674e552-3178-42d6-b4db-2ce2843dbb30\",\n  \"expectedDeliveryDate\": \"2026-09-10\",\n  \"note\": \"Approved for Ooty Central Hub delivery\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/listings/{{activeListingId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "listings",
+                "{{activeListingId}}",
+                "approve"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Goods Receipt & 5-Point Quality Check",
+      "item": [
+        {
+          "name": "1. Create Goods Receipt (Intake)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "  pm.collectionVariables.set(\"activeGoodsReceiptId\", data.id);",
+                  "  pm.environment.set(\"activeGoodsReceiptId\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseOrderId\": \"{{activePurchaseOrderId}}\",\n  \"warehouseId\": \"c674e552-3178-42d6-b4db-2ce2843dbb30\",\n  \"grossQtyKg\": \"400.000\",\n  \"vehicleNumber\": \"TN-43-C-9876\",\n  \"photos\": [],\n  \"remarks\": \"Clean harvest intake lot\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/goods-receipts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "goods-receipts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Record 5-Point QC Check (BR-30)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedGrade\": \"GRADE_1\",\n  \"outcome\": \"ACCEPTED\",\n  \"acceptedQtyKg\": \"395.000\",\n  \"rejectedQtyKg\": \"5.000\",\n  \"rejectionReason\": \"Minor root crack and soil clump\",\n  \"items\": [\n    {\n      \"parameter\": \"APPEARANCE\",\n      \"score\": 9,\n      \"passed\": true,\n      \"remarks\": \"Even coloration and size\",\n      \"photoKeys\": []\n    },\n    {\n      \"parameter\": \"SIZE_UNIFORMITY\",\n      \"score\": 9,\n      \"passed\": true,\n      \"remarks\": \"Clean uniform conical shape\",\n      \"photoKeys\": []\n    },\n    {\n      \"parameter\": \"MOISTURE\",\n      \"score\": 8,\n      \"passed\": true,\n      \"remarks\": \"Fresh and crispy\",\n      \"photoKeys\": []\n    },\n    {\n      \"parameter\": \"DAMAGE_PEST\",\n      \"score\": 10,\n      \"passed\": true,\n      \"remarks\": \"Zero insect infestation\",\n      \"photoKeys\": []\n    },\n    {\n      \"parameter\": \"FRESHNESS\",\n      \"score\": 9,\n      \"passed\": true,\n      \"remarks\": \"Fresh harvest condition\",\n      \"photoKeys\": []\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/goods-receipts/{{activeGoodsReceiptId}}/quality-check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "goods-receipts",
+                "{{activeGoodsReceiptId}}",
+                "quality-check"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. View 70/10/10/10 Allocation Dashboard (BR-12)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/allocations?warehouseId={{defaultWarehouseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "allocations"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "{{defaultWarehouseId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. View Append-Only Stock Ledger",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/stock-ledger?warehouseId={{defaultWarehouseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "stock-ledger"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "{{defaultWarehouseId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Farm-Anonymous Catalog & Cart",
+      "item": [
+        {
+          "name": "1. Browse Farm-Anonymous Catalog (BR-16)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products?limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Public, farm-anonymous produce catalog."
+          }
+        },
+        {
+          "name": "2. Add Item to Cart (24-Hour Lock BR-22)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"5fcda424-f709-48b3-98a6-03dbbd7ec6c7\",\n  \"grade\": \"GRADE_1\",\n  \"qtyKg\": \"2.500\",\n  \"warehouseId\": \"c674e552-3178-42d6-b4db-2ce2843dbb30\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "items"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. View Active Cart",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Orders & Delivery Fulfilment",
+      "item": [
+        {
+          "name": "1. Place Order (Wallet Checkout BR-17)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "  pm.collectionVariables.set(\"activeOrderId\", data.id);",
+                  "  pm.environment.set(\"activeOrderId\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "checkout-postman-1"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fulfillmentType\": \"PICKUP\",\n  \"warehouseId\": \"c674e552-3178-42d6-b4db-2ce2843dbb30\",\n  \"paymentMethod\": \"WALLET\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Warehouse: Pack Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/orders/{{activeOrderId}}/pack",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "orders",
+                "{{activeOrderId}}",
+                "pack"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Warehouse: Mark Dispatched / Ready for Pickup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleNumber\": \"TN-43-W-0001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/orders/{{activeOrderId}}/dispatch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "orders",
+                "{{activeOrderId}}",
+                "dispatch"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Warehouse: Verify 4-Digit Handover OTP (BR-20)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"{{deliveryOtp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/orders/{{activeOrderId}}/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "orders",
+                "{{activeOrderId}}",
+                "verify-otp"
+              ]
+            },
+            "description": "Submits 4-digit OTP to complete order handover."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Wallets, Cash Top-Up & Reconciliation",
+      "item": [
+        {
+          "name": "Get Own Wallet Balance (BR-36)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wallets/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallets",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Query Transactions with Server Re-querying Filter Tabs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wallets/me/transactions?tab=all&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallets",
+                "me",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "tab",
+                  "value": "all"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Cash Top-Up (BR-18, BR-19 capped at Rs 10k)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "topup-cash-postman-1"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"2500.00\",\n  \"warehouseId\": \"c674e552-3178-42d6-b4db-2ce2843dbb30\",\n  \"fiscalCashTag\": \"POS-CASH-DESK-01\",\n  \"remarks\": \"In-person counter cash deposit\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/wallets/90000000-0000-0000-0000-000000000001/cash-topup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "wallets",
+                "90000000-0000-0000-0000-000000000001",
+                "cash-topup"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Payouts, Invoices & Notifications",
+      "item": [
+        {
+          "name": "Admin: View Farmer Payout Dues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/payout-dues",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "payout-dues"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Initiate Farmer Payout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "payout-postman-1"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farmerId\": \"20000000-0000-0000-0000-000000000001\",\n  \"amount\": \"4500.00\",\n  \"mode\": \"UPI\",\n  \"notes\": \"Weekly crop payout batch\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/payouts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "payouts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List In-App Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{farmerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
