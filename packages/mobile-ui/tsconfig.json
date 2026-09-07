@@ -1,6 +1,4 @@
 {
-  /* React Native uses Metro + Babel, so tsc is a typechecker only (--noEmit).
-     Strictness deliberately matches tsconfig.base.json. */
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
@@ -24,11 +22,9 @@
     "types": ["react"],
     "baseUrl": ".",
     "paths": {
-      "@tohfa/shared-types": ["../../packages/shared-types/src/index.ts"],
-      "@tohfa/design-tokens": ["../../packages/design-tokens/src/index.ts"],
-      "@tohfa/mobile-ui": ["../../packages/mobile-ui/src/index.ts"]
+      "@tohfa/design-tokens": ["../design-tokens/src/index.ts"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "index.js"],
-  "exclude": ["node_modules", "android", "ios"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
 }

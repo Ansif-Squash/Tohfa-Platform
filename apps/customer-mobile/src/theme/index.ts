@@ -58,3 +58,16 @@ export const theme = {
 } as const;
 
 export type Theme = typeof theme;
+
+export function useTheme() {
+  return {
+    ...theme,
+    colors: {
+      ...colors,
+      grey100: neutral('grey100'),
+      grey300: neutral('grey300'),
+      grey500: neutral('grey500'),
+      grey700: neutral('grey700'),
+    },
+  };
+}

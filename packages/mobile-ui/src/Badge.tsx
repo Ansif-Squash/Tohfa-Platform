@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import type { ViewStyle } from 'react-native';
-import { theme } from '../theme';
+import { useTheme } from './theme';
 
 export type BadgeVariant = 'success' | 'danger' | 'warning' | 'info';
 
@@ -12,6 +12,8 @@ export interface BadgeProps {
 }
 
 export const Badge: React.FC<BadgeProps> = ({ label, variant = 'info', style }) => {
+  const theme = useTheme();
+
   const getBadgeColors = (): { bg: string; text: string } => {
     switch (variant) {
       case 'success':
@@ -29,21 +31,37 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'info', style }) 
   const colors = getBadgeColors();
 
   return (
-    <View style={[styles.badge, { backgroundColor: colors.bg }, style]}>
-      <Text style={[styles.text, { color: colors.text }]}>{label}</Text>
+    <View
+      style={[
+        styles.badge,
+        {
+          backgroundColor: colors.bg,
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: theme.spacing.xs,
+          borderRadius: theme.radius.pill,
+        },
+        style,
+      ]}
+    >
+      <Text
+        style={[
+          styles.text,
+          {
+            color: colors.text,
+            fontSize: theme.typography.caption,
+            fontWeight: theme.weights.medium,
+          },
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radius.pill,
     alignSelf: 'flex-start',
   },
-  text: {
-    fontSize: theme.typography.caption,
-    fontWeight: theme.weights.medium,
-  },
+  text: {},
 });

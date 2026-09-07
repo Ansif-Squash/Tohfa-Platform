@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { ViewStyle } from 'react-native';
-import { theme } from '../theme';
+import { useTheme } from './theme';
 import { Button } from './Button';
-import { t } from '../i18n';
 
 export interface StickyFooterProps {
   onSave: () => void;
@@ -18,19 +17,32 @@ export interface StickyFooterProps {
 export const StickyFooter: React.FC<StickyFooterProps> = ({
   onSave,
   onCancel,
-  saveTitle,
-  cancelTitle,
+  saveTitle = 'Continue',
+  cancelTitle = 'Cancel',
   loading = false,
   disabled = false,
   style,
 }) => {
+  const theme = useTheme();
+
   return (
-    <View style={[styles.container, style]}>
+    <View
+      style={[
+        styles.container,
+        {
+          padding: theme.spacing.lg,
+          backgroundColor: theme.colors.white,
+          borderTopColor: theme.colors.surface,
+          gap: theme.spacing.md,
+        },
+        style,
+      ]}
+    >
       <Button
         disabled={loading}
         onPress={onCancel}
         style={styles.button}
-        title={cancelTitle ?? t('common.cancel')}
+        title={cancelTitle}
         variant="outline"
       />
       <Button
@@ -38,7 +50,7 @@ export const StickyFooter: React.FC<StickyFooterProps> = ({
         loading={loading}
         onPress={onSave}
         style={styles.button}
-        title={saveTitle ?? t('common.continue')}
+        title={saveTitle}
         variant="primary"
       />
     </View>
@@ -47,12 +59,8 @@ export const StickyFooter: React.FC<StickyFooterProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.white,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.surface,
     flexDirection: 'row',
-    gap: theme.spacing.md,
   },
   button: {
     flex: 1,

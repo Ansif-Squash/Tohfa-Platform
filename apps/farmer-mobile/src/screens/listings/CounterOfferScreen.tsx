@@ -21,11 +21,7 @@ import {
   type Listing,
 } from '../../api/listings';
 import { NetworkError } from '../../api/client';
-import { Badge } from '../../components/Badge';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { Icon } from '../../components/Icon';
-import { Input } from '../../components/Input';
+import { Badge, Button, Card, Icon, Input } from '@tohfa/mobile-ui';
 import { t } from '../../i18n';
 import { MIN_TOUCH_TARGET, colors, radius, spacing, typography, weights } from '../../theme';
 

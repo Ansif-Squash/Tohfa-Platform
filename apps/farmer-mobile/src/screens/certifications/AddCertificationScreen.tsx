@@ -10,10 +10,7 @@ import {
 } from 'react-native';
 import { createCertification } from '../../api/farmer';
 import { signUpload } from '../../api/registration';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { Icon } from '../../components/Icon';
-import { Input } from '../../components/Input';
+import { Button, Card, Icon, Input } from '@tohfa/mobile-ui';
 import { t } from '../../i18n';
 import {
   MIN_TOUCH_TARGET,
