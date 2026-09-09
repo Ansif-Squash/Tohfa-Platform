@@ -41,6 +41,33 @@ export interface JobPayloads {
    * to EXPIRED, decrements allocations.reserved_qty and marks cart EXPIRED. Idempotent.
    */
   'cart-lock-reaper': { batchSize?: number };
+  /**
+   * S-50: Notification outbound delivery with retry and dead-letter queue.
+   */
+  'notification-dispatch': {
+    notificationId: string;
+    channel: 'PUSH' | 'SMS' | 'EMAIL' | 'IN_APP';
+    userId: string;
+    templateCode?: string | undefined;
+    recipient?: string | undefined;
+    title?: string | null | undefined;
+    body: string;
+    locale?: 'en' | 'ta' | undefined;
+    data?: Record<string, unknown> | undefined;
+    dedupeKey?: string | undefined;
+  };
+  /**
+   * S-50: Dead-letter queue for exhausted notification delivery retries.
+   */
+  'notification-dead-letter': {
+    notificationId: string;
+    jobId?: string | undefined;
+    channel: string;
+    userId: string;
+    error: string;
+    attempts: number;
+    failedAt: string;
+  };
   // TODO(STORY-FIN-09): 'payout-settlement-poll': { }
 }
 
@@ -91,6 +118,30 @@ export const JOB_REGISTRY: { [N in JobName]: JobDefinition<N> } = {
     defaultPayload: { batchSize: 500 },
     // Every 5 minutes
     repeat: { pattern: '*/5 * * * *', tz: 'Asia/Kolkata' },
+  },
+  'notification-dispatch': {
+    name: 'notification-dispatch',
+    description:
+      'S-50: Outbound push/SMS notification delivery with retry and dead-letter queue.',
+    defaultPayload: {
+      notificationId: '',
+      channel: 'IN_APP',
+      userId: '',
+      body: '',
+    },
+  },
+  'notification-dead-letter': {
+    name: 'notification-dead-letter',
+    description:
+      'S-50: Records permanently failed notification delivery attempts into dead-letter registry.',
+    defaultPayload: {
+      notificationId: '',
+      channel: '',
+      userId: '',
+      error: '',
+      attempts: 3,
+      failedAt: new Date().toISOString(),
+    },
   },
 };
 
