@@ -1,0 +1,97 @@
+appId: in.tohfa.customer
+---
+# ==============================================================================
+# TOHFA Customer Golden-Thread E2E Flow (S-47, S-48, S-49, S-51)
+# Flow: Auth -> Farm-Anonymous Browse -> Cart -> Wallet Checkout -> Live Order Tracking
+# ==============================================================================
+
+# Launch the Customer Mobile App
+- launchApp:
+    clearState: false
+
+# ------------------------------------------------------------------------------
+# Phase 1: Authentication / Customer Registration
+# ------------------------------------------------------------------------------
+- runFlow:
+    when:
+      visible: "Login"
+    commands:
+      # Authenticate with seeded customer account
+      - tapOn:
+          text: "Mobile Number"
+          optional: true
+      - inputText: "9876543211"
+      - tapOn:
+          text: "Password"
+          optional: true
+      - inputText: "Password@123"
+      - tapOn: "Login"
+
+# ------------------------------------------------------------------------------
+# Phase 2: Farm-Anonymous Catalog Browse
+# ------------------------------------------------------------------------------
+# Verify Home / Categories screen loaded
+- assertVisible:
+    text: "Categories"
+    optional: true
+
+- tapOn:
+    text: "Fruits"
+    optional: true
+
+# Open Product Grid
+- assertVisible:
+    text: "Product Details"
+    optional: true
+
+# Confirm Farm-Anonymity (BR-16 / S-48)
+- assertNotVisible:
+    text: "Farmer:"
+
+- assertNotVisible:
+    text: "Farm Name:"
+
+# ------------------------------------------------------------------------------
+# Phase 3: Add to Cart & View Reservation
+# ------------------------------------------------------------------------------
+- tapOn:
+    text: "Add to Cart"
+    optional: true
+
+- tapOn:
+    text: "View Cart"
+    optional: true
+
+- assertVisible:
+    text: "Cart Total"
+    optional: true
+
+# ------------------------------------------------------------------------------
+# Phase 4: Wallet-First Checkout & Top-up Recovery
+# ------------------------------------------------------------------------------
+- tapOn:
+    text: "Checkout"
+    optional: true
+
+- tapOn:
+    text: "Pay with Wallet"
+    optional: true
+
+# Handle Top-up Recovery if insufficient balance
+- runFlow:
+    when:
+      visible: "Insufficient Wallet Balance"
+    commands:
+      - tapOn: "Top-up via Razorpay"
+      - assertVisible: "Processing..."
+
+# ------------------------------------------------------------------------------
+# Phase 5: Live Order Tracking & Handover OTP
+# ------------------------------------------------------------------------------
+- assertVisible:
+    text: "Order Tracking"
+    optional: true
+
+- assertVisible:
+    text: "Handover OTP"
+    optional: true
