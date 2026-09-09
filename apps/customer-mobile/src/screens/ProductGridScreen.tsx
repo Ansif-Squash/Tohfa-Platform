@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, FlatList, Text, TouchableOpacity } from 'react-native';
-import { useProducts, ListProductsQuery } from '../api/catalog';
+import { useProducts, type ListProductsQuery, type Product } from '../api/catalog';
 import { Card } from '@tohfa/mobile-ui';
 
 export function ProductGridScreen({ categoryId }: { categoryId?: string }) {
@@ -25,7 +25,7 @@ export function ProductGridScreen({ categoryId }: { categoryId?: string }) {
   }
 
   // BR-16 and S-48: REJECT grade products must never render.
-  const validItems = data.items.filter(item => item.grade !== 'REJECT');
+  const validItems = data.items.filter((item: Product) => item.grade !== 'REJECT');
 
   return (
     <View style={styles.container}>
@@ -39,7 +39,7 @@ export function ProductGridScreen({ categoryId }: { categoryId?: string }) {
 
       <FlatList
         data={validItems}
-        keyExtractor={item => item.id}
+        keyExtractor={(item: Product) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <Card style={styles.card}>

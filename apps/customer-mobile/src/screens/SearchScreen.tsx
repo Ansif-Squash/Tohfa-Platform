@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, FlatList, ActivityIndicator, Text } from 'react-native';
-import { useSearch, useCatalogHome } from '../api/catalog';
+import { useSearch, useCatalogHome, type Product } from '../api/catalog';
 import { Card } from '@tohfa/mobile-ui';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -42,12 +42,12 @@ export function SearchScreen() {
       if (isSearchLoading) return <ActivityIndicator style={styles.center} testID="loading-indicator" />;
       if (!searchResults || searchResults.items.length === 0) return <Text style={styles.center}>No results found</Text>;
       
-      const validItems = searchResults.items.filter(item => item.grade !== 'REJECT');
+      const validItems = searchResults.items.filter((item: Product) => item.grade !== 'REJECT');
       
       return (
         <FlatList
           data={validItems}
-          keyExtractor={item => item.id}
+          keyExtractor={(item: Product) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <Card style={styles.card}>
@@ -75,7 +75,7 @@ export function SearchScreen() {
           {isHomeLoading ? (
             <ActivityIndicator />
           ) : (
-            homeData?.featured?.slice(0, 5).map(prod => (
+            homeData?.featured?.slice(0, 5).map((prod: Product) => (
               <Text key={prod.id} style={styles.recentItem} onPress={() => setQuery(prod.name)}>{prod.name}</Text>
             ))
           )}

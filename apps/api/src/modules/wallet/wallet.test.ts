@@ -2,7 +2,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { RoleCode, parseMoney, type Money } from '@tohfa/shared-types';
 import type { Executor } from '../../db/pool.js';
 import { createWalletService } from './wallet.service.js';
-import type { WalletRepo } from './wallet.repo.js';
+import type {
+  WalletRepo,
+  WalletRow,
+  WalletTransactionRow,
+  InsertTransactionData,
+  ListTransactionsResult,
+} from './wallet.repo.js';
 import type { ListMyTransactionsQuery } from './wallet.schema.js';
 import {
   IDS,
@@ -17,28 +23,31 @@ interface RecordingRepo extends WalletRepo {
   lastFindOwner: string | null;
 }
 
-function fakeRepo(rows: any[]): RecordingRepo {
+function fakeRepo(rows: WalletRow[]): RecordingRepo {
   const repo: RecordingRepo = {
     lastFindOwner: null,
     async findWalletByOwner(
       _db: Executor,
       ownerType: 'CUSTOMER' | 'FARMER',
       ownerId: string,
-    ): Promise<any | null> {
+    ): Promise<WalletRow | null> {
       repo.lastFindOwner = `${ownerType}:${ownerId}`;
-      return rows.find((r) => r.ownerType === ownerType && r.ownerId === ownerId) ?? null;
+      return rows.find((r) => r.owner_type === ownerType && (r.customer_id === ownerId || r.farmer_id === ownerId)) ?? null;
     },
     async createWallet(
       _db: Executor,
       ownerType: 'CUSTOMER' | 'FARMER',
       ownerId: string,
-    ): Promise<any> {
-      const newWallet = {
+    ): Promise<WalletRow> {
+      const newWallet: WalletRow = {
         id: newId(),
-        ownerType,
-        ownerId,
+        owner_type: ownerType,
+        customer_id: ownerType === 'CUSTOMER' ? ownerId : null,
+        farmer_id: ownerType === 'FARMER' ? ownerId : null,
         balance: '0.00',
+        currency: 'INR',
         status: 'ACTIVE',
+        version: 1,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -49,20 +58,20 @@ function fakeRepo(rows: any[]): RecordingRepo {
       _db: Executor,
       _walletId: string,
       _query: ListMyTransactionsQuery,
-    ): Promise<any> {
-      return { items: [], hasMore: false };
+    ): Promise<ListTransactionsResult> {
+      return { items: [], nextCursor: null, hasMore: false };
     },
     async findTransactionByIdempotencyKey(
       _db: Executor,
       _key: string,
-    ): Promise<any | null> {
+    ): Promise<WalletTransactionRow | null> {
       return null;
     },
     async insertTransaction(
       _db: Executor,
-      _input: any,
-    ): Promise<any> {
-      return {};
+      _input: InsertTransactionData,
+    ): Promise<WalletTransactionRow> {
+      return {} as WalletTransactionRow;
     },
   };
   return repo;

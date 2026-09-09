@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ContentChild, Input, TemplateRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ContentChild, Input, type TemplateRef } from '@angular/core';
 
 /**
  * Usage:
@@ -130,11 +130,11 @@ import { ChangeDetectionStrategy, Component, ContentChild, Input, TemplateRef } 
     </div>
   `,
 })
-export class TohfaTableComponent<T = any> {
+export class TohfaTableComponent<T = unknown> {
   @Input() rows: T[] = [];
   @Input() colspan = 1;
   @Input() emptyMessage = 'No records found.';
 
-  @ContentChild('header', { static: true }) headerTpl!: TemplateRef<any>;
-  @ContentChild('row', { static: true }) rowTpl!: TemplateRef<any>;
+  @ContentChild('header', { static: true }) headerTpl!: TemplateRef<unknown>;
+  @ContentChild('row', { static: true }) rowTpl!: TemplateRef<unknown>;
 }
