@@ -265,11 +265,178 @@ export const cartLockReaper: Handler<'cart-lock-reaper'> = async (payload) => {
   }
 };
 
+import { notificationsRepo } from '../modules/notifications/notifications.repo.js';
+import { smsTransport } from '../modules/notifications/sms/index.js';
+import { pushTransport, resolveDeepLink } from '../modules/notifications/push/index.js';
+import { enqueue } from './queue.js';
+
+export const notificationDispatch: Handler<'notification-dispatch'> = async (payload, job) => {
+  logger.info(
+    {
+      notificationId: payload.notificationId,
+      channel: payload.channel,
+      userId: payload.userId,
+      attempt: job.attemptsMade + 1,
+    },
+    'notification-dispatch: starting',
+  );
+
+  try {
+    if (payload.channel === 'SMS') {
+      let mobile = payload.recipient;
+      if (!mobile) {
+        mobile = (await notificationsRepo.getUserMobile(pool, payload.userId)) ?? undefined;
+      }
+
+      if (!mobile) {
+        logger.warn(
+          { userId: payload.userId, notificationId: payload.notificationId },
+          'notification-dispatch: user has no mobile number for SMS dispatch',
+        );
+        await notificationsRepo.updateNotificationDelivery(pool, payload.notificationId, {
+          status: 'FAILED',
+          error: 'No valid recipient phone number found for user.',
+        });
+        return;
+      }
+
+      const result = await smsTransport.sendSms({
+        to: mobile,
+        message: payload.body,
+        templateId: payload.templateCode,
+      });
+
+      await notificationsRepo.updateNotificationDelivery(pool, payload.notificationId, {
+        status: result.status,
+        providerMessageId: result.providerMessageId,
+        error: result.error,
+      });
+
+      if (result.status === 'FAILED') {
+        const error = new Error(result.error ?? 'SMS dispatch provider error');
+        if (job.attemptsMade + 1 >= (job.opts.attempts ?? 3)) {
+          await enqueue('notification-dead-letter', {
+            notificationId: payload.notificationId,
+            jobId: job.id,
+            channel: 'SMS',
+            userId: payload.userId,
+            error: error.message,
+            attempts: job.attemptsMade + 1,
+            failedAt: new Date().toISOString(),
+          });
+        }
+        throw error;
+      }
+    } else if (payload.channel === 'PUSH') {
+      const tokens = await notificationsRepo.findActiveDeviceTokens(pool, payload.userId);
+      if (tokens.length === 0) {
+        logger.info(
+          { userId: payload.userId, notificationId: payload.notificationId },
+          'notification-dispatch: no active device tokens found for push',
+        );
+        await notificationsRepo.updateNotificationDelivery(pool, payload.notificationId, {
+          status: 'DELIVERED',
+          error: 'No registered device tokens for user.',
+        });
+        return;
+      }
+
+      const deepLink = payload.templateCode
+        ? (resolveDeepLink(payload.templateCode, payload.data ?? {}) ?? undefined)
+        : undefined;
+
+      let lastMessageId: string | undefined;
+      let hasSuccess = false;
+      let lastError: string | undefined;
+
+      for (const token of tokens) {
+        const result = await pushTransport.sendPush({
+          token: token.token,
+          title: payload.title ?? 'TOHFA Notification',
+          body: payload.body,
+          deepLink,
+          data: payload.data,
+        });
+
+        if (result.unregistered) {
+          await notificationsRepo.revokeDeviceToken(pool, token.token, payload.userId);
+        }
+
+        if (result.status === 'SENT' || result.status === 'DELIVERED') {
+          hasSuccess = true;
+          lastMessageId = result.providerMessageId;
+        } else {
+          lastError = result.error;
+        }
+      }
+
+      const finalStatus = hasSuccess ? 'DELIVERED' : 'FAILED';
+      await notificationsRepo.updateNotificationDelivery(pool, payload.notificationId, {
+        status: finalStatus,
+        providerMessageId: lastMessageId,
+        error: lastError,
+      });
+
+      if (!hasSuccess && lastError) {
+        const error = new Error(lastError);
+        if (job.attemptsMade + 1 >= (job.opts.attempts ?? 3)) {
+          await enqueue('notification-dead-letter', {
+            notificationId: payload.notificationId,
+            jobId: job.id,
+            channel: 'PUSH',
+            userId: payload.userId,
+            error: error.message,
+            attempts: job.attemptsMade + 1,
+            failedAt: new Date().toISOString(),
+          });
+        }
+        throw error;
+      }
+    } else {
+      // IN_APP or others
+      await notificationsRepo.updateNotificationDelivery(pool, payload.notificationId, {
+        status: 'DELIVERED',
+      });
+    }
+
+    logger.info(
+      { notificationId: payload.notificationId, channel: payload.channel },
+      'notification-dispatch: completed successfully',
+    );
+  } catch (error) {
+    logger.error(
+      { notificationId: payload.notificationId, channel: payload.channel, err: error },
+      'notification-dispatch: failed attempt',
+    );
+    throw error;
+  }
+};
+
+export const notificationDeadLetter: Handler<'notification-dead-letter'> = async (payload) => {
+  logger.warn(
+    {
+      notificationId: payload.notificationId,
+      channel: payload.channel,
+      userId: payload.userId,
+      error: payload.error,
+      attempts: payload.attempts,
+    },
+    'notification-dead-letter: recording permanently failed notification',
+  );
+
+  await notificationsRepo.updateNotificationDelivery(pool, payload.notificationId, {
+    status: 'FAILED',
+    error: `Exhausted ${payload.attempts} attempts: ${payload.error}`,
+  });
+};
+
 const HANDLERS: { [N in JobName]: Handler<N> } = {
   'certificate-expiry-sweep': certificateExpirySweep,
   'counter-offer-expiry-sweep': counterOfferExpirySweep,
   'daily-cash-reconciliation': dailyCashReconciliation,
   'cart-lock-reaper': cartLockReaper,
+  'notification-dispatch': notificationDispatch,
+  'notification-dead-letter': notificationDeadLetter,
 };
 
 // Start Sentry before any job can fail so worker errors are reportable.

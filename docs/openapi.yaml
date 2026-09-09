@@ -3140,6 +3140,74 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '500': { $ref: '#/components/responses/ServerError' }
 
+  /notifications/device-tokens:
+    post:
+      tags: [Platform]
+      operationId: registerDeviceToken
+      summary: Register device token for push notifications
+      description: |
+        Registers or updates an FCM device token for the authenticated user (S-50).
+      x-permission: notification.own.view
+      x-business-rules: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, platform, app]
+              properties:
+                token: { type: string, minLength: 1, maxLength: 512 }
+                platform: { type: string, enum: [android, ios, web] }
+                app: { type: string, enum: [farmer-mobile, customer-mobile, admin-web] }
+                locale: { type: string, enum: [en, ta], default: en }
+      responses:
+        '201':
+          description: Device token registered.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, token, platform, app, locale, revoked, lastSeen]
+                properties:
+                  id: { type: string, format: uuid }
+                  token: { type: string }
+                  platform: { type: string }
+                  app: { type: string }
+                  locale: { type: string }
+                  revoked: { type: boolean }
+                  lastSeen: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /notifications/device-tokens/{token}:
+    delete:
+      tags: [Platform]
+      operationId: revokeDeviceToken
+      summary: Revoke a registered device token
+      description: |
+        Revokes an FCM device token so no further push notifications are routed to it (S-50).
+      x-permission: notification.own.view
+      x-business-rules: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Revocation result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
   /admin/audit-log:
     get:
       tags: [Platform]

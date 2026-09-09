@@ -1,0 +1,31 @@
+{
+  "appName": "TOHFA",
+  "bundleId": "in.tohfa.customer",
+  "theme": {
+    "primaryColor": "#0C447C",
+    "primaryColorName": "deepBlue",
+    "backgroundColor": "#F7F5EE",
+    "backgroundColorName": "backgroundCream",
+    "accentColor": "#0F6E56"
+  },
+  "icons": {
+    "android": [
+      { "density": "mdpi", "size": 48, "path": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png" },
+      { "density": "hdpi", "size": 72, "path": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png" },
+      { "density": "xhdpi", "size": 96, "path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" },
+      { "density": "xxhdpi", "size": 144, "path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" },
+      { "density": "xxxhdpi", "size": 192, "path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" }
+    ],
+    "ios": [
+      { "size": 120, "scale": "2x", "idiom": "iphone", "path": "ios/TohfaCustomer/Images.xcassets/AppIcon.appiconset/icon_60pt@2x.png" },
+      { "size": 180, "scale": "3x", "idiom": "iphone", "path": "ios/TohfaCustomer/Images.xcassets/AppIcon.appiconset/icon_60pt@3x.png" },
+      { "size": 1024, "scale": "1x", "idiom": "ios-marketing", "path": "ios/TohfaCustomer/Images.xcassets/AppIcon.appiconset/icon_1024.png" }
+    ]
+  },
+  "splash": {
+    "backgroundColor": "#F7F5EE",
+    "brandLogo": "assets/logo-customer-blue.svg",
+    "textColor": "#0C447C",
+    "tagline": "Fresh Certified Farm Produce Delivered to Your Doorstep"
+  }
+}

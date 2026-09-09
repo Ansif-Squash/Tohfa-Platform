@@ -25,7 +25,8 @@
     "baseUrl": ".",
     "paths": {
       "@tohfa/shared-types": ["../../packages/shared-types/src/index.ts"],
-      "@tohfa/design-tokens": ["../../packages/design-tokens/src/index.ts"]
+      "@tohfa/design-tokens": ["../../packages/design-tokens/src/index.ts"],
+      "@tohfa/mobile-ui": ["../../packages/mobile-ui/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "index.js"],

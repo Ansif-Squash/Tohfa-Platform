@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { useTheme } from '../../theme';
 import { t } from '../../i18n';
-import { Input } from '../../components/Input';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { ErrorState } from '../../components/ErrorState';
+import { Button, Card, ErrorState, Input } from '@tohfa/mobile-ui';
 import { loginWithPassword, requestOtp, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
 

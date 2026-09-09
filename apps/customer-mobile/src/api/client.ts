@@ -51,7 +51,7 @@ function correlationId(): string {
   return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'x-correlation-id': correlationId(),
@@ -113,4 +113,8 @@ export const api = {
     }),
   patch: <T>(path: string, body: unknown): Promise<T> =>
     request<T>(path, { method: 'PATCH', body }),
+  put: <T>(path: string, body: unknown): Promise<T> =>
+    request<T>(path, { method: 'PUT', body }),
+  delete: <T>(path: string): Promise<T> =>
+    request<T>(path, { method: 'DELETE' }),
 };
