@@ -11,13 +11,14 @@ export const CartScreen = ({
   const [timeLeft, setTimeLeft] = useState<string>('');
 
   useEffect(() => {
-    if (!cart?.lockExpiresAt) {
+    const lockExpiresAt = cart?.lockExpiresAt;
+    if (!lockExpiresAt) {
       setTimeLeft('');
       return;
     }
     const timer = setInterval(() => {
       const now = new Date().getTime();
-      const expiresAt = new Date(cart.lockExpiresAt).getTime();
+      const expiresAt = new Date(lockExpiresAt).getTime();
       const diff = expiresAt - now;
       if (diff <= 0) {
         setTimeLeft('Expired');

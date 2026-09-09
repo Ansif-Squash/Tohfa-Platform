@@ -90,7 +90,7 @@ describe('BR-22: Cart locking', () => {
     });
 
     // Check if the timer text is rendered correctly
-    const texts = component.root.findAllByType('Text');
+    const texts = component.root.findAll((node) => (node.type as unknown) === 'Text');
     const timerTexts = texts.filter((t: renderer.ReactTestInstance) => {
       const children = Array.isArray(t.props.children) ? t.props.children.join('') : String(t.props.children);
       return children.includes('Reserved for:');
@@ -98,7 +98,8 @@ describe('BR-22: Cart locking', () => {
     
     expect(timerTexts.length).toBeGreaterThan(0);
     const timerText = timerTexts[0];
-    const joinedText = Array.isArray(timerText.props.children) ? timerText.props.children.join('') : String(timerText.props.children);
+    expect(timerText).toBeDefined();
+    const joinedText = Array.isArray(timerText?.props.children) ? timerText.props.children.join('') : String(timerText?.props.children);
     expect(joinedText).toContain('2h 30m 14s');
 
     vi.useRealTimers();

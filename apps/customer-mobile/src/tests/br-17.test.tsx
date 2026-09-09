@@ -93,7 +93,7 @@ describe('BR-17: Wallet-first checkout recovery', () => {
     });
 
     // Find the checkout button and press it
-    const texts = component.root.findAllByType('Text');
+    const texts = component.root.findAll((node) => (node.type as unknown) === 'Text');
     const payText = texts.find((t: renderer.ReactTestInstance) => t.props.children?.includes('Pay ₹1000'));
     const payBtn = payText?.parent;
     await act(async () => {

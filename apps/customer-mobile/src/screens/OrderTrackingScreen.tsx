@@ -2,15 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useOrderTracking } from '../api/orders';
 
+interface TrackingEvent {
+  id?: string | undefined;
+  status?: string | undefined;
+  timestamp: string;
+}
+
 export const OrderTrackingScreen = ({
   orderId,
-  _onNavigate,
+  onNavigate: _onNavigate,
 }: {
   orderId?: string | undefined;
-  _onNavigate?: ((screen: string, params?: Record<string, unknown>) => void) | undefined;
+  onNavigate?: ((screen: string, params?: Record<string, unknown>) => void) | undefined;
 }) => {
   const { data: tracking, isLoading } = useOrderTracking(orderId || '');
-  const [events, setEvents] = useState<Array<{ id?: string; status?: string; timestamp: string }>>([]);
+  const [events, setEvents] = useState<TrackingEvent[]>([]);
 
   useEffect(() => {
     // Attempt SSE connection
@@ -40,7 +46,11 @@ export const OrderTrackingScreen = ({
   if (isLoading && !events.length) return <ActivityIndicator style={styles.centered} />;
 
   // Prefer SSE events if available, otherwise use polling data
-  const displayStatus = events.length > 0 ? events[events.length - 1].status : tracking?.status;
+  const displayStatus = events.length > 0 ? events[events.length - 1]?.status : tracking?.status;
+
+  const timelineData: TrackingEvent[] = events.length > 0
+    ? events
+    : [{ id: '1', status: tracking?.status, timestamp: new Date().toISOString() }];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -54,7 +64,7 @@ export const OrderTrackingScreen = ({
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Timeline</Text>
         <FlatList
-          data={events.length > 0 ? events : [{ id: '1', status: tracking?.status, timestamp: new Date().toISOString() }]}
+          data={timelineData}
           keyExtractor={(_item, index) => String(index)}
           renderItem={({ item }) => (
             <View style={styles.timelineItem}>
