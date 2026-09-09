@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, FlatList, Text, TouchableOpacity } from 'react-native';
+5<<<<<<<<< Temporary merge branch 1
+import { useProducts, ListProductsQuery } from '../api/catalog';
+=========
 import { useProducts, type ListProductsQuery } from '../api/catalog';
+>>>>>>>>> Temporary merge branch 2
 import { Card } from '@tohfa/mobile-ui';
 
 export function ProductGridScreen({ categoryId }: { categoryId?: string }) {
