@@ -130,11 +130,11 @@ import { ChangeDetectionStrategy, Component, ContentChild, Input, type TemplateR
     </div>
   `,
 })
-export class TohfaTableComponent<T = any> {
+export class TohfaTableComponent<T = unknown> {
   @Input() rows: T[] = [];
   @Input() colspan = 1;
   @Input() emptyMessage = 'No records found.';
 
-  @ContentChild('header', { static: true }) headerTpl!: TemplateRef<any>;
-  @ContentChild('row', { static: true }) rowTpl!: TemplateRef<any>;
+  @ContentChild('header', { static: true }) headerTpl!: TemplateRef<unknown>;
+  @ContentChild('row', { static: true }) rowTpl!: TemplateRef<unknown>;
 }

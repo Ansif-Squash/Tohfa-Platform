@@ -6,7 +6,7 @@
  */
 import tokensData from './tokens.json' with { type: 'json' };
 
-const rawObj = ((tokensData as any).default ?? tokensData) as typeof tokensData;
+const rawObj = (('default' in tokensData ? (tokensData as { default: typeof tokensData }).default : tokensData) ?? tokensData) as typeof tokensData;
 
 export type ColorName = keyof typeof rawObj.color;
 export type NeutralName = keyof typeof rawObj.neutral;

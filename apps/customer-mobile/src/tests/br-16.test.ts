@@ -7,7 +7,7 @@ vi.mock('react-native', () => ({
   View: 'View',
   Text: 'Text',
   ScrollView: 'ScrollView',
-  StyleSheet: { create: (s: any) => s },
+  StyleSheet: { create: <T>(s: T) => s },
   ActivityIndicator: 'ActivityIndicator',
   FlatList: 'FlatList',
   TextInput: 'TextInput',
@@ -55,7 +55,7 @@ const DENYLIST = [
   'polygon',
 ];
 
-function walkTreeAndAssertNoIdentity(node: any) {
+function walkTreeAndAssertNoIdentity(node: unknown) {
   if (!node) return;
   if (typeof node === 'string') {
     const lower = node.toLowerCase();
@@ -69,16 +69,17 @@ function walkTreeAndAssertNoIdentity(node: any) {
     return;
   }
   if (typeof node === 'object') {
-    if (node.props) {
-      Object.values(node.props).forEach(walkTreeAndAssertNoIdentity);
+    const obj = node as Record<string, unknown>;
+    if (obj['props'] && typeof obj['props'] === 'object') {
+      Object.values(obj['props'] as Record<string, unknown>).forEach(walkTreeAndAssertNoIdentity);
     }
-    if (node.children) {
-      node.children.forEach(walkTreeAndAssertNoIdentity);
+    if (obj['children'] && Array.isArray(obj['children'])) {
+      obj['children'].forEach(walkTreeAndAssertNoIdentity);
     }
   }
 }
 
-function walkPayloadAndAssertNoIdentity(payload: any) {
+function walkPayloadAndAssertNoIdentity(payload: unknown) {
   if (!payload) return;
   if (typeof payload === 'string') {
     return;
@@ -88,14 +89,15 @@ function walkPayloadAndAssertNoIdentity(payload: any) {
     return;
   }
   if (typeof payload === 'object') {
-    Object.keys(payload).forEach((key) => {
+    const obj = payload as Record<string, unknown>;
+    Object.keys(obj).forEach((key) => {
       const lowerKey = key.toLowerCase();
       DENYLIST.forEach((term) => {
         if (lowerKey === term.toLowerCase() || lowerKey.includes(term.toLowerCase())) {
           throw new Error(`API LEAK DETECTED: Payload contains forbidden field "${key}"`);
         }
       });
-      walkPayloadAndAssertNoIdentity(payload[key]);
+      walkPayloadAndAssertNoIdentity(obj[key]);
     });
   }
 }
@@ -128,12 +130,12 @@ describe('BR-16: enforces farm-anonymous catalog in customer views', () => {
     vi.spyOn(api, 'get').mockImplementation(async (path) => {
       if (path === '/catalog/home') {
         walkPayloadAndAssertNoIdentity(mockHomePayload);
-        return mockHomePayload;
+        return mockHomePayload as never;
       }
-      return null as any;
+      return null as never;
     });
 
-    let root: any;
+    let root!: renderer.ReactTestRenderer;
     await renderer.act(async () => {
       root = renderWithProviders(React.createElement(HomeScreen));
     });
@@ -142,9 +144,9 @@ describe('BR-16: enforces farm-anonymous catalog in customer views', () => {
 
   it('BR-16: Categories screen renders without farm identity and payload is clean', async () => {
     const mockCatPayload = [{ id: 'c1', name: 'Veg' }];
-    vi.spyOn(api, 'get').mockResolvedValue(mockCatPayload as any);
+    vi.spyOn(api, 'get').mockResolvedValue(mockCatPayload as never);
 
-    let root: any;
+    let root!: renderer.ReactTestRenderer;
     await renderer.act(async () => {
       root = renderWithProviders(React.createElement(CategoriesScreen));
     });
@@ -162,10 +164,10 @@ describe('BR-16: enforces farm-anonymous catalog in customer views', () => {
     
     vi.spyOn(api, 'get').mockImplementation(async () => {
       walkPayloadAndAssertNoIdentity(mockProdPayload);
-      return mockProdPayload as any;
+      return mockProdPayload as never;
     });
 
-    let root: any;
+    let root!: renderer.ReactTestRenderer;
     await renderer.act(async () => {
       root = renderWithProviders(React.createElement(ProductGridScreen, { categoryId: 'c1' }));
     });
@@ -179,9 +181,9 @@ describe('BR-16: enforces farm-anonymous catalog in customer views', () => {
 
   it('BR-16: Product detail renders without farm identity and payload is clean', async () => {
     const mockDetailPayload = { id: 'p1', name: 'Carrot', price: '1000', grade: 'A', photos: [] };
-    vi.spyOn(api, 'get').mockResolvedValue(mockDetailPayload as any);
+    vi.spyOn(api, 'get').mockResolvedValue(mockDetailPayload as never);
 
-    let root: any;
+    let root!: renderer.ReactTestRenderer;
     await renderer.act(async () => {
       root = renderWithProviders(React.createElement(ProductDetailScreen, { productId: 'p1' }));
     });
@@ -196,11 +198,11 @@ describe('BR-16: enforces farm-anonymous catalog in customer views', () => {
       heroBanners: [], categories: [], featured: []
     };
     vi.spyOn(api, 'get').mockImplementation(async (path) => {
-      if (path.includes('/catalog/search')) return mockSearchPayload as any;
-      return mockHomePayload as any;
+      if (path.includes('/catalog/search')) return mockSearchPayload as never;
+      return mockHomePayload as never;
     });
 
-    let root: any;
+    let root!: renderer.ReactTestRenderer;
     await renderer.act(async () => {
       root = renderWithProviders(React.createElement(SearchScreen));
     });
