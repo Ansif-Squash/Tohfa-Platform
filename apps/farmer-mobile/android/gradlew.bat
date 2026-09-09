@@ -19,13 +19,10 @@ set JAVA_EXE=java.exe
 %JAVA_EXE% -version >NUL 2>&1
 if "%ERRORLEVEL%" == "0" goto execute
 
-echo.
-echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
-echo.
-echo Please set the JAVA_HOME variable in your environment to match the
-echo location of your Java installation.
-
-goto fail
+if exist "C:\Program Files\Android\Android Studio\jbr\bin\java.exe" (
+    set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
+    goto findJavaFromJavaHome
+)
 
 :findJavaFromJavaHome
 set JAVA_HOME=%JAVA_HOME:"=%
