@@ -1,0 +1,14 @@
+rootProject.name = 'in.tohfa.farmer'
+
+def getPackagePath(String packageName) {
+    def proc = ['node', '--print', "require.resolve('${packageName}/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir)
+    proc.waitFor()
+    return new File(proc.in.text.trim()).parentFile
+}
+
+def cliPlatformAndroid = getPackagePath('@react-native-community/cli-platform-android')
+def gradlePlugin = getPackagePath('@react-native/gradle-plugin')
+
+apply from: new File(cliPlatformAndroid, 'native_modules.gradle'); applyNativeModulesSettingsGradle(settings)
+include ':app'
+includeBuild(gradlePlugin)

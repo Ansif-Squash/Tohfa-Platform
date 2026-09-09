@@ -39,3 +39,13 @@ dependencies {
         implementation("org.webkit:android-jsc:+")
     }
 }
+
+def getPackagePath(String packageName) {
+    def proc = ['node', '--print', "require.resolve('${packageName}/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir)
+    proc.waitFor()
+    return new File(proc.in.text.trim()).parentFile
+}
+
+def cliPlatformAndroid = getPackagePath('@react-native-community/cli-platform-android')
+apply from: new File(cliPlatformAndroid, 'native_modules.gradle'); applyNativeModulesAppBuildGradle(project)
+
