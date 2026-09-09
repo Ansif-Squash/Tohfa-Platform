@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
-import { useCatalogHome } from '../api/catalog';
+import { useCatalogHome, type Product } from '../api/catalog';
 import { Card } from '@tohfa/mobile-ui';
 
 export function HomeScreen() {
@@ -28,7 +28,7 @@ export function HomeScreen() {
       <View style={styles.section}>
         <Text style={{ fontSize: 24, fontWeight: "bold" }}>Featured</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {data.heroBanners.map(banner => (
+          {data.heroBanners.map((banner: { id: string; imageUrl: string }) => (
             <Image 
               key={banner.id} 
               source={{ uri: banner.imageUrl }} 
@@ -42,7 +42,7 @@ export function HomeScreen() {
       <View style={styles.section}>
         <Text style={{ fontSize: 24, fontWeight: "bold" }}>Categories</Text>
         <View style={styles.grid}>
-          {data.categories.map(cat => (
+          {data.categories.map((cat: { id: string; name: string; iconUrl?: string }) => (
             <Card key={cat.id} style={styles.card}>
               <Text style={{ fontSize: 16 }}>{cat.name}</Text>
             </Card>
@@ -54,7 +54,7 @@ export function HomeScreen() {
       <View style={styles.section}>
         <Text style={{ fontSize: 24, fontWeight: "bold" }}>Trending</Text>
         <View style={styles.grid}>
-          {data.featured.map(product => (
+          {data.featured.map((product: Product) => (
             <Card key={product.id} style={styles.card}>
               <Text style={{ fontSize: 16 }}>{product.name}</Text>
               <Text style={{ fontSize: 14 }}>{product.pricePerKg}</Text>

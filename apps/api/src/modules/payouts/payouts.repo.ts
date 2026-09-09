@@ -263,7 +263,7 @@ export const payoutsRepo: PayoutRepo = {
       `SELECT u.full_name FROM farmers f JOIN users u ON u.id = f.user_id WHERE f.id = $1`,
       [params.farmerId],
     );
-    (payout as any).farmer_name = nameRes.rows[0]?.full_name ?? 'Unknown';
+    (payout as PayoutRow).farmer_name = nameRes.rows[0]?.full_name ?? 'Unknown';
 
     return { payout, approvals: [] };
   },

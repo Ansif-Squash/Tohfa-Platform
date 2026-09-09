@@ -6,8 +6,57 @@ import type {
   OrderTracking,
   OrderTrackingEvent,
 } from './fulfilment.schema.js';
-import type { OrderStatus, ProduceGrade, SalesChannel, FulfillmentType } from './orders.schema.js';
+import type { OrderStatus, ProduceGrade, SalesChannel, FulfillmentType, DeliverySlot } from './orders.schema.js';
 import type { Money } from '@tohfa/shared-types';
+
+interface FulfilmentOrderRow {
+  id: string;
+  orderNumber: string;
+  status: string;
+  channel: string;
+  fulfillmentType: string;
+  warehouseId: string;
+  itemCount: number;
+  totalAmount: string;
+  paymentStatus: string;
+  deliveryDate: string | null;
+  placedAt: string | Date;
+}
+
+interface FulfilmentOrderDetailRow {
+  id: string;
+  orderNumber: string;
+  status: string;
+  channel: string;
+  fulfillmentType: string;
+  warehouseId: string;
+  subtotal: string;
+  deliveryFee: string;
+  discount: string;
+  gstAmount: string;
+  totalAmount: string;
+  paymentStatus: string;
+  deliveryDate: string | null;
+  deliverySlot: string | null;
+  deliveryAddressId: string | null;
+  otpRequired: boolean;
+  cancellationReason: string | null;
+  deliveredAt: string | Date | null;
+  placedAt: string | Date;
+}
+
+interface FulfilmentOrderItemRow {
+  id: string;
+  productId: string;
+  name: string;
+  grade: string;
+  qtyKg: string;
+  fulfilledQtyKg: string;
+  unitPrice: string;
+  gstRate: number;
+  gstAmount: string;
+  lineTotal: string;
+}
 
 export interface FulfilmentRepo {
   listAdminOrders(
@@ -118,10 +167,10 @@ export const fulfilmentRepo: FulfilmentRepo = {
         FROM orders o
        WHERE ${conditions.join(' AND ')}
        ORDER BY o.placed_at DESC, o.id DESC
-       LIMIT $${idx}
+        LIMIT $${idx}
     `;
 
-    const res = await db.query<any>(sql, values);
+    const res = await db.query<FulfilmentOrderRow>(sql, values);
     const hasMore = res.rows.length > limit;
     const items = res.rows.slice(0, limit).map((r) => ({
       id: r.id,
@@ -157,7 +206,7 @@ export const fulfilmentRepo: FulfilmentRepo = {
       values.push(warehouseScope);
     }
 
-    const orderRes = await db.query<any>(
+    const orderRes = await db.query<FulfilmentOrderDetailRow>(
       `SELECT o.id, o.order_number AS "orderNumber", o.status, o.channel,
               o.fulfilment_type AS "fulfillmentType", o.warehouse_id AS "warehouseId",
               o.subtotal::text AS subtotal, o.delivery_fee::text AS "deliveryFee",
@@ -177,7 +226,7 @@ export const fulfilmentRepo: FulfilmentRepo = {
     const order = orderRes.rows[0];
     if (!order) return null;
 
-    const itemsRes = await db.query<any>(
+    const itemsRes = await db.query<FulfilmentOrderItemRow>(
       `SELECT oi.id, oi.crop_id AS "productId", cm.name, oi.grade,
               oi.qty_kg::text AS "qtyKg", oi.fulfilled_qty_kg::text AS "fulfilledQtyKg",
               oi.unit_price::text AS "unitPrice", oi.gst_rate AS "gstRate",
@@ -205,7 +254,7 @@ export const fulfilmentRepo: FulfilmentRepo = {
       deliveryFee: order.deliveryFee as Money,
       discount: order.discount as Money,
       gstAmount: order.gstAmount as Money,
-      deliverySlot: order.deliverySlot,
+      deliverySlot: order.deliverySlot as DeliverySlot | null,
       deliveryAddressId: order.deliveryAddressId,
       otpRequired: order.otpRequired,
       cancellationReason: order.cancellationReason,

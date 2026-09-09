@@ -8,11 +8,30 @@ export type CartItemInput = {
   warehouseId?: string;
 };
 
+export interface CartItem {
+  id: string;
+  productId: string;
+  name: string;
+  grade?: string;
+  qtyKg: string;
+  unitPrice?: string;
+  lineTotal: string;
+  warehouseId?: string;
+}
+
+export interface CartResponse {
+  id?: string;
+  items: CartItem[];
+  subtotal: string;
+  warehouseId?: string;
+  lockExpiresAt?: string | null;
+}
+
 export const useCart = () => {
   return useQuery({
     queryKey: ['cart'],
     queryFn: async () => {
-      const data = await api.get<any>('/cart');
+      const data = await api.get<CartResponse>('/cart');
       return data;
     },
   });
@@ -22,7 +41,7 @@ export const useAddToCart = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (item: CartItemInput) => {
-      const data = await api.post<any>('/cart/items', item);
+      const data = await api.post<CartResponse>('/cart/items', item);
       return data;
     },
     onSuccess: () => {
@@ -35,7 +54,7 @@ export const useUpdateCart = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { warehouseId?: string; items: CartItemInput[] }) => {
-      const data = await api.put<any>('/cart', payload);
+      const data = await api.put<CartResponse>('/cart', payload);
       return data;
     },
     onSuccess: () => {

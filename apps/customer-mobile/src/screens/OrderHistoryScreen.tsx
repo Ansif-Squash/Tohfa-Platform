@@ -5,7 +5,7 @@ import { useOrders, useReorder } from '../api/orders';
 export const OrderHistoryScreen = ({
   onNavigate,
 }: {
-  onNavigate?: ((screen: string, params?: any) => void) | undefined;
+  onNavigate?: ((screen: string, params?: Record<string, unknown>) => void) | undefined;
 }) => {
   const { data: orders, isLoading } = useOrders();
   const reorderMutation = useReorder();

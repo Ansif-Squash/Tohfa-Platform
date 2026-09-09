@@ -8,7 +8,7 @@ export const TopupScreen = ({
   onNavigate,
 }: {
   shortfall?: string | undefined;
-  onNavigate?: ((screen: string, params?: any) => void) | undefined;
+  onNavigate?: ((screen: string, params?: Record<string, unknown>) => void) | undefined;
 }) => {
   const { data: wallet, refetch: refetchWallet } = useWallet();
   const { data: cart } = useCart();
@@ -19,7 +19,7 @@ export const TopupScreen = ({
 
   // Poll wallet until the balance covers the cart total
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (isPolling) {
       interval = setInterval(async () => {
         const { data } = await refetchWallet();
@@ -46,7 +46,7 @@ export const TopupScreen = ({
     topupMutation.mutate(
       { amount: shortfall, mode: 'UPI' },
       {
-        onSuccess: (data) => {
+        onSuccess: (_data) => {
           // In a real app we'd open Razorpay with data.razorpayKeyId
           // For now, we simulate the payment success by waiting for the webhook
           // Webhook testing will be done via CLI or mock
