@@ -11,11 +11,25 @@ export type CheckoutInput = {
   notes?: string;
 };
 
+export interface OrderResponse {
+  id: string;
+  orderNumber: string;
+  status: string;
+  totalAmount: string;
+  placedAt: string;
+}
+
+export interface OrderTrackingResponse {
+  orderId: string;
+  orderNumber?: string;
+  status: string;
+}
+
 export const useCheckout = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ payload, idempotencyKey }: { payload: CheckoutInput; idempotencyKey: string }) => {
-      const data = await api.post<any>('/orders', payload, idempotencyKey);
+      const data = await api.post<OrderResponse>('/orders', payload, idempotencyKey);
       return data;
     },
     onSuccess: () => {
@@ -30,7 +44,7 @@ export const useOrders = () => {
   return useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const data = await api.get<any>('/orders');
+      const data = await api.get<OrderResponse[]>('/orders');
       return data;
     },
   });
@@ -40,7 +54,7 @@ export const useReorder = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (orderId: string) => {
-      const data = await api.post<any>(`/orders/${orderId}/reorder`, {});
+      const data = await api.post<OrderResponse>(`/orders/${orderId}/reorder`, {});
       return data;
     },
     onSuccess: () => {
@@ -53,7 +67,7 @@ export const useOrderTracking = (orderId: string) => {
   return useQuery({
     queryKey: ['order', orderId, 'tracking'],
     queryFn: async () => {
-      const data = await api.get<any>(`/orders/${orderId}/tracking`);
+      const data = await api.get<OrderTrackingResponse>(`/orders/${orderId}/tracking`);
       return data;
     },
     refetchInterval: 5000, // Fallback polling every 5s if SSE is not active

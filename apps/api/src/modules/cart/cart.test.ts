@@ -354,7 +354,7 @@ describeIfDatabase('Cart Integration Tests (BR-22, BR-12)', () => {
     const { cartLockReaper } = await import('../../jobs/worker.js');
 
     // Run 1: reaper sweeps expired cart and returns its 8 kg
-    await cartLockReaper({ batchSize: 500 }, {} as any);
+    await cartLockReaper({ batchSize: 500 }, {} as never);
 
     // Verify cart and items are EXPIRED
     const cartRes = await pool.query<{ status: string }>(
@@ -372,7 +372,7 @@ describeIfDatabase('Cart Integration Tests (BR-22, BR-12)', () => {
     expect(Number(allocRes1.rows[0]!.available_qty)).toBe(20);
 
     // Run 2: repeat execution must be idempotent and not decrement again
-    await cartLockReaper({ batchSize: 500 }, {} as any);
+    await cartLockReaper({ batchSize: 500 }, {} as never);
 
     const allocRes2 = await pool.query<{ reserved_qty: string; available_qty: string }>(
       `SELECT reserved_qty::text, available_qty::text FROM allocations WHERE id = $1`,

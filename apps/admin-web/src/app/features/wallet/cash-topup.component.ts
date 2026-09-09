@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators, type AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CashTopupService, type WalletTransactionResponse } from './cash-topup.service';
 
@@ -366,7 +366,7 @@ export class CashTopupComponent {
       [
         Validators.required,
         Validators.pattern(/^[0-9]{1,5}(\.[0-9]{1,2})?$/),
-        (control: any) => {
+        (control: AbstractControl) => {
           const val = Number(control.value);
           if (isNaN(val) || val <= 0) return { min: true };
           if (val > 10000) return { max: true };

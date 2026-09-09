@@ -203,8 +203,8 @@ export function createOrdersService(opts: {
               input.deliveryDate,
               input.deliverySlot,
             );
-          } catch (err: any) {
-            if (err.message === 'SLOT_CAPACITY_EXCEEDED') {
+          } catch (err: unknown) {
+            if (err instanceof Error && err.message === 'SLOT_CAPACITY_EXCEEDED') {
               throw new AppError('CONFLICT', {
                 status: 409,
                 detail: 'Selected delivery slot is fully booked.',

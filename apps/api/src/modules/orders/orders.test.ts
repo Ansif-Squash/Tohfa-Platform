@@ -421,7 +421,7 @@ describeIfDatabase('Orders Integration Tests (BR-17, BR-21, BR-15, BR-22)', () =
       },
     };
 
-    const service = createOrdersService({ repo: failingRepo as any });
+    const service = createOrdersService({ repo: failingRepo as typeof realRepo });
     const actor = {
       userId: customerUserId2,
       roles: [{ code: 'CUSTOMER' as const }],
