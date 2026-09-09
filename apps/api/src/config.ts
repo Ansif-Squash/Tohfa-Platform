@@ -47,6 +47,9 @@ const envSchema = z.object({
 
   SMS_PROVIDER: z.enum(['mock', 'msg91', 'twilio']).default('mock'),
   MSG91_AUTH_KEY: z.string().default(''),
+  TWILIO_ACCOUNT_SID: z.string().default(''),
+  TWILIO_AUTH_TOKEN: z.string().default(''),
+  TWILIO_FROM_NUMBER: z.string().default(''),
   FCM_SERVER_KEY: z.string().default(''),
   SENTRY_DSN: z.string().default(''),
 

@@ -62,8 +62,8 @@ describe('Farmer Mobile Foundation & Lint Guard (S-41)', () => {
     const violatingFiles: string[] = [];
 
     for (const filePath of allFiles) {
-      const normalized = filePath.replace(/\\/g, '/');
-      if (normalized.includes('/tests/')) continue;
+      const normalizedPath = filePath.replace(/\\/g, '/');
+      if (normalizedPath.includes('/tests/')) continue;
       const content = fs.readFileSync(filePath, 'utf8');
       if (
         content.includes('async-storage') ||

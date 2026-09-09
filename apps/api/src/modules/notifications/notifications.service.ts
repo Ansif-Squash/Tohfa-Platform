@@ -45,9 +45,14 @@ function mapNotificationResponse(row: NotificationRow) {
   };
 }
 
+import type { RegisterDeviceTokenBody } from './notifications.schema.js';
+import { enqueue } from '../../jobs/queue.js';
+
 export interface NotificationsService {
   listMyNotifications(actor: Actor, query: ListNotificationsQuery): Promise<unknown>;
   markAsRead(actor: Actor, id: string): Promise<unknown>;
+  registerDeviceToken(actor: Actor, input: RegisterDeviceTokenBody): Promise<unknown>;
+  revokeDeviceToken(actor: Actor, token: string): Promise<unknown>;
   handleDomainEvent<E extends DomainEventName>(
     eventName: E,
     payload: DomainEvents[E],
@@ -84,6 +89,31 @@ export function createNotificationsService(
       return mapNotificationResponse(updated);
     },
 
+    async registerDeviceToken(actor, input) {
+      const row = await repo.registerDeviceToken(pool, {
+        userId: actor.userId,
+        token: input.token,
+        platform: input.platform,
+        app: input.app,
+        locale: input.locale,
+      });
+
+      return {
+        id: row.id,
+        token: row.token,
+        platform: row.platform,
+        app: row.app,
+        locale: row.locale,
+        revoked: row.revoked,
+        lastSeen: row.last_seen.toISOString(),
+      };
+    },
+
+    async revokeDeviceToken(actor, token) {
+      const revoked = await repo.revokeDeviceToken(pool, token, actor.userId);
+      return { success: revoked };
+    },
+
     async handleDomainEvent(eventName, payload) {
       const templateCode = EVENT_TEMPLATE_MAP[eventName];
       if (!templateCode) return null;
@@ -118,7 +148,8 @@ export function createNotificationsService(
 
       const dedupeKey = `${eventName}:${userId}:${dedupeEntityId}`;
 
-      return repo.createNotification(pool, {
+      // 1. Create In-App Notification
+      const inAppRow = await repo.createNotification(pool, {
         userId,
         templateId: template.id,
         channel: 'IN_APP',
@@ -126,8 +157,80 @@ export function createNotificationsService(
         body,
         locale: template.locale,
         data: rawData,
-        dedupeKey,
+        dedupeKey: `in_app:${dedupeKey}`,
       });
+
+      // 2. Queue Push Notification (if device tokens or push template exist)
+      try {
+        const pushTemplate = (await repo.findTemplate(pool, templateCode, 'PUSH', locale)) ?? template;
+        const pushTitle = pushTemplate.subject ? interpolateTemplate(pushTemplate.subject, rawData) : title;
+        const pushBody = interpolateTemplate(pushTemplate.body_template, rawData);
+
+        const pushRow = await repo.createNotification(pool, {
+          userId,
+          templateId: pushTemplate.id,
+          channel: 'PUSH',
+          title: pushTitle,
+          body: pushBody,
+          locale: pushTemplate.locale,
+          data: rawData,
+          dedupeKey: `push:${dedupeKey}`,
+        });
+
+        if (pushRow) {
+          await enqueue('notification-dispatch', {
+            notificationId: pushRow.id,
+            channel: 'PUSH',
+            userId,
+            templateCode,
+            title: pushTitle,
+            body: pushBody,
+            locale: pushTemplate.locale,
+            data: rawData,
+            dedupeKey: `push:${dedupeKey}`,
+          });
+        }
+      } catch (err) {
+        logger.warn({ err, userId, eventName }, 'failed to queue push notification dispatch job');
+      }
+
+      // 3. Queue SMS Notification (if SMS template exists or transaction alert)
+      try {
+        const smsTemplate = await repo.findTemplate(pool, templateCode, 'SMS', locale);
+        if (smsTemplate || eventName === 'wallet.credited' || eventName === 'order.confirmed') {
+          const activeSmsTemplate = smsTemplate ?? template;
+          const smsBody = interpolateTemplate(activeSmsTemplate.body_template, rawData);
+
+          const smsRow = await repo.createNotification(pool, {
+            userId,
+            templateId: activeSmsTemplate.id,
+            channel: 'SMS',
+            title: null,
+            body: smsBody,
+            locale: activeSmsTemplate.locale,
+            data: rawData,
+            dedupeKey: `sms:${dedupeKey}`,
+          });
+
+          if (smsRow) {
+            await enqueue('notification-dispatch', {
+              notificationId: smsRow.id,
+              channel: 'SMS',
+              userId,
+              templateCode,
+              title: null,
+              body: smsBody,
+              locale: activeSmsTemplate.locale,
+              data: rawData,
+              dedupeKey: `sms:${dedupeKey}`,
+            });
+          }
+        }
+      } catch (err) {
+        logger.warn({ err, userId, eventName }, 'failed to queue SMS notification dispatch job');
+      }
+
+      return inAppRow;
     },
   };
 }
