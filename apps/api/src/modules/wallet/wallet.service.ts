@@ -149,7 +149,7 @@ export function createWalletService(
           });
           return toWalletTransactionResponse(row);
         } catch (err: unknown) {
-          const pgErr = err as { code?: string };
+          const pgErr = err as { code?: string; hint?: string; message?: string };
           // A. Unique constraint violation on idempotency_key
           if (pgErr.code === '23505') {
             try {
@@ -174,15 +174,15 @@ export function createWalletService(
           }
 
           // B. Trigger check constraints (insufficient balance or frozen status)
-          if (err.code === '23514') {
-            if (err.hint === 'code: WALLET_INSUFFICIENT' || err.message?.includes('insufficient wallet balance')) {
+          if (pgErr.code === '23514') {
+            if (pgErr.hint === 'code: WALLET_INSUFFICIENT' || pgErr.message?.includes('insufficient wallet balance')) {
               throw new AppError('WALLET_INSUFFICIENT', {
                 status: 402,
                 detail: 'Insufficient wallet balance.',
                 cause: err,
               });
             }
-            if (err.hint === 'code: WALLET_NOT_ACTIVE' || err.message?.includes('no movement permitted')) {
+            if (pgErr.hint === 'code: WALLET_NOT_ACTIVE' || pgErr.message?.includes('no movement permitted')) {
               throw new AppError('FORBIDDEN', {
                 detail: 'Wallet is not active.',
                 cause: err,
