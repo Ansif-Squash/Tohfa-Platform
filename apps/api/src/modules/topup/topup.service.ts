@@ -165,14 +165,15 @@ export function createTopupService(opts: {
             amount: input.amount,
             fiscalCashTag: input.fiscalCashTag,
           });
-        } catch (err: any) {
-          if (err.code === '23505') {
+        } catch (err: unknown) {
+          const pgErr = err as { code?: string };
+          if (pgErr.code === '23505') {
             throw new AppError('CONFLICT', {
               status: 409,
               detail: `Fiscal cash tag ${input.fiscalCashTag} has already been used.`,
             });
           }
-          if (err.code === '23514') {
+          if (pgErr.code === '23514') {
             throw new AppError('CASH_LIMIT_EXCEEDED', {
               status: 422,
               detail: 'Cash top-up amount exceeds allowable ceiling.',
@@ -222,8 +223,9 @@ export function createTopupService(opts: {
       // BR-18c: SMS dispatch outcome outside credit transaction
       try {
         await repo.updateTopupSmsStatus(db, topup.id, { sentAt: new Date() });
-      } catch (smsErr: any) {
-        await repo.updateTopupSmsStatus(db, topup.id, { error: smsErr?.message ?? 'SMS dispatch error' });
+      } catch (smsErr: unknown) {
+        const errorMsg = smsErr instanceof Error ? smsErr.message : 'SMS dispatch error';
+        await repo.updateTopupSmsStatus(db, topup.id, { error: errorMsg });
       }
 
       return walletTxn;

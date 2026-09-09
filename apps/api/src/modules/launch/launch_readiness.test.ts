@@ -85,4 +85,8 @@ describe('User Story 53 (S-53): Launch Readiness Review & Handover Verification'
     const content = fs.readFileSync(goldenThreadPath, 'utf8');
     expect(content).toContain('Golden Thread');
   });
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> ad83f39f24dd411069b1918a9da112a1ce8a3317

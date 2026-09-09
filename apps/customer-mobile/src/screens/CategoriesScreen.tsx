@@ -31,7 +31,7 @@ export function CategoriesScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <Card style={styles.card}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>Categories</Text>
+            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{item.name}</Text>
           </Card>
         )}
       />
