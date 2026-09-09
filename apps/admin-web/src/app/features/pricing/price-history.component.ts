@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TohfaTableComponent } from '../../shared/tohfa-table.component';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PricingService, type FairPrice } from './pricing.service';
@@ -6,7 +7,7 @@ import { PricingService, type FairPrice } from './pricing.service';
 @Component({
   selector: 'tohfa-price-history',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TohfaTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
@@ -56,31 +57,9 @@ import { PricingService, type FairPrice } from './pricing.service';
         font-weight: var(--tohfa-font-weight-semibold);
         font-size: var(--tohfa-font-size-body-small);
       }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-      }
-      th,
-      td {
-        padding: var(--tohfa-space-md);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
-        font-size: var(--tohfa-font-size-body-small);
-      }
-      th {
-        background: var(--tohfa-surface);
-        font-weight: var(--tohfa-font-weight-semibold);
-        font-size: var(--tohfa-font-size-footnote);
-        text-transform: uppercase;
-      }
       .money-val {
         font-family: var(--tohfa-font-mono);
         font-weight: var(--tohfa-font-weight-bold);
-      }
-      .empty-row {
-        text-align: center;
-        padding: var(--tohfa-space-xxl);
-        color: var(--tohfa-neutral-grey500);
       }
     `,
   ],
@@ -124,35 +103,31 @@ import { PricingService, type FairPrice } from './pricing.service';
         </button>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Crop</th>
-            <th>Grade</th>
-            <th>Ceiling Price (₹/kg)</th>
-            <th>Frequency</th>
-            <th>Effective From</th>
-            <th>Effective To</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of history()">
-            <td>{{ item.cropName }}</td>
-            <td>{{ item.grade }}</td>
-            <td class="money-val">₹{{ item.ceilingPrice }}</td>
-            <td>{{ item.frequency }}</td>
-            <td>{{ item.effectiveFrom }}</td>
-            <td>{{ item.effectiveTo ? item.effectiveTo : 'Current (Open)' }}</td>
-            <td>{{ item.notes || '—' }}</td>
-          </tr>
-          <tr *ngIf="history().length === 0">
-            <td colspan="7" class="empty-row">
-              {{ hasSearched() ? 'No history records found for this crop.' : 'Enter a crop ID to search ceiling history.' }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <tohfa-table
+        [rows]="history()"
+        [colspan]="7"
+        [emptyMessage]="hasSearched() ? 'No history records found for this crop.' : 'Enter a crop ID to search ceiling history.'"
+      >
+        <ng-template #header>
+          <th>Crop</th>
+          <th>Grade</th>
+          <th>Ceiling Price (₹/kg)</th>
+          <th>Frequency</th>
+          <th>Effective From</th>
+          <th>Effective To</th>
+          <th>Notes</th>
+        </ng-template>
+
+        <ng-template #row let-item>
+          <td>{{ item.cropName }}</td>
+          <td>{{ item.grade }}</td>
+          <td class="money-val">₹{{ item.ceilingPrice }}</td>
+          <td>{{ item.frequency }}</td>
+          <td>{{ item.effectiveFrom }}</td>
+          <td>{{ item.effectiveTo ? item.effectiveTo : 'Current (Open)' }}</td>
+          <td>{{ item.notes || '—' }}</td>
+        </ng-template>
+      </tohfa-table>
     </div>
   `,
 })

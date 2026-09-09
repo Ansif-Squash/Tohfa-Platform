@@ -124,7 +124,7 @@ export function createFulfilmentService(opts: {
     if (hasOnlySubWh) {
       // Find assigned warehouse from actor roles
       const subWhRole = actor.roles.find((r) => r.code === 'SUB_WH_ADMIN');
-      return subWhRole?.warehouseId ?? (actor as any).warehouseId ?? null;
+      return subWhRole?.warehouseId ?? (actor as { warehouseId?: string }).warehouseId ?? null;
     }
     return null;
   }

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import { parseMoney } from '@tohfa/shared-types';
 import { createApp } from '../../app.js';
 import { signAccessToken } from '../../auth/jwt.js';
 import { pool } from '../../db/pool.js';
@@ -10,6 +11,7 @@ import {
   newId,
 } from '../../test/factories.js';
 import { createFulfilmentService } from './fulfilment.service.js';
+import type { FulfilmentRepo } from './fulfilment.repo.js';
 
 describe('Fulfilment Unit Tests (State Machine & Logic)', () => {
   it('INVALID_STATE_TRANSITION: rejects illegal status transitions with 409', async () => {
@@ -30,14 +32,14 @@ describe('Fulfilment Unit Tests (State Machine & Logic)', () => {
         fulfillmentType: 'PICKUP' as const,
         warehouseId: newId(),
         itemCount: 1,
-        totalAmount: '100.00' as any,
+        totalAmount: parseMoney('100.00'),
         paymentStatus: 'PAID',
         deliveryDate: null,
         placedAt: new Date().toISOString(),
-        subtotal: '100.00' as any,
-        deliveryFee: '0.00' as any,
-        discount: '0.00' as any,
-        gstAmount: '0.00' as any,
+        subtotal: parseMoney('100.00'),
+        deliveryFee: parseMoney('0.00'),
+        discount: parseMoney('0.00'),
+        gstAmount: parseMoney('0.00'),
         deliverySlot: null,
         deliveryAddressId: null,
         otpRequired: false,
@@ -47,7 +49,7 @@ describe('Fulfilment Unit Tests (State Machine & Logic)', () => {
       }),
     };
 
-    const s = createFulfilmentService({ repo: mockRepo as any });
+    const s = createFulfilmentService({ repo: mockRepo as unknown as FulfilmentRepo });
     await expect(
       s.packOrder(actor, aScope(), newId(), {}),
     ).rejects.toMatchObject({
@@ -269,7 +271,7 @@ describeIfDatabase('Fulfilment Integration Tests (BR-20, BR-21, BR-30, BR-35)', 
       .set('Authorization', `Bearer ${subWhAdminToken1}`);
 
     expect(listRes.status).toBe(200);
-    const ids = listRes.body.items.map((it: any) => it.id);
+    const ids = listRes.body.items.map((it: { id: string }) => it.id);
     expect(ids).toContain(orderWh1);
     expect(ids).not.toContain(orderWh2);
 
@@ -295,7 +297,7 @@ describeIfDatabase('Fulfilment Integration Tests (BR-20, BR-21, BR-30, BR-35)', 
       .set('Authorization', `Bearer ${subWhAdminToken2}`);
 
     expect(listRes2.status).toBe(200);
-    const ids2 = listRes2.body.items.map((it: any) => it.id);
+    const ids2 = listRes2.body.items.map((it: { id: string }) => it.id);
     expect(ids2).toContain(orderWh2);
     expect(ids2).not.toContain(orderWh1);
 
@@ -305,7 +307,7 @@ describeIfDatabase('Fulfilment Integration Tests (BR-20, BR-21, BR-30, BR-35)', 
       .set('Authorization', `Bearer ${mainWhAdminToken}`);
 
     expect(mainListRes.status).toBe(200);
-    const mainIds = mainListRes.body.items.map((it: any) => it.id);
+    const mainIds = mainListRes.body.items.map((it: { id: string }) => it.id);
     expect(mainIds).toContain(orderWh1);
     expect(mainIds).toContain(orderWh2);
 
@@ -515,7 +517,7 @@ describeIfDatabase('Fulfilment Integration Tests (BR-20, BR-21, BR-30, BR-35)', 
         res.on('data', (chunk) => {
           data += chunk.toString();
           if (data.includes('event: order.status')) {
-            (res as any).destroy?.();
+            (res as unknown as { destroy?: () => void }).destroy?.();
             cb(null, data);
           }
         });

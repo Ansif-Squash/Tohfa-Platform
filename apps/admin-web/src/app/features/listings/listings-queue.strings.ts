@@ -23,7 +23,7 @@ export const LISTINGS_STRINGS = {
   REFRESH_BTN: 'Refresh Queue',
 
   // Table Columns
-  COL_LISTING_NO: 'Listing #',
+  COL_LISTING_NO: 'Listing',
   COL_FARMER: 'Farmer',
   COL_CROP: 'Crop & Grade',
   COL_QUANTITY: 'Quantity',

@@ -105,9 +105,9 @@ describeIfDatabase('S-30 — Golden Thread End-to-End Supply Chain', () => {
     );
     for (const row of whRes.rows) {
       if (row.code === 'WH-OOTY') {
-        (IDS as any).warehouseOoty = row.id;
+        (IDS as Record<string, string>).warehouseOoty = row.id;
       } else if (row.code === 'WH-COON') {
-        (IDS as any).warehouseCoonoor = row.id;
+        (IDS as Record<string, string>).warehouseCoonoor = row.id;
       }
     }
 

@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TohfaTableComponent } from '../../shared/tohfa-table.component';
 import { ChangeDetectionStrategy, Component, inject, signal, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RbacService } from '../../core/rbac.service';
@@ -7,93 +8,93 @@ import { PricingService, type FairPrice, type FairPriceCreate } from './pricing.
 @Component({
   selector: 'tohfa-fair-price-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TohfaTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
       :host {
         display: block;
+        font-family: 'Manrope', sans-serif;
+      }
+      .page-header {
+        margin-bottom: var(--tohfa-space-lg, 24px);
+      }
+      .page-title {
+        font-size: var(--tohfa-font-size-h1, 30px);
+        font-weight: 700;
+        color: var(--tohfa-neutral-900, #1f2937);
+        letter-spacing: -0.01em;
+        margin: 0 0 4px 0;
       }
       .toolbar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: var(--tohfa-space-lg);
-        gap: var(--tohfa-space-md);
+        margin-bottom: var(--tohfa-space-lg, 24px);
+        gap: var(--tohfa-space-md, 16px);
         flex-wrap: wrap;
+        background: var(--tohfa-neutral-50, #f9fafb);
+        border: 1px solid var(--tohfa-neutral-200, #eceff3);
+        padding: var(--tohfa-space-md, 16px);
+        border-radius: var(--tohfa-radius-md, 8px);
       }
       .filters {
         display: flex;
-        gap: var(--tohfa-space-sm);
+        gap: var(--tohfa-space-sm, 8px);
         align-items: center;
         flex-wrap: wrap;
       }
       select,
       input {
-        padding: var(--tohfa-space-sm) var(--tohfa-space-md);
-        border: 1px solid var(--tohfa-neutral-grey300);
-        border-radius: var(--tohfa-radius-input);
-        background: var(--tohfa-neutral-white);
-        font-family: var(--tohfa-font-sans);
-        font-size: var(--tohfa-font-size-body-small);
-        color: var(--tohfa-on-surface);
+        padding: 9px var(--tohfa-space-md, 12px);
+        border: 1.5px solid var(--tohfa-neutral-300, #e5e7eb);
+        border-radius: var(--tohfa-radius-sm, 6px);
+        background: var(--tohfa-white, #ffffff);
+        font-family: 'Manrope', sans-serif;
+        font-size: var(--tohfa-font-size-body, 14px);
+        color: var(--tohfa-neutral-900, #1f2937);
+        outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+      }
+      select:hover,
+      input:hover {
+        border-color: var(--tohfa-neutral-400, #d1d5db);
+      }
+      select:focus,
+      input:focus {
+        border-color: var(--tohfa-primary, #2f7d32);
+        box-shadow: 0 0 0 3px rgba(47, 125, 50, 0.14);
+        background: var(--tohfa-primary-pale, #f4fbf4);
       }
       .btn-primary {
-        background: var(--tohfa-primary);
-        color: var(--tohfa-neutral-white);
-        padding: var(--tohfa-space-sm) var(--tohfa-space-lg);
+        background: var(--tohfa-primary, #2f7d32);
+        color: var(--tohfa-white, #ffffff);
+        padding: 9px var(--tohfa-space-lg, 24px);
         border: none;
-        border-radius: var(--tohfa-radius-button);
-        font-family: var(--tohfa-font-sans);
-        font-weight: var(--tohfa-font-weight-semibold);
+        border-radius: var(--tohfa-radius-button, 8px);
+        font-family: 'Manrope', sans-serif;
+        font-weight: 600;
         cursor: pointer;
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-body, 14px);
+        transition: background 0.15s ease;
       }
       .btn-primary:hover {
-        background: var(--tohfa-primary-pressed);
-      }
-      .table-card {
-        background: var(--tohfa-neutral-white);
-        border-radius: var(--tohfa-radius-card-max);
-        box-shadow: 0 1px 3px rgba(4, 52, 44, 0.08);
-        overflow: hidden;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-      }
-      th,
-      td {
-        padding: var(--tohfa-space-md) var(--tohfa-space-lg);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
-        font-size: var(--tohfa-font-size-body-small);
-      }
-      th {
-        background: var(--tohfa-surface);
-        font-weight: var(--tohfa-font-weight-semibold);
-        font-size: var(--tohfa-font-size-footnote);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--tohfa-on-surface);
+        background: var(--tohfa-primary-dark, #1b5e20);
       }
       .money-val {
-        font-family: var(--tohfa-font-mono);
-        font-weight: var(--tohfa-font-weight-bold);
-        color: var(--tohfa-primary-pressed);
+        font-family: var(--tohfa-font-mono, monospace);
+        font-weight: 700;
+        color: var(--tohfa-primary-dark, #1b5e20);
       }
       .grade-badge {
         display: inline-block;
-        padding: var(--tohfa-space-xs) var(--tohfa-space-sm);
-        border-radius: var(--tohfa-radius-pill);
-        font-size: var(--tohfa-font-size-caption);
-        font-weight: var(--tohfa-font-weight-semibold);
-        background: var(--tohfa-neutral-grey100);
-      }
-      .empty-row {
-        text-align: center;
-        padding: var(--tohfa-space-xxl);
-        color: var(--tohfa-neutral-grey500);
+        padding: 4px 10px;
+        border-radius: var(--tohfa-radius-full, 999px);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        background: var(--tohfa-neutral-100, #f3f4f6);
+        color: var(--tohfa-neutral-700, #4b5563);
       }
       /* Drawer */
       .drawer-backdrop {
@@ -178,6 +179,10 @@ import { PricingService, type FairPrice, type FairPriceCreate } from './pricing.
     `,
   ],
   template: `
+    <div class="page-header">
+      <h1 class="page-title">Fair Price Intelligence</h1>
+    </div>
+
     <div class="toolbar">
       <div class="filters">
         <select [(ngModel)]="filterGrade" (change)="loadFairPrices()">
@@ -205,40 +210,36 @@ import { PricingService, type FairPrice, type FairPriceCreate } from './pricing.
       </button>
     </div>
 
-    <div class="table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Crop</th>
-            <th>Grade</th>
-            <th>Ceiling Price (₹/kg)</th>
-            <th>Frequency</th>
-            <th>Effective Window</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of fairPrices()">
-            <td>
-              <strong>{{ item.cropName }}</strong>
-            </td>
-            <td>
-              <span class="grade-badge">{{ item.grade }}</span>
-            </td>
-            <td class="money-val">₹{{ item.ceilingPrice }}</td>
-            <td>{{ item.frequency }}</td>
-            <td>
-              {{ item.effectiveFrom }} &rarr;
-              {{ item.effectiveTo ? item.effectiveTo : 'Open' }}
-            </td>
-            <td>{{ item.notes || '—' }}</td>
-          </tr>
-          <tr *ngIf="fairPrices().length === 0">
-            <td colspan="6" class="empty-row">No fair price ceilings in effect.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <tohfa-table
+      [rows]="fairPrices()"
+      [colspan]="6"
+      emptyMessage="No fair price ceilings in effect."
+    >
+      <ng-template #header>
+        <th>Crop</th>
+        <th>Grade</th>
+        <th>Ceiling Price (₹/kg)</th>
+        <th>Frequency</th>
+        <th>Effective Window</th>
+        <th>Notes</th>
+      </ng-template>
+
+      <ng-template #row let-item>
+        <td>
+          <strong>{{ item.cropName }}</strong>
+        </td>
+        <td>
+          <span class="grade-badge">{{ item.grade }}</span>
+        </td>
+        <td class="money-val">₹{{ item.ceilingPrice }}</td>
+        <td>{{ item.frequency }}</td>
+        <td>
+          {{ item.effectiveFrom }} &rarr;
+          {{ item.effectiveTo ? item.effectiveTo : 'Open' }}
+        </td>
+        <td>{{ item.notes || '—' }}</td>
+      </ng-template>
+    </tohfa-table>
 
     <!-- Create Ceiling Drawer -->
     <div class="drawer-backdrop" *ngIf="isDrawerOpen()">

@@ -1,7 +1,13 @@
 export const GOODS_RECEIPT_STRINGS = {
+  // Page
   title: 'Warehouse Intake & Quality Checks',
-  subtitle: 'Receive incoming produce against purchase orders, perform the 5-point quality inspection, or issue quality counter-offers.',
+
+  subtitle:
+    'Receive incoming produce against purchase orders, perform the 5-point quality inspection, or issue quality counter-offers.',
+
   receiveButton: '+ Receive Goods (GRN)',
+
+  // Tabs
   tabs: {
     all: 'All Receipts',
     awaitingQc: 'Awaiting QC',
@@ -10,6 +16,8 @@ export const GOODS_RECEIPT_STRINGS = {
     rejected: 'Rejected',
     counterOffered: 'Counter-Offered',
   },
+
+  // Table
   table: {
     grnNumber: 'GRN Number',
     poNumber: 'PO Number',
@@ -23,7 +31,10 @@ export const GOODS_RECEIPT_STRINGS = {
     actions: 'Actions',
     emptyMessage: 'No goods receipts found in queue.',
   },
+
+  // Modals
   modal: {
+    // Receive Goods
     receiveTitle: 'New Goods Intake (GRN)',
     poId: 'Purchase Order ID (UUID)',
     warehouseId: 'Warehouse ID (UUID)',
@@ -34,6 +45,7 @@ export const GOODS_RECEIPT_STRINGS = {
     submitReceive: 'Create Goods Receipt',
     cancel: 'Cancel',
 
+    // Quality Check
     qcTitle: '5-Point Quality Inspection',
     assignedGrade: 'Assigned Grade',
     outcome: 'Inspection Outcome',
@@ -43,12 +55,15 @@ export const GOODS_RECEIPT_STRINGS = {
     priceAdjustment: 'Price Adjustment (₹/kg)',
     submitQc: 'Complete Quality Check',
 
+    // Counter Offer
     counterTitle: 'Quality Shortfall Counter-Offer',
     counterPrice: 'Revised Price (₹/kg)',
     counterQty: 'Countered Quantity (kg)',
     counterMessage: 'Reason / Message to Farmer',
     submitCounter: 'Send Counter-Offer (24h Expiry)',
   },
+
+  // Quality Check Points
   qcPoints: {
     appearance: '1. Appearance & Color',
     sizeUniformity: '2. Size & Shape Uniformity',

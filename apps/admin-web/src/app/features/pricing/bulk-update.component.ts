@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TohfaTableComponent } from '../../shared/tohfa-table.component';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PricingService, type BulkFairPriceItem, type FairPriceCreate } from './pricing.service';
@@ -6,7 +7,7 @@ import { PricingService, type BulkFairPriceItem, type FairPriceCreate } from './
 @Component({
   selector: 'tohfa-bulk-update',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TohfaTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
@@ -62,24 +63,6 @@ import { PricingService, type BulkFairPriceItem, type FairPriceCreate } from './
       .btn-secondary:disabled {
         opacity: 0.5;
         cursor: not-allowed;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: var(--tohfa-space-md);
-      }
-      th,
-      td {
-        padding: var(--tohfa-space-sm) var(--tohfa-space-md);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
-        font-size: var(--tohfa-font-size-body-small);
-        text-align: left;
-      }
-      th {
-        background: var(--tohfa-surface);
-        font-size: var(--tohfa-font-size-footnote);
-        text-transform: uppercase;
-        font-weight: var(--tohfa-font-weight-semibold);
       }
       .row-error {
         background: rgba(226, 75, 74, 0.08);
@@ -147,40 +130,36 @@ import { PricingService, type BulkFairPriceItem, type FairPriceCreate } from './
 
       <div *ngIf="parsedItems().length > 0">
         <h3>Preview Batch ({{ parsedItems().length }} rows)</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Crop ID</th>
-              <th>Grade</th>
-              <th>Ceiling Price (₹)</th>
-              <th>Frequency</th>
-              <th>Effective From</th>
-              <th>Status / Validation</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              *ngFor="let row of parsedItems(); let i = index"
-              [class.row-error]="row.status === 'error'"
-              [class.row-success]="row.status === 'success'"
-            >
-              <td>{{ i + 1 }}</td>
-              <td><code>{{ row.cropId }}</code></td>
-              <td>{{ row.grade }}</td>
-              <td><strong>₹{{ row.ceilingPrice }}</strong></td>
-              <td>{{ row.frequency }}</td>
-              <td>{{ row.effectiveFrom }}</td>
-              <td>
-                <span *ngIf="row.status === 'error'" class="error-text">
-                  ⚠️ {{ row.errorMessage }}
-                </span>
-                <span *ngIf="row.status === 'success'">✅ Applied</span>
-                <span *ngIf="row.status === 'pending' || !row.status">Ready</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <tohfa-table
+          [rows]="parsedItems()"
+          [colspan]="7"
+        >
+          <ng-template #header>
+            <th>#</th>
+            <th>Crop ID</th>
+            <th>Grade</th>
+            <th>Ceiling Price (₹)</th>
+            <th>Frequency</th>
+            <th>Effective From</th>
+            <th>Status / Validation</th>
+          </ng-template>
+
+          <ng-template #row let-row let-i="index">
+            <td [class.row-error]="row.status === 'error'" [class.row-success]="row.status === 'success'">{{ i + 1 }}</td>
+            <td [class.row-error]="row.status === 'error'" [class.row-success]="row.status === 'success'"><code>{{ row.cropId }}</code></td>
+            <td [class.row-error]="row.status === 'error'" [class.row-success]="row.status === 'success'">{{ row.grade }}</td>
+            <td [class.row-error]="row.status === 'error'" [class.row-success]="row.status === 'success'"><strong>₹{{ row.ceilingPrice }}</strong></td>
+            <td [class.row-error]="row.status === 'error'" [class.row-success]="row.status === 'success'">{{ row.frequency }}</td>
+            <td [class.row-error]="row.status === 'error'" [class.row-success]="row.status === 'success'">{{ row.effectiveFrom }}</td>
+            <td [class.row-error]="row.status === 'error'" [class.row-success]="row.status === 'success'">
+              <span *ngIf="row.status === 'error'" class="error-text">
+                ⚠️ {{ row.errorMessage }}
+              </span>
+              <span *ngIf="row.status === 'success'">✅ Applied</span>
+              <span *ngIf="row.status === 'pending' || !row.status">Ready</span>
+            </td>
+          </ng-template>
+        </tohfa-table>
       </div>
     </div>
   `,

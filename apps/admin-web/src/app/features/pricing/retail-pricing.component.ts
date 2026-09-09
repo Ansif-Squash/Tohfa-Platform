@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TohfaTableComponent } from '../../shared/tohfa-table.component';
 import { ChangeDetectionStrategy, Component, inject, signal, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RbacService } from '../../core/rbac.service';
@@ -7,7 +8,7 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
 @Component({
   selector: 'tohfa-retail-pricing',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TohfaTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
@@ -44,30 +45,6 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
         cursor: pointer;
         font-size: var(--tohfa-font-size-body-small);
       }
-      .table-card {
-        background: var(--tohfa-neutral-white);
-        border-radius: var(--tohfa-radius-card-max);
-        box-shadow: 0 1px 3px rgba(4, 52, 44, 0.08);
-        overflow: hidden;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-      }
-      th,
-      td {
-        padding: var(--tohfa-space-md) var(--tohfa-space-lg);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
-        font-size: var(--tohfa-font-size-body-small);
-      }
-      th {
-        background: var(--tohfa-surface);
-        font-weight: var(--tohfa-font-weight-semibold);
-        font-size: var(--tohfa-font-size-footnote);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
       .price-val {
         font-family: var(--tohfa-font-mono);
         font-weight: var(--tohfa-font-weight-bold);
@@ -83,11 +60,6 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
         border-radius: var(--tohfa-radius-pill);
         font-size: var(--tohfa-font-size-caption);
         background: var(--tohfa-neutral-grey100);
-      }
-      .empty-row {
-        text-align: center;
-        padding: var(--tohfa-space-xxl);
-        color: var(--tohfa-neutral-grey500);
       }
       /* Drawer */
       .drawer-backdrop {
@@ -186,42 +158,38 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
       </button>
     </div>
 
-    <div class="table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Crop</th>
-            <th>Grade</th>
-            <th>Retail Price (₹/kg)</th>
-            <th>Governing Ceiling (₹/kg)</th>
-            <th>Markup %</th>
-            <th>GST Incl.</th>
-            <th>Effective Window</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of retailPrices()">
-            <td>
-              <strong>{{ item.cropName }}</strong>
-            </td>
-            <td>
-              <span class="grade-badge">{{ item.grade }}</span>
-            </td>
-            <td class="price-val">₹{{ item.price }}</td>
-            <td class="ceiling-val">₹{{ item.ceilingPrice }}</td>
-            <td>{{ item.markupPct !== null ? item.markupPct + '%' : '—' }}</td>
-            <td>{{ item.gstInclusive ? 'Yes' : 'No' }}</td>
-            <td>
-              {{ item.effectiveFrom }} &rarr;
-              {{ item.effectiveTo ? item.effectiveTo : 'Open' }}
-            </td>
-          </tr>
-          <tr *ngIf="retailPrices().length === 0">
-            <td colspan="7" class="empty-row">No active retail prices found.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <tohfa-table
+      [rows]="retailPrices()"
+      [colspan]="7"
+      emptyMessage="No active retail prices found."
+    >
+      <ng-template #header>
+        <th>Crop</th>
+        <th>Grade</th>
+        <th>Retail Price (₹/kg)</th>
+        <th>Governing Ceiling (₹/kg)</th>
+        <th>Markup %</th>
+        <th>GST Incl.</th>
+        <th>Effective Window</th>
+      </ng-template>
+
+      <ng-template #row let-item>
+        <td>
+          <strong>{{ item.cropName }}</strong>
+        </td>
+        <td>
+          <span class="grade-badge">{{ item.grade }}</span>
+        </td>
+        <td class="price-val">₹{{ item.price }}</td>
+        <td class="ceiling-val">₹{{ item.ceilingPrice }}</td>
+        <td>{{ item.markupPct !== null ? item.markupPct + '%' : '—' }}</td>
+        <td>{{ item.gstInclusive ? 'Yes' : 'No' }}</td>
+        <td>
+          {{ item.effectiveFrom }} &rarr;
+          {{ item.effectiveTo ? item.effectiveTo : 'Open' }}
+        </td>
+      </ng-template>
+    </tohfa-table>
 
     <!-- Create Retail Price Drawer -->
     <div class="drawer-backdrop" *ngIf="isDrawerOpen()">

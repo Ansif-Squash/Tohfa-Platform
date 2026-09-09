@@ -148,9 +148,10 @@ export function createWalletService(
             createdBy: input.createdBy !== undefined ? input.createdBy : (scope.userId === '00000000-0000-0000-0000-000000000000' ? null : (scope.userId ?? null)),
           });
           return toWalletTransactionResponse(row);
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const pgErr = err as { code?: string; hint?: string; message?: string };
           // A. Unique constraint violation on idempotency_key
-          if (err.code === '23505') {
+          if (pgErr.code === '23505') {
             try {
               await activeTx.query('ROLLBACK');
             } catch {
@@ -173,15 +174,15 @@ export function createWalletService(
           }
 
           // B. Trigger check constraints (insufficient balance or frozen status)
-          if (err.code === '23514') {
-            if (err.hint === 'code: WALLET_INSUFFICIENT' || err.message?.includes('insufficient wallet balance')) {
+          if (pgErr.code === '23514') {
+            if (pgErr.hint === 'code: WALLET_INSUFFICIENT' || pgErr.message?.includes('insufficient wallet balance')) {
               throw new AppError('WALLET_INSUFFICIENT', {
                 status: 402,
                 detail: 'Insufficient wallet balance.',
                 cause: err,
               });
             }
-            if (err.hint === 'code: WALLET_NOT_ACTIVE' || err.message?.includes('no movement permitted')) {
+            if (pgErr.hint === 'code: WALLET_NOT_ACTIVE' || pgErr.message?.includes('no movement permitted')) {
               throw new AppError('FORBIDDEN', {
                 detail: 'Wallet is not active.',
                 cause: err,
