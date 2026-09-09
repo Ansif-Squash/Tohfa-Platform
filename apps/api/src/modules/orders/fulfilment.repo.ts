@@ -6,7 +6,7 @@ import type {
   OrderTracking,
   OrderTrackingEvent,
 } from './fulfilment.schema.js';
-import type { OrderStatus, ProduceGrade, SalesChannel, FulfillmentType } from './orders.schema.js';
+import type { OrderStatus, ProduceGrade, SalesChannel, FulfillmentType, DeliverySlot } from './orders.schema.js';
 import type { Money } from '@tohfa/shared-types';
 
 interface FulfilmentOrderRow {
@@ -254,7 +254,7 @@ export const fulfilmentRepo: FulfilmentRepo = {
       deliveryFee: order.deliveryFee as Money,
       discount: order.discount as Money,
       gstAmount: order.gstAmount as Money,
-      deliverySlot: order.deliverySlot,
+      deliverySlot: order.deliverySlot as DeliverySlot | null,
       deliveryAddressId: order.deliveryAddressId,
       otpRequired: order.otpRequired,
       cancellationReason: order.cancellationReason,

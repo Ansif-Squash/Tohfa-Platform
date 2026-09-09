@@ -13,6 +13,7 @@ import {
   newId,
 } from '../../test/factories.js';
 import { createTopupService } from './topup.service.js';
+import type { WalletService } from '../wallet/wallet.service.js';
 import { MockPaymentGateway } from '../../payments/mock.gateway.js';
 
 describe('TopupService Unit Tests', () => {
@@ -29,7 +30,7 @@ describe('TopupService Unit Tests', () => {
 
     await expect(
       service.createTopup(actor, aScope(), {
-        amount: parseMoney('500.00'),
+        amount: parseMoney('100.00'),
         mode: 'UPI',
       }),
     ).rejects.toMatchObject({
@@ -43,7 +44,7 @@ describe('TopupService Unit Tests', () => {
       gateway: mockGateway,
       walletSvc: {
         getWalletForActor: async () => ({ id: newId(), balance: '0.00' as Money, ownerType: 'CUSTOMER' as const, ownerId: newId(), status: 'ACTIVE' as const, created_at: new Date() }),
-      } as unknown as Parameters<typeof createTopupService>[0]['walletSvc'],
+      } as unknown as WalletService,
     });
     const actor = {
       userId: newId(),
