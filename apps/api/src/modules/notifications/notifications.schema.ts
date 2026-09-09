@@ -26,3 +26,17 @@ export const notificationResponse = z.object({
   createdAt: z.string().datetime(),
 });
 export type NotificationResponse = z.infer<typeof notificationResponse>;
+
+export const registerDeviceTokenBody = z.object({
+  token: z.string().min(1).max(512),
+  platform: z.enum(['android', 'ios', 'web']),
+  app: z.enum(['farmer-mobile', 'customer-mobile', 'admin-web']),
+  locale: z.enum(['en', 'ta']).default('en'),
+});
+export type RegisterDeviceTokenBody = z.infer<typeof registerDeviceTokenBody>;
+
+export const revokeDeviceTokenParam = z.object({
+  token: z.string().min(1),
+});
+export type RevokeDeviceTokenParam = z.infer<typeof revokeDeviceTokenParam>;
+
