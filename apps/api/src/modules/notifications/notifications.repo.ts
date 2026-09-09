@@ -11,6 +11,7 @@ export interface NotificationRow {
   data: Record<string, unknown>;
   status: string;
   provider_message_id: string | null;
+  error?: string | null | undefined;
   sent_at: Date | null;
   read_at: Date | null;
   created_at: Date;
@@ -44,6 +45,27 @@ export interface ListNotificationsOptions {
   unreadOnly?: boolean | undefined;
 }
 
+export interface DeviceTokenRow {
+  id: string;
+  user_id: string;
+  token: string;
+  platform: 'android' | 'ios' | 'web';
+  app: 'farmer-mobile' | 'customer-mobile' | 'admin-web';
+  locale: 'en' | 'ta';
+  last_seen: Date;
+  revoked: boolean;
+  created_at: Date;
+  updated_at: Date | null;
+}
+
+export interface RegisterDeviceTokenParams {
+  userId: string;
+  token: string;
+  platform: 'android' | 'ios' | 'web';
+  app: 'farmer-mobile' | 'customer-mobile' | 'admin-web';
+  locale?: 'en' | 'ta' | undefined;
+}
+
 export interface NotificationsRepo {
   listByUserId(
     db: Executor,
@@ -52,8 +74,17 @@ export interface NotificationsRepo {
   ): Promise<{ items: NotificationRow[]; nextCursor: string | null; hasMore: boolean; unreadCount: number }>;
   markAsRead(db: Executor, id: string, userId: string): Promise<NotificationRow | null>;
   createNotification(db: Executor, params: CreateNotificationParams): Promise<NotificationRow | null>;
+  updateNotificationDelivery(
+    db: Executor,
+    id: string,
+    outcome: { status: 'SENT' | 'DELIVERED' | 'FAILED'; providerMessageId?: string | undefined; error?: string | undefined },
+  ): Promise<NotificationRow | null>;
   findTemplate(db: Executor, code: string, channel: string, locale: 'en' | 'ta'): Promise<NotificationTemplateRow | null>;
   getUserPreferredLocale(db: Executor, userId: string): Promise<'en' | 'ta'>;
+  getUserMobile(db: Executor, userId: string): Promise<string | null>;
+  registerDeviceToken(db: Executor, params: RegisterDeviceTokenParams): Promise<DeviceTokenRow>;
+  revokeDeviceToken(db: Executor, token: string, userId: string): Promise<boolean>;
+  findActiveDeviceTokens(db: Executor, userId: string, app?: string | undefined): Promise<DeviceTokenRow[]>;
 }
 
 export const notificationsRepo: NotificationsRepo = {
@@ -72,6 +103,7 @@ export const notificationsRepo: NotificationsRepo = {
               status, provider_message_id, sent_at, read_at, created_at, updated_at
          FROM notifications
         WHERE user_id = $1
+              AND channel = 'IN_APP'
               ${unreadClause}
               ${cursorClause}
         ORDER BY created_at DESC, id DESC
@@ -82,7 +114,7 @@ export const notificationsRepo: NotificationsRepo = {
     const countResult = await db.query<{ count: string }>(
       `SELECT COUNT(*)::text AS count
          FROM notifications
-        WHERE user_id = $1 AND read_at IS NULL`,
+        WHERE user_id = $1 AND channel = 'IN_APP' AND read_at IS NULL`,
       [userId],
     );
 
@@ -179,5 +211,75 @@ export const notificationsRepo: NotificationsRepo = {
       [userId],
     );
     return result.rows[0]?.preferred_locale ?? 'en';
+  },
+
+  async updateNotificationDelivery(db, id, outcome) {
+    const sentAtClause = outcome.status === 'SENT' || outcome.status === 'DELIVERED' ? ', sent_at = COALESCE(sent_at, now())' : '';
+    const result = await db.query<NotificationRow>(
+      `UPDATE notifications
+          SET status = $2,
+              provider_message_id = COALESCE($3, provider_message_id),
+              error = $4,
+              updated_at = now()
+              ${sentAtClause}
+        WHERE id = $1
+        RETURNING id, user_id, template_id, channel, title, body, locale, data,
+                  status, provider_message_id, sent_at, read_at, created_at, updated_at`,
+      [id, outcome.status, outcome.providerMessageId ?? null, outcome.error ?? null],
+    );
+    return result.rows[0] ?? null;
+  },
+
+  async getUserMobile(db, userId) {
+    const result = await db.query<{ mobile: string }>(
+      `SELECT mobile FROM users WHERE id = $1 LIMIT 1`,
+      [userId],
+    );
+    return result.rows[0]?.mobile ?? null;
+  },
+
+  async registerDeviceToken(db, params) {
+    const result = await db.query<DeviceTokenRow>(
+      `INSERT INTO device_tokens (user_id, token, platform, app, locale, last_seen, revoked)
+       VALUES ($1, $2, $3, $4, $5, now(), false)
+       ON CONFLICT (token) DO UPDATE
+         SET user_id = EXCLUDED.user_id,
+             platform = EXCLUDED.platform,
+             app = EXCLUDED.app,
+             locale = EXCLUDED.locale,
+             last_seen = now(),
+             revoked = false,
+             updated_at = now()
+       RETURNING id, user_id, token, platform, app, locale, last_seen, revoked, created_at, updated_at`,
+      [params.userId, params.token, params.platform, params.app, params.locale ?? 'en'],
+    );
+    return result.rows[0]!;
+  },
+
+  async revokeDeviceToken(db, token, userId) {
+    const result = await db.query(
+      `UPDATE device_tokens
+          SET revoked = true,
+              updated_at = now()
+        WHERE token = $1 AND user_id = $2`,
+      [token, userId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  },
+
+  async findActiveDeviceTokens(db, userId, app) {
+    const appClause = app ? `AND app = $2` : '';
+    const params: unknown[] = [userId];
+    if (app) params.push(app);
+
+    const result = await db.query<DeviceTokenRow>(
+      `SELECT id, user_id, token, platform, app, locale, last_seen, revoked, created_at, updated_at
+         FROM device_tokens
+        WHERE user_id = $1 AND revoked = false
+              ${appClause}
+        ORDER BY last_seen DESC`,
+      params,
+    );
+    return result.rows;
   },
 };
