@@ -200,16 +200,11 @@ importers:
         specifier: ^8.0.0
         version: 8.0.0
       '@react-native-async-storage/async-storage':
-<<<<<<< HEAD
-        specifier: ^3.1.1
-        version: 3.1.1(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0))(react@18.2.0)
-=======
         specifier: ^1.23.1
         version: 1.24.0(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0))
       '@tanstack/react-query':
         specifier: ^5.28.0
         version: 5.102.8(react@18.2.0)
->>>>>>> ad83f39f24dd411069b1918a9da112a1ce8a3317
       '@tohfa/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -232,27 +227,14 @@ importers:
       '@react-native/metro-config':
         specifier: 0.74.87
         version: 0.74.87(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))
-      '@tanstack/react-query':
-        specifier: ^5.28.0
-        version: 5.102.8(react@18.2.0)
       '@types/react':
         specifier: ^18.2.79
         version: 18.3.31
       '@types/react-test-renderer':
-<<<<<<< HEAD
-        specifier: ^19.1.0
-        version: 19.1.0
-      '@vitejs/plugin-react':
-        specifier: ^6.1.1
-        version: 6.1.1(vite@5.4.21(@types/node@20.19.43)(less@4.2.0)(sass@1.71.1)(terser@5.50.0))
-      react-test-renderer:
-        specifier: ^18.2.0
-=======
         specifier: ^18.0.7
         version: 18.3.1
       react-test-renderer:
         specifier: 18.2.0
->>>>>>> ad83f39f24dd411069b1918a9da112a1ce8a3317
         version: 18.2.0(react@18.2.0)
       typescript:
         specifier: ^5.5.4
@@ -2147,18 +2129,10 @@ packages:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
 
-<<<<<<< HEAD
-  '@react-native-async-storage/async-storage@3.1.1':
-    resolution: {integrity: sha512-z+PnLz1n6ECKhgoHZHkfc+dijXZEyZnNFSajbtE0NEbsJhmX8x9GlOeiMQIKX2E4DUqPSgfIh4FYBv1M49KgPQ==}
-    peerDependencies:
-      react: '*'
-      react-native: '*'
-=======
   '@react-native-async-storage/async-storage@1.24.0':
     resolution: {integrity: sha512-W4/vbwUOYOjco0x3toB8QCr7EjIP6nE9G7o8PMguvvjYT5Awg09lyV4enACRx4s++PPulBiBSjL0KTFx2u0Z/g==}
     peerDependencies:
       react-native: ^0.0.0-0 || >=0.60 <1.0
->>>>>>> ad83f39f24dd411069b1918a9da112a1ce8a3317
 
   '@react-native-community/cli-clean@13.6.9':
     resolution: {integrity: sha512-7Dj5+4p9JggxuVNOjPbduZBAP1SUgNhLKVw5noBUzT/3ZpUZkDM+RCSwyoyg8xKWoE4OrdUAXwAFlMcFDPKykA==}
@@ -2265,9 +2239,6 @@ packages:
   '@rnx-kit/chromium-edge-launcher@1.0.0':
     resolution: {integrity: sha512-lzD84av1ZQhYUS+jsGqJiCMaJO2dn9u+RTT9n9q6D3SaKVwWqv+7AoRKqBu19bkwyE+iFRl1ymr40QS90jVFYg==}
     engines: {node: '>=14.15'}
-
-  '@rolldown/pluginutils@1.0.1':
-    resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
   '@rollup/plugin-commonjs@22.0.2':
     resolution: {integrity: sha512-//NdP6iIwPbMTcazYsiBMbJW7gfmpHom33u1beiIoHDEM0Q9clvtQB1T0efvMqHeKsGohiHo97BCPCkBXdscwg==}
@@ -2710,13 +2681,8 @@ packages:
   '@types/range-parser@1.2.7':
     resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
 
-<<<<<<< HEAD
-  '@types/react-test-renderer@19.1.0':
-    resolution: {integrity: sha512-XD0WZrHqjNrxA/MaR9O22w/RNidWR9YZmBdRGI7wcnWGrv/3dA8wKCJ8m63Sn+tLJhcjmuhOi629N66W6kgWzQ==}
-=======
   '@types/react-test-renderer@18.3.1':
     resolution: {integrity: sha512-vAhnk0tG2eGa37lkU9+s5SoroCsRI08xnsWFiAXOuPH2jqzMbcXvKExXViPi1P5fIklDeCvXqyrdmipFaSkZrA==}
->>>>>>> ad83f39f24dd411069b1918a9da112a1ce8a3317
 
   '@types/react@18.3.31':
     resolution: {integrity: sha512-vfEqpXTvwT91yhmwdfouStN2hSKwTvyRs8qpLfADyrq/kxDw0hZM7Wk9Ug1FELj8hIby+S/+kQCSRFF32nv2Qw==}
@@ -2838,22 +2804,6 @@ packages:
     engines: {node: '>=14.6.0'}
     peerDependencies:
       vite: ^3.0.0 || ^4.0.0 || ^5.0.0
-
-  '@vitejs/plugin-react@6.1.1':
-    resolution: {integrity: sha512-yxLaQV9gkhS8ezJqCM6+ndU7mDY6gqAg75NQ+0IjwEI8IYOmQCgkRwHKVSfWXW076DsqMo0Dk+0FK1U+M5RgFw==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    peerDependencies:
-      '@rolldown/plugin-babel': ^0.1.7 || ^0.2.0
-      babel-plugin-react-compiler: ^1.0.0
-      oxc-transform-react: ^0.145.0
-      vite: ^8.0.0
-    peerDependenciesMeta:
-      '@rolldown/plugin-babel':
-        optional: true
-      babel-plugin-react-compiler:
-        optional: true
-      oxc-transform-react:
-        optional: true
 
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
@@ -4399,9 +4349,6 @@ packages:
     engines: {node: ^10 || ^12 || >= 14}
     peerDependencies:
       postcss: ^8.1.0
-
-  idb@8.0.3:
-    resolution: {integrity: sha512-LtwtVyVYO5BqRvcsKuB2iUMnHwPVByPCXFXOpuU96IZPPoPN6xjOGxZQ74pgSVVLQWtUOYgyeL4GE98BY5D3wg==}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -9583,16 +9530,9 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-<<<<<<< HEAD
-  '@react-native-async-storage/async-storage@3.1.1(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0))(react@18.2.0)':
-    dependencies:
-      idb: 8.0.3
-      react: 18.2.0
-=======
   '@react-native-async-storage/async-storage@1.24.0(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0))':
     dependencies:
       merge-options: 3.0.4
->>>>>>> ad83f39f24dd411069b1918a9da112a1ce8a3317
       react-native: 0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0)
 
   '@react-native-community/cli-clean@13.6.9(encoding@0.1.13)':
@@ -9906,8 +9846,6 @@ snapshots:
       rimraf: 3.0.2
     transitivePeerDependencies:
       - supports-color
-
-  '@rolldown/pluginutils@1.0.1': {}
 
   '@rollup/plugin-commonjs@22.0.2(rollup@2.80.0)':
     dependencies:
@@ -10503,11 +10441,7 @@ snapshots:
 
   '@types/range-parser@1.2.7': {}
 
-<<<<<<< HEAD
-  '@types/react-test-renderer@19.1.0':
-=======
   '@types/react-test-renderer@18.3.1':
->>>>>>> ad83f39f24dd411069b1918a9da112a1ce8a3317
     dependencies:
       '@types/react': 18.3.31
 
@@ -10681,11 +10615,6 @@ snapshots:
   '@vitejs/plugin-basic-ssl@1.1.0(vite@5.4.21(@types/node@20.19.43)(less@4.2.0)(sass@1.71.1)(terser@5.29.1))':
     dependencies:
       vite: 5.4.21(@types/node@20.19.43)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
-
-  '@vitejs/plugin-react@6.1.1(vite@5.4.21(@types/node@20.19.43)(less@4.2.0)(sass@1.71.1)(terser@5.50.0))':
-    dependencies:
-      '@rolldown/pluginutils': 1.0.1
-      vite: 5.4.21(@types/node@20.19.43)(less@4.2.0)(sass@1.71.1)(terser@5.50.0)
 
   '@vitest/expect@2.1.9':
     dependencies:
@@ -12522,8 +12451,6 @@ snapshots:
   icss-utils@5.1.0(postcss@8.4.35):
     dependencies:
       postcss: 8.4.35
-
-  idb@8.0.3: {}
 
   ieee754@1.2.1: {}
 
