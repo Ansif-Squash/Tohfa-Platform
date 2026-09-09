@@ -135,8 +135,9 @@ export function createPricingService(
           });
 
           return { fairPrice, affectedRetailPrices };
-        } catch (err: any) {
-          if (err.code === '23505' || err.code === '23P01') {
+        } catch (err: unknown) {
+          const pgErr = err as { code?: string };
+          if (pgErr.code === '23505' || pgErr.code === '23P01') {
             throw new AppError('CONFLICT', {
               status: 409,
               detail: 'A fair price ceiling for this crop, grade, and effective window already exists.',

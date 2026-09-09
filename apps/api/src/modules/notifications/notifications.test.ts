@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../app.js';
-import { signAccessToken } from '../../auth/jwt.js';
 import { eventBus } from '../../events/bus.js';
+import type { Executor } from '../../db/pool.js';
 import { anActor, IDS } from '../../test/factories.js';
 import {
   createNotificationsService,
@@ -373,7 +373,7 @@ describe('Domain Event Bus & Notification Centre (Stories S-15 & S-50)', () => {
       expect(regRes.token).toBe('fcm-device-token-abc');
       expect(regRes.revoked).toBe(false);
 
-      const activeTokens = await repo.findActiveDeviceTokens(null as any, IDS.customer);
+      const activeTokens = await repo.findActiveDeviceTokens(null as unknown as Executor, IDS.customer);
       expect(activeTokens).toHaveLength(1);
       expect(activeTokens[0]?.token).toBe('fcm-device-token-abc');
 
@@ -383,7 +383,7 @@ describe('Domain Event Bus & Notification Centre (Stories S-15 & S-50)', () => {
       };
       expect(revokeRes.success).toBe(true);
 
-      const remainingTokens = await repo.findActiveDeviceTokens(null as any, IDS.customer);
+      const remainingTokens = await repo.findActiveDeviceTokens(null as unknown as Executor, IDS.customer);
       expect(remainingTokens).toHaveLength(0);
     });
   });
@@ -398,7 +398,7 @@ describe('Domain Event Bus & Notification Centre (Stories S-15 & S-50)', () => {
       const walletBalance = { amount: '500.00', credited: true };
 
       // 2. Notification is logged in notifications repo independently
-      const notifRow = await repo.createNotification(null as any, {
+      const notifRow = await repo.createNotification(null as unknown as Executor, {
         userId: IDS.customer,
         channel: 'SMS',
         body: 'Wallet credited with ₹500.00',
@@ -415,7 +415,7 @@ describe('Domain Event Bus & Notification Centre (Stories S-15 & S-50)', () => {
       });
 
       // Update notification status
-      await repo.updateNotificationDelivery(null as any, notifId, {
+      await repo.updateNotificationDelivery(null as unknown as Executor, notifId, {
         status: smsResult.status,
         error: smsResult.error,
       });
@@ -431,7 +431,7 @@ describe('Domain Event Bus & Notification Centre (Stories S-15 & S-50)', () => {
       expect(stored?.error).toBe('Mock SMS provider simulated network failure');
 
       // - Replay/retry with same dedupeKey does NOT create duplicate row
-      const retryRow = await repo.createNotification(null as any, {
+      const retryRow = await repo.createNotification(null as unknown as Executor, {
         userId: IDS.customer,
         channel: 'SMS',
         body: 'Wallet credited with ₹500.00',

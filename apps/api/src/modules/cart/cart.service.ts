@@ -165,8 +165,9 @@ export function createCartService(opts: {
 
         try {
           await repo.reserveAllocation(tx, allocation.id, input.qtyKg);
-        } catch (err: any) {
-          if (err.code === '23514') {
+        } catch (err: unknown) {
+          const pgErr = err as { code?: string };
+          if (pgErr.code === '23514') {
             throw new AppError('STOCK_UNAVAILABLE', {
               status: 409,
               detail: 'Allocation oversold constraint reached.',

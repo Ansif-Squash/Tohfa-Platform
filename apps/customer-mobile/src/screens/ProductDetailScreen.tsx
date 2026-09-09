@@ -26,7 +26,7 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
     <ScrollView style={styles.container}>
       {/* Photos */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoContainer}>
-        {data.photos?.map(photo => (
+        {data.photos?.map((photo: { id: string; url: string }) => (
           <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} />
         ))}
       </ScrollView>
@@ -50,7 +50,7 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
         {data.certifications && data.certifications.length > 0 && (
           <View style={styles.section}>
             <Text style={{ fontSize: 20, fontWeight: "bold" }}>Certifications</Text>
-            {data.certifications.map(cert => (
+            {data.certifications.map((cert: { code: string; name: string }) => (
               <Text key={cert.code} style={{ fontSize: 14 }}>• {cert.name}</Text>
             ))}
           </View>
