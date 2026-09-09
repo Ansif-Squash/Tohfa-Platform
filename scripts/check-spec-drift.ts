@@ -114,7 +114,7 @@ interface SpecAnnotations {
 }
 
 function readSpec(): SpecAnnotations {
-  const lines = readFileSync(OPENAPI_PATH, 'utf8').split('\n');
+  const lines = readFileSync(OPENAPI_PATH, 'utf8').split(/\r?\n/);
 
   const permissions: Annotation[] = [];
   const businessRules: Annotation[] = [];

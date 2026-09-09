@@ -2900,7 +2900,7 @@ The two marked **contradiction** are not questions the client left open; they ar
 | 12 | Multi-role admin assignments allowed? | Yes — modelled as a user_roles join table. Collapsing later is trivial; expanding later is a migration. |
 | 13 | **contradiction** — audit scoring says max 100 points but tiers are set at 650/700/750 | Modelled as SA-configurable data seeded on a 0-100 scale (65/70/75). Needs an explicit answer — this is a defect in the source, not one of the doc's 19 open items. |
 | 14 | **contradiction** — does home delivery exist in v1? The Role Matrix states 'all orders fulfilled via warehouse pickup' and has zero delivery rows; the Requirements doc describes delivery slots, a doorstep OTP and an out-for-delivery state | Build both, pickup-first. If the client confirms pickup-only, roughly 3-4 hours comes straight back out of Day 10. |
-
+/
 ---
 
 *Generated against the TOHFA base repository. Every permission code, `BR-xx` ID and file path in this manual was validated against `docs/rbac.json`, `docs/rules.md` and the repo tree.*
