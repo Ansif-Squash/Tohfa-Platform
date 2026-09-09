@@ -118,7 +118,7 @@ interface ShellNotification {
 
       .role-badge {
         font-family: inherit;
-        background: rgba(255, 255, 255, 0.08);=
+        background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.4);
         color: #fff;
         padding: 10px var(--tohfa-space-md);
