@@ -7,7 +7,7 @@ vi.mock('react-native', () => ({
   View: 'View',
   Text: 'Text',
   ScrollView: 'ScrollView',
-  StyleSheet: { create: (s: any) => s },
+  StyleSheet: { create: (s: Record<string, unknown>) => s },
   ActivityIndicator: 'ActivityIndicator',
   FlatList: 'FlatList',
   TextInput: 'TextInput',
@@ -65,7 +65,7 @@ describe('BR-17: Wallet-first checkout recovery', () => {
   });
 
   it('BR-17: Returns to checkout after insufficient funds top-up recovery', async () => {
-    const mockMutate = vi.fn((opts, callbacks) => {
+    const mockMutate = vi.fn((_opts, callbacks) => {
       // Simulate 422 WALLET_INSUFFICIENT
       callbacks.onError({
         response: {
@@ -80,24 +80,24 @@ describe('BR-17: Wallet-first checkout recovery', () => {
       isPending: false,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof ordersApi.useCheckout>);
 
     vi.spyOn(cartApi, 'useCart').mockReturnValue({
       data: { warehouseId: 'wh-1', subtotal: '1000' },
       isLoading: false,
-    } as any);
+    } as unknown as ReturnType<typeof cartApi.useCart>);
 
-    let component: any;
+    let component!: renderer.ReactTestRenderer;
     await act(async () => {
       component = renderWithProviders(<CheckoutScreen />);
     });
 
     // Find the checkout button and press it
     const texts = component.root.findAllByType('Text');
-    const payText = texts.find((t: any) => t.props.children?.includes('Pay ₹1000'));
-    const payBtn = payText.parent;
+    const payText = texts.find((t: renderer.ReactTestInstance) => t.props.children?.includes('Pay ₹1000'));
+    const payBtn = payText?.parent;
     await act(async () => {
-      payBtn.props.onPress();
+      payBtn?.props.onPress();
     });
 
     // Expect navigation to Topup with shortfall

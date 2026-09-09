@@ -7,7 +7,7 @@ vi.mock('react-native', () => ({
   View: 'View',
   Text: 'Text',
   ScrollView: 'ScrollView',
-  StyleSheet: { create: (s: any) => s },
+  StyleSheet: { create: (s: Record<string, unknown>) => s },
   ActivityIndicator: 'ActivityIndicator',
   FlatList: 'FlatList',
   TextInput: 'TextInput',
@@ -77,9 +77,9 @@ describe('BR-22: Cart locking', () => {
         lockExpiresAt: expiresAt 
       },
       isLoading: false,
-    } as any);
+    } as unknown as ReturnType<typeof cartApi.useCart>);
 
-    let component: any;
+    let component!: renderer.ReactTestRenderer;
     await act(async () => {
       component = renderWithProviders(<CartScreen />);
     });
@@ -91,7 +91,7 @@ describe('BR-22: Cart locking', () => {
 
     // Check if the timer text is rendered correctly
     const texts = component.root.findAllByType('Text');
-    const timerTexts = texts.filter((t: any) => {
+    const timerTexts = texts.filter((t: renderer.ReactTestInstance) => {
       const children = Array.isArray(t.props.children) ? t.props.children.join('') : String(t.props.children);
       return children.includes('Reserved for:');
     });

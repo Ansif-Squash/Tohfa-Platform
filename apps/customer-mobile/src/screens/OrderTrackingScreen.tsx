@@ -4,13 +4,13 @@ import { useOrderTracking } from '../api/orders';
 
 export const OrderTrackingScreen = ({
   orderId,
-  onNavigate,
+  _onNavigate,
 }: {
   orderId?: string | undefined;
-  onNavigate?: ((screen: string, params?: any) => void) | undefined;
+  _onNavigate?: ((screen: string, params?: Record<string, unknown>) => void) | undefined;
 }) => {
   const { data: tracking, isLoading } = useOrderTracking(orderId || '');
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<Array<{ id?: string; status?: string; timestamp: string }>>([]);
 
   useEffect(() => {
     // Attempt SSE connection
@@ -26,8 +26,8 @@ export const OrderTrackingScreen = ({
           setEvents((prev) => [...prev, data]);
         };
       }
-    } catch (e) {
-      console.log('EventSource not available, relying on polling');
+    } catch {
+      // EventSource not available in environment, relying on polling
     }
 
     return () => {

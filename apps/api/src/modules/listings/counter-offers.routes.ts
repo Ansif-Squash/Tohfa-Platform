@@ -83,14 +83,14 @@ adminListingsRouter.post(
         }
 
         if (req.scope) {
-          const isOwn = (scope: any, row: any) => {
+          const isOwn = (scope: { level: string; userId: string }, row: { ownerUserId: string }) => {
             if (scope.level === 'own') {
               return row.ownerUserId === scope.userId;
             }
             return false;
           };
           if (isOwn(req.scope, listing)) {
-            const denied = await (counterOffersService as any)['routeAwayFromOwner'](tx, req.scope, listing, 'approve');
+            const denied = await (counterOffersService as unknown as { routeAwayFromOwner: (tx: unknown, scope: unknown, listing: unknown, action: string) => Promise<AppError> })['routeAwayFromOwner'](tx, req.scope, listing, 'approve');
             throw denied;
           }
         }
@@ -163,7 +163,7 @@ adminListingsRouter.post(
             id: updatedListing.id,
             farmerId: updatedListing.farmerId,
             cropId: updatedListing.cropId,
-            grade: updatedListing.grade as any,
+            grade: updatedListing.grade as Parameters<typeof purchaseOrdersService.createForListing>[3]['grade'],
             quantityKg: updatedListing.quantityKg,
             askingPricePerKg: updatedListing.askingPricePerKg,
             finalPricePerKg: updatedListing.finalPricePerKg,

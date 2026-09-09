@@ -10,6 +10,7 @@ import {
   newId,
 } from '../../test/factories.js';
 import { createPayoutsService } from './payouts.service.js';
+import type { PayoutRepo, PayoutRow } from './payouts.repo.js';
 
 // ---------------------------------------------------------------------------
 // Unit Tests — BR-31 dual-approval logic (no DB needed)
@@ -26,7 +27,7 @@ describe('PayoutsService Unit Tests (BR-31)', () => {
         updatePayoutStatus: async () => {},
         listPayoutDues: async () => ({ items: [], totals: { totalDue: '0.00', farmerCount: 0 }, nextCursor: null }),
         findPayoutByIdempotencyKey: async () => null,
-      } as any,
+      } as unknown as PayoutRepo,
     });
 
     const actor = {
@@ -75,9 +76,9 @@ describe('PayoutsService Unit Tests (BR-31)', () => {
         updatePayoutStatus: async () => {},
         listPayoutDues: async () => ({ items: [], totals: { totalDue: '0.00', farmerCount: 0 }, nextCursor: null }),
         getFarmerName: async () => 'Ravi Kumar',
-        createPayout: async () => ({ payout: {} as any, approvals: [] }),
+        createPayout: async () => ({ payout: {} as PayoutRow, approvals: [] }),
         findPayoutByIdempotencyKey: async () => null,
-      } as any,
+      } as unknown as PayoutRepo,
     });
 
     const actor = {
@@ -125,9 +126,9 @@ describe('PayoutsService Unit Tests (BR-31)', () => {
         updatePayoutStatus: async () => {},
         listPayoutDues: async () => ({ items: [], totals: { totalDue: '0.00', farmerCount: 0 }, nextCursor: null }),
         getFarmerName: async () => 'Test Farmer',
-        createPayout: async () => ({ payout: {} as any, approvals: [] }),
+        createPayout: async () => ({ payout: {} as PayoutRow, approvals: [] }),
         findPayoutByIdempotencyKey: async () => null,
-      } as any,
+      } as unknown as PayoutRepo,
     });
 
     const actor = {
@@ -171,11 +172,11 @@ describe('PayoutsService Unit Tests (BR-31)', () => {
         }),
         listPayoutDues: async () => ({ items: [], totals: { totalDue: '0.00', farmerCount: 0 }, nextCursor: null }),
         getFarmerName: async () => 'Test',
-        createPayout: async () => ({ payout: {} as any, approvals: [] }),
+        createPayout: async () => ({ payout: {} as PayoutRow, approvals: [] }),
         addApproval: async () => [],
         updatePayoutStatus: async () => {},
         findPayoutByIdempotencyKey: async () => null,
-      } as any,
+      } as unknown as PayoutRepo,
     });
 
     const actor = {
@@ -354,7 +355,7 @@ describeIfDatabase('Payouts Integration Tests (BR-31, BR-35)', () => {
     expect(res.body.totals).toHaveProperty('farmerCount');
 
     // Our seeded farmer should appear
-    const ourDue = res.body.items.find((d: any) => d.farmerId === farmerId);
+    const ourDue = res.body.items.find((d: { farmerId: string }) => d.farmerId === farmerId);
     expect(ourDue).toBeDefined();
     expect(ourDue.ageBucket).toMatch(/D0_7|D8_15|D16_30|D30_PLUS/);
   });

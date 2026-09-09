@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
-import { useCart, useUpdateCart, useAddToCart, useClearCart } from '../api/cart';
+import { useCart } from '../api/cart';
 
 export const CartScreen = ({
   onNavigate,
 }: {
-  onNavigate?: ((screen: string, params?: any) => void) | undefined;
+  onNavigate?: ((screen: string, params?: Record<string, unknown>) => void) | undefined;
 }) => {
   const { data: cart, isLoading, error, refetch } = useCart();
   const [timeLeft, setTimeLeft] = useState<string>('');

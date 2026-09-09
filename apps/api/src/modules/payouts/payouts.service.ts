@@ -4,7 +4,7 @@ import type { ResolvedScope } from '../../rbac/requirePermission.js';
 import { pool, withTransaction } from '../../db/pool.js';
 import { AppError } from '../../http/problem.js';
 import { writeAuditLog } from '../../audit/auditLog.js';
-import { payoutsRepo, type PayoutRepo } from './payouts.repo.js';
+import { payoutsRepo, type PayoutRepo, type PayoutRow, type PayoutApprovalRow } from './payouts.repo.js';
 import type {
   PayoutDue,
   PayoutDuesTotals,
@@ -51,7 +51,7 @@ export interface PayoutsService {
 // ---------------------------------------------------------------------------
 
 function toResponse(
-  payout: any,
+  payout: PayoutRow,
   approvals: Array<{ approver_id: string; approved_at: Date }>,
 ): PayoutResponse {
   return {
@@ -124,7 +124,7 @@ export function createPayoutsService(opts: { repo?: PayoutRepo } = {}): PayoutsS
 
       const requiresDualApproval = amountNum > DUAL_APPROVAL_THRESHOLD;
 
-      let result: { payout: any; approvals: any[] };
+      let result: { payout: PayoutRow; approvals: PayoutApprovalRow[] };
 
       await withTransaction(async (tx) => {
         result = await repo.createPayout(tx, {
@@ -227,7 +227,7 @@ export function createPayoutsService(opts: { repo?: PayoutRepo } = {}): PayoutsS
         });
       }
 
-      let updatedApprovals: any[];
+      let updatedApprovals: PayoutApprovalRow[];
 
       await withTransaction(async (tx) => {
         updatedApprovals = await repo.addApproval(tx, {

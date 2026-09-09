@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useCart } from '../api/cart';
 import { useCheckout } from '../api/orders';
 
-// @ts-ignore
+// @ts-expect-error Optional navigation package in non-router contexts
 import { useNavigation } from '@react-navigation/native';
 
 export const CheckoutScreen = ({
   onNavigate,
 }: {
-  onNavigate?: ((screen: string, params?: any) => void) | undefined;
+  onNavigate?: ((screen: string, params?: Record<string, unknown>) => void) | undefined;
 }) => {
   const { data: cart, isLoading: isCartLoading } = useCart();
   const checkoutMutation = useCheckout();
@@ -19,12 +19,14 @@ export const CheckoutScreen = ({
     return 'id-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15);
   }, []);
 
-  let navigation: any;
+  let navigation: { navigate?: (screen: string, params?: Record<string, unknown>) => void } | undefined;
   try {
     navigation = useNavigation();
-  } catch {}
+  } catch {
+    // Navigation not available in isolated test environments
+  }
 
-  const navigate = (screen: string, params?: any) => {
+  const navigate = (screen: string, params?: Record<string, unknown>) => {
     if (onNavigate) {
       onNavigate(screen, params);
     } else if (navigation?.navigate) {
@@ -48,8 +50,8 @@ export const CheckoutScreen = ({
         onSuccess: (data) => {
           navigate('OrderTracking', { orderId: data.id });
         },
-        onError: (error: any) => {
-          const response = error?.response;
+        onError: (error: unknown) => {
+          const response = (error as { response?: { status?: number; data?: { code?: string; shortfall?: string } } })?.response;
           if (response?.status === 422 && response?.data?.code === 'WALLET_INSUFFICIENT') {
             const shortfall = response.data.shortfall || '0';
             navigate('Topup', { shortfall });

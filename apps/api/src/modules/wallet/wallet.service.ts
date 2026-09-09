@@ -148,9 +148,10 @@ export function createWalletService(
             createdBy: input.createdBy !== undefined ? input.createdBy : (scope.userId === '00000000-0000-0000-0000-000000000000' ? null : (scope.userId ?? null)),
           });
           return toWalletTransactionResponse(row);
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const pgErr = err as { code?: string };
           // A. Unique constraint violation on idempotency_key
-          if (err.code === '23505') {
+          if (pgErr.code === '23505') {
             try {
               await activeTx.query('ROLLBACK');
             } catch {
