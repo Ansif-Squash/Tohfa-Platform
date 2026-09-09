@@ -167,7 +167,7 @@ export const fulfilmentRepo: FulfilmentRepo = {
         FROM orders o
        WHERE ${conditions.join(' AND ')}
        ORDER BY o.placed_at DESC, o.id DESC
-       LIMIT $${idx}
+        LIMIT $${idx}
     `;
 
     const res = await db.query<FulfilmentOrderRow>(sql, values);
