@@ -37,6 +37,7 @@
     "@types/node": "^20.14.10",
     "@types/pg": "^8.11.6",
     "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
     "dotenv": "^16.4.5",
     "eslint": "^9.9.0",
     "globals": "^15.9.0",

@@ -4,8 +4,8 @@
   "private": true,
   "description": "TOHFA customer app. React Native 0.74. Catalog, cart, wallet, orders.",
   "scripts": {
-    "start": "react-native start",
-    "android": "react-native run-android",
+    "start": "cross-env JAVA_HOME=\"C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.20.101-hotspot\" ANDROID_HOME=\"C:\\Users\\ansif\\AppData\\Local\\Android\\Sdk\" react-native start",
+    "android": "cross-env JAVA_HOME=\"C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.20.101-hotspot\" ANDROID_HOME=\"C:\\Users\\ansif\\AppData\\Local\\Android\\Sdk\" react-native run-android",
     "ios": "react-native run-ios",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
