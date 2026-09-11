@@ -27,8 +27,9 @@ export function validateStep(step: number, data: unknown): StepValidationResult 
     if (!s1.mobile || !/^\+[1-9][0-9]{7,14}$/.test(s1.mobile.trim())) {
       errors['mobile'] = 'Valid mobile number starting with +91 is required.';
     }
-    if (!s1.aadhaarLast4 || !/^[0-9]{4}$/.test(s1.aadhaarLast4.trim())) {
-      errors['aadhaarLast4'] = 'Aadhaar last 4 digits must be exactly 4 numbers.';
+    const aadhaarInput = (s1.aadhaarNumber || s1.aadhaarLast4 || '').replace(/\s+/g, '').trim();
+    if (!aadhaarInput || aadhaarInput.length < 4) {
+      errors['aadhaarLast4'] = 'Aadhaar / ID Number is required.';
     }
   } else if (step === 2) {
     const s2 = (data ?? {}) as Step2FarmData;
@@ -39,8 +40,17 @@ export function validateStep(step: number, data: unknown): StepValidationResult 
       if (!first?.name || first.name.trim().length === 0) {
         errors['farmName'] = 'Farm name is required.';
       }
+      if (!first?.typeOfFarming) {
+        errors['typeOfFarming'] = 'Type of farming is required.';
+      }
+      if (!first?.experienceYears || first.experienceYears <= 0) {
+        errors['experienceYears'] = 'Experience must be greater than zero.';
+      }
       if (!first?.totalAreaAcres || first.totalAreaAcres <= 0) {
         errors['acreage'] = 'Total acreage must be greater than zero.';
+      }
+      if (!first?.numberOfFarms || first.numberOfFarms <= 0) {
+        errors['numberOfFarms'] = 'Number of farms must be at least 1.';
       }
     }
   } else if (step === 3) {

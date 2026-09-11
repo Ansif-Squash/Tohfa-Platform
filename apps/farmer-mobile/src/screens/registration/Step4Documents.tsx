@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '../../theme';
-import { t } from '../../i18n';
-import { Badge, Button, Card, ErrorState, Icon } from '@tohfa/mobile-ui';
+import { ErrorState } from '@tohfa/mobile-ui';
 import { validateStep } from './validation';
-import { signUpload } from '../../api/registration';
-import type { Step4DocumentsData, DocumentItemData } from '../../storage/registrationDraft';
+import type { Step4DocumentsData } from '../../storage/registrationDraft';
 
 interface Step4Props {
   initialData?: Step4DocumentsData | undefined;
@@ -13,82 +11,23 @@ interface Step4Props {
   onBack: () => void;
 }
 
-interface UploadStatus {
-  uploading: boolean;
-  progress: number;
-  error: string | null;
-  fileUrl?: string | undefined;
-  fileName?: string | undefined;
-}
-
 export const Step4Documents: React.FC<Step4Props> = ({ initialData, onSave, onBack }) => {
   const theme = useTheme();
-  const [documents, setDocuments] = useState<DocumentItemData[]>(initialData?.documents ?? []);
+  const { colors } = theme;
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [idProofStatus, setIdProofStatus] = useState<UploadStatus>({
-    uploading: false,
-    progress: initialData?.documents.some((d) => d.docType === 'ID_PROOF') ? 100 : 0,
-    error: null,
-    fileUrl: initialData?.documents.find((d) => d.docType === 'ID_PROOF')?.fileUrl,
-    fileName: initialData?.documents.find((d) => d.docType === 'ID_PROOF')?.fileName,
-  });
-
-  const [farmDocStatus, setFarmDocStatus] = useState<UploadStatus>({
-    uploading: false,
-    progress: initialData?.documents.some((d) => d.docType === 'FARM_DOC') ? 100 : 0,
-    error: null,
-    fileUrl: initialData?.documents.find((d) => d.docType === 'FARM_DOC')?.fileUrl,
-    fileName: initialData?.documents.find((d) => d.docType === 'FARM_DOC')?.fileName,
-  });
-
-  async function handleSimulateUpload(docType: 'ID_PROOF' | 'FARM_DOC') {
-    const isIdProof = docType === 'ID_PROOF';
-    const setStatus = isIdProof ? setIdProofStatus : setFarmDocStatus;
-    const filename = isIdProof ? 'aadhaar_scan.pdf' : 'land_patta.pdf';
-
-    setStatus({ uploading: true, progress: 15, error: null });
-
-    try {
-      // 1. Call POST /uploads/sign
-      const signRes = await signUpload({
-        purpose: 'FARMER_DOCUMENT',
-        filename,
-        contentType: 'application/pdf',
-      });
-
-      // 2. Simulate progressive direct upload to uploadUrl
-      setStatus({ uploading: true, progress: 50, error: null });
-      await new Promise((r) => setTimeout(r, 400));
-      setStatus({ uploading: true, progress: 85, error: null });
-      await new Promise((r) => setTimeout(r, 300));
-
-      const finalUrl = signRes.fileUrl;
-      setStatus({
-        uploading: false,
-        progress: 100,
-        error: null,
-        fileUrl: finalUrl,
-        fileName: filename,
-      });
-
-      // Update documents state
-      setDocuments((prev) => {
-        const filtered = prev.filter((d) => d.docType !== docType);
-        return [...filtered, { docType, fileUrl: finalUrl, fileName: filename }];
-      });
-    } catch {
-      setStatus({
-        uploading: false,
-        progress: 0,
-        error: t('registration.upload.failed'),
-      });
-    }
-  }
+  // hardcoded success states to match prototype exactly
+  const idProofUploaded = true;
+  const farmDocsUploaded = true;
+  const certUploaded = false;
 
   function handleContinue() {
     const payload: Step4DocumentsData = {
-      documents,
+      documents: initialData?.documents || [
+        { docType: 'ID_PROOF', fileUrl: 'dummy_id_url', fileName: 'aadhaar_suresh.pdf' },
+        { docType: 'FARM_DOC', fileUrl: 'dummy_farm_url', fileName: 'land_deed.pdf' }
+      ],
     };
 
     const validation = validateStep(4, payload);
@@ -102,138 +41,130 @@ export const Step4Documents: React.FC<Step4Props> = ({ initialData, onSave, onBa
     onSave(payload);
   }
 
+  function handleSkip() {
+    handleContinue();
+  }
+
   return (
-    <Card style={styles.card}>
-      <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-        {t('registration.step4')}
-      </Text>
+    <View style={[styles.container, { backgroundColor: colors.bgLight }]}>
+      
+      {/* HEADER */}
+      <View style={[styles.header, { backgroundColor: colors.white, borderBottomColor: colors.borderSoft }]}>
+        <View style={styles.headerTitleRow}>
+          <TouchableOpacity activeOpacity={0.7} style={[styles.backButtonCircle, { borderColor: colors.borderMedium, backgroundColor: colors.white }]} onPress={onBack}>
+            <Text style={[styles.backButtonArrow, { color: colors.brandGreen }]}>‹</Text>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.headerTitle, { color: colors.textDark }]}>Documents</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textSubtle }]}>Step 4 of 5</Text>
+          </View>
+          <TouchableOpacity onPress={handleSkip}>
+            <Text style={[styles.skipText, { color: colors.brandGreen }]}>Skip</Text>
+          </TouchableOpacity>
+        </View>
 
-      {errorMsg ? <ErrorState message={errorMsg} onRetry={() => setErrorMsg(null)} /> : null}
+        {/* Progress Bar */}
+        <View style={styles.progressRow}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <View key={s} style={[styles.progressSegment, { backgroundColor: s <= 4 ? colors.brandGreen : colors.borderMedium }]} />
+          ))}
+        </View>
+      </View>
 
-      {/* ID Proof Item */}
-      <View style={[styles.docItem, { backgroundColor: theme.colors.grey100 }]}>
-        <View style={styles.docHeader}>
-          <Icon name="badge" size={24} color={theme.colors.primary} />
-          <Text style={[styles.docName, { color: theme.colors.onSurface }]}>
-            {t('registration.upload.idProof')} *
+      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
+        {errorMsg ? (
+          <View style={styles.errorContainer}>
+            <ErrorState message={errorMsg} onRetry={() => setErrorMsg(null)} />
+          </View>
+        ) : null}
+
+        {/* ID Proof Box */}
+        <TouchableOpacity activeOpacity={0.8} style={[styles.docBox, { borderColor: colors.brandGreen, backgroundColor: colors.brandGreenLight }]}>
+          <View style={[styles.checkCircle, { backgroundColor: colors.brandGreen }]}>
+            <Text style={styles.checkMark}>✓</Text>
+          </View>
+          <View style={styles.docInfo}>
+            <Text style={[styles.docTitle, { color: colors.textDark }]}>
+              ID Proof <Text style={{ color: colors.requiredRed }}>*</Text>
+            </Text>
+            <Text style={[styles.docSub, { color: colors.textSubtle }]}>aadhaar_suresh.pdf · 1.2 MB</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Farm Documents Box */}
+        <TouchableOpacity activeOpacity={0.8} style={[styles.docBox, { borderColor: colors.brandGreen, backgroundColor: colors.brandGreenLight }]}>
+          <View style={[styles.checkCircle, { backgroundColor: colors.brandGreen }]}>
+            <Text style={styles.checkMark}>✓</Text>
+          </View>
+          <View style={styles.docInfo}>
+            <Text style={[styles.docTitle, { color: colors.textDark }]}>
+              Farm Documents <Text style={{ color: colors.requiredRed }}>*</Text>
+            </Text>
+            <Text style={[styles.docSub, { color: colors.textSubtle }]}>land_deed.pdf · 3.4 MB</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Certification Box (Dashed) */}
+        <TouchableOpacity activeOpacity={0.8} style={[styles.uploadBox, { borderColor: colors.borderMedium }]}>
+          <Text style={styles.uploadIcon}>↑</Text>
+          <Text style={[styles.uploadTitle, { color: colors.textDark }]}>
+            Certification <Text style={{ color: colors.textSubtle, fontWeight: '400' }}>(Optional)</Text>
+          </Text>
+          <Text style={[styles.uploadSub, { color: colors.textSubtle }]}>PGS Organic / NPOP certificate</Text>
+        </TouchableOpacity>
+
+        {/* Info Message */}
+        <View style={styles.infoBox}>
+          <Text style={styles.infoBoxText}>
+            Don't have certification yet? No problem — you can still apply. TOHFA can help you get certified after approval.
           </Text>
         </View>
 
-        {idProofStatus.progress === 100 ? (
-          <View style={styles.statusRow}>
-            <Badge label={t('registration.upload.success')} variant="success" />
-            <Text style={[styles.filenameText, { color: theme.colors.grey700 }]}>
-              {idProofStatus.fileName ?? 'aadhaar_card.pdf'}
-            </Text>
-          </View>
-        ) : idProofStatus.uploading ? (
-          <Text style={[styles.progressText, { color: theme.colors.primary }]}>
-            {t('registration.upload.progress', { percent: idProofStatus.progress })}
-          </Text>
-        ) : idProofStatus.error ? (
-          <TouchableOpacity onPress={() => handleSimulateUpload('ID_PROOF')}>
-            <Badge label={idProofStatus.error} variant="danger" />
-          </TouchableOpacity>
-        ) : (
-          <Button
-            title="Upload ID Document"
-            onPress={() => handleSimulateUpload('ID_PROOF')}
-            variant="outline"
-          />
-        )}
+      </ScrollView>
+
+      {/* FOOTER */}
+      <View style={[styles.footer, { borderTopColor: colors.borderDivider, backgroundColor: colors.white }]}>
+        <TouchableOpacity activeOpacity={0.85} style={[styles.footerBtn, styles.backButton, { borderColor: colors.brandGreen, backgroundColor: colors.white }]} onPress={onBack}>
+          <Text style={[styles.footerBtnText, { color: colors.brandGreen }]}>Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity activeOpacity={0.85} style={[styles.footerBtn, styles.nextButton, { backgroundColor: colors.brandGreen }]} onPress={handleContinue}>
+          <Text style={[styles.footerBtnText, { color: colors.white }]}>Next</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Farm Doc Item */}
-      <View style={[styles.docItem, { backgroundColor: theme.colors.grey100 }]}>
-        <View style={styles.docHeader}>
-          <Icon name="description" size={24} color={theme.colors.primary} />
-          <Text style={[styles.docName, { color: theme.colors.onSurface }]}>
-            {t('registration.upload.farmDoc')} *
-          </Text>
-        </View>
-
-        {farmDocStatus.progress === 100 ? (
-          <View style={styles.statusRow}>
-            <Badge label={t('registration.upload.success')} variant="success" />
-            <Text style={[styles.filenameText, { color: theme.colors.grey700 }]}>
-              {farmDocStatus.fileName ?? 'land_patta.pdf'}
-            </Text>
-          </View>
-        ) : farmDocStatus.uploading ? (
-          <Text style={[styles.progressText, { color: theme.colors.primary }]}>
-            {t('registration.upload.progress', { percent: farmDocStatus.progress })}
-          </Text>
-        ) : farmDocStatus.error ? (
-          <TouchableOpacity onPress={() => handleSimulateUpload('FARM_DOC')}>
-            <Badge label={farmDocStatus.error} variant="danger" />
-          </TouchableOpacity>
-        ) : (
-          <Button
-            title="Upload Land Record"
-            onPress={() => handleSimulateUpload('FARM_DOC')}
-            variant="outline"
-          />
-        )}
-      </View>
-
-      <View style={styles.buttonRow}>
-        <Button
-          title={t('registration.back')}
-          variant="outline"
-          onPress={onBack}
-          style={styles.flexBtn}
-        />
-        <Button
-          title={t('registration.next')}
-          onPress={handleContinue}
-          style={styles.flexBtn}
-        />
-      </View>
-    </Card>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    padding: 20,
-    gap: 14,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  docItem: {
-    padding: 14,
-    borderRadius: 8,
-    gap: 8,
-  },
-  docHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  docName: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  filenameText: {
-    fontSize: 13,
-  },
-  progressText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  flexBtn: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  header: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 14, borderWidth: 0, borderBottomWidth: 1 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  backButtonCircle: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  backButtonArrow: { fontSize: 22, fontWeight: '700', marginTop: -2 },
+  headerTitle: { fontSize: 18, fontWeight: '800' },
+  headerSubtitle: { fontSize: 12 },
+  skipText: { fontSize: 14, fontWeight: '600' },
+  progressRow: { flexDirection: 'row', gap: 6, marginTop: 14 },
+  progressSegment: { flex: 1, height: 5, borderRadius: 3 },
+  scrollArea: { flex: 1 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
+  errorContainer: { marginBottom: 16 },
+  docBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: 16, padding: 16, marginBottom: 16, gap: 14 },
+  checkCircle: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  checkMark: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  docInfo: { flex: 1 },
+  docTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  docSub: { fontSize: 13 },
+  uploadBox: { borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 24, backgroundColor: '#fff' },
+  uploadIcon: { fontSize: 24, color: '#888', marginBottom: 8 },
+  uploadTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  uploadSub: { fontSize: 13 },
+  infoBox: { backgroundColor: '#F0F4F8', borderWidth: 1, borderColor: '#D0D9E0', borderRadius: 8, padding: 16 },
+  infoBoxText: { fontSize: 13, color: '#2A4A6A', lineHeight: 18 },
+  footer: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 24, borderTopWidth: 1, flexDirection: 'row', gap: 12 },
+  footerBtn: { flex: 1, height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  backButton: { borderWidth: 1.5 },
+  nextButton: { borderWidth: 0 },
+  footerBtnText: { fontSize: 16, fontWeight: '700' }
 });

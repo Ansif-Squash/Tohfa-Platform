@@ -23,6 +23,18 @@ export const colors = {
   surfacePressed: neutral('grey300'),
   onSurfaceVariant: neutral('grey500'),
   textMuted: neutral('grey700'),
+  brandGreen: '#2E7D32',
+  bgLight: '#FCFCFC',
+  borderLight: '#E8E6DD',
+  borderMedium: '#E0DDD2',
+  borderDivider: '#EAE7DD',
+  borderSoft: '#F0EEE6',
+  prefixBg: '#F0EEE6',
+  textDark: '#1A2E1A',
+  textBody: '#3A3A3A',
+  textSubtle: '#6B7566',
+  textPlaceholder: '#8A927F',
+  requiredRed: '#E24B4A',
 } as const;
 
 /** Point values map 1:1 to React Native `dp`. */

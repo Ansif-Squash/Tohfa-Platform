@@ -7,8 +7,10 @@ export interface Step1PersonalData {
   fullName?: string | undefined;
   mobile?: string | undefined;
   dob?: string | undefined;
-  gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'UNDISCLOSED' | undefined;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'UNDISCLOSED' | string | undefined;
+  aadhaarNumber?: string | undefined;
   aadhaarLast4?: string | undefined;
+  address?: string | undefined;
   farmingExperienceYears?: number | undefined;
   addressLine1?: string | undefined;
   addressLine2?: string | undefined;
@@ -21,8 +23,9 @@ export interface Step1PersonalData {
 export interface FarmItemData {
   name: string;
   totalAreaAcres: number;
-  waterSource?: string | undefined;
-  primaryCrops?: string[] | undefined;
+  typeOfFarming?: string | undefined;
+  experienceYears?: number | undefined;
+  numberOfFarms?: number | undefined;
 }
 
 export interface Step2FarmData {

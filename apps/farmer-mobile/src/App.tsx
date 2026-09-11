@@ -8,6 +8,7 @@ import { ForgotPasswordScreen } from './screens/auth/ForgotPasswordScreen';
 import { LoginScreen } from './screens/auth/LoginScreen';
 import { OtpScreen } from './screens/auth/OtpScreen';
 import { ResetPasswordScreen } from './screens/auth/ResetPasswordScreen';
+import { RoleSelectionScreen } from './screens/auth/RoleSelectionScreen';
 import { SplashScreen } from './screens/auth/SplashScreen';
 import { WelcomeScreen } from './screens/auth/WelcomeScreen';
 import { AddCertificationScreen } from './screens/certifications/AddCertificationScreen';
@@ -26,6 +27,7 @@ export type ScreenName =
   | 'Splash'
   | 'Welcome'
   | 'Login'
+  | 'RoleSelection'
   | 'Register'
   | 'Otp'
   | 'ForgotPassword'
@@ -78,24 +80,26 @@ export default function App(): React.JSX.Element {
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
 
-      {!isAuthLanding && (
+      {screen !== 'Register' && screen !== 'RoleSelection' && (
+        {!isAuthLanding && (
         <View style={styles.header}>
-          <Text style={styles.headerText}>{t('app.name')}</Text>
-          <View style={styles.localeRow}>
-            {LOCALES.map((code) => (
-              <Pressable
-                key={code}
-                accessibilityRole="button"
-                style={[styles.localeChip, locale === code && styles.localeChipActive]}
-                onPress={() => switchLocale(code)}
-              >
-                <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
-                  {code.toUpperCase()}
-                </Text>
-              </Pressable>
-            ))}
+            <Text style={styles.headerText}>{t('app.name')}</Text>
+            <View style={styles.localeRow}>
+              {LOCALES.map((code) => (
+                <Pressable
+                  key={code}
+                  accessibilityRole="button"
+                  style={[styles.localeChip, locale === code && styles.localeChipActive]}
+                  onPress={() => switchLocale(code)}
+                >
+                  <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
+                    {code.toUpperCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
+      )}
       )}
 
       <View style={styles.content}>
@@ -105,6 +109,8 @@ export default function App(): React.JSX.Element {
           <WelcomeScreen onNavigate={(s) => navigate(s)} />
         ) : screen === 'Login' ? (
           <LoginScreen onNavigate={(s, p) => navigate(s, p)} />
+        ) : screen === 'RoleSelection' ? (
+          <RoleSelectionScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'Register' ? (
           <RegistrationFlowScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'Otp' ? (

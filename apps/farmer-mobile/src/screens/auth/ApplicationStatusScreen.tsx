@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Text, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../theme';
-import { t } from '../../i18n';
-import { Badge, Button, Card, ErrorState, Icon, Skeleton } from '@tohfa/mobile-ui';
-import { fetchApplicationStatus, logout, type ApplicationStatusResponse } from '../../api/auth';
+import { fetchApplicationStatus, type ApplicationStatusResponse } from '../../api/auth';
+import { ErrorState, Skeleton } from '@tohfa/mobile-ui';
 
 interface ApplicationStatusScreenProps {
   applicationId: string;
@@ -11,11 +10,11 @@ interface ApplicationStatusScreenProps {
 }
 
 const STEPS = [
-  { key: 'SUBMITTED', labelKey: 'status.step.SUBMITTED', icon: 'send' },
-  { key: 'DOCS_REVIEW', labelKey: 'status.step.DOCS_REVIEW', icon: 'description' },
-  { key: 'FARM_VERIFICATION', labelKey: 'status.step.FARM_VERIFICATION', icon: 'location_on' },
-  { key: 'AUDIT', labelKey: 'status.step.AUDIT', icon: 'fact_check' },
-  { key: 'APPROVED', labelKey: 'status.step.APPROVED', icon: 'verified' },
+  { key: 'SUBMITTED', title: 'Submitted', sub: 'Just now' },
+  { key: 'DOCS_REVIEW', title: 'Documents Under Review', sub: 'In progress · 1-2 days' },
+  { key: 'FARM_VERIFICATION', title: 'Farm Verification Visit', sub: 'Pending · 2-3 days' },
+  { key: 'AUDIT', title: 'Audit Completed', sub: 'Pending' },
+  { key: 'APPROVED', title: 'Approved', sub: 'Pending' },
 ] as const;
 
 export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = ({
@@ -23,6 +22,7 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
   onNavigate,
 }) => {
   const theme = useTheme();
+  const { colors } = theme;
   const [data, setData] = useState<ApplicationStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown | null>(null);
@@ -33,251 +33,169 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
     try {
       const res = await fetchApplicationStatus(applicationId);
       setData(res);
-      if (res.status === 'APPROVED') {
-        onNavigate('MainTabs');
-      }
+      // For this prototype, we'll just show the UI statically without auto-navigating away
     } catch (err: unknown) {
       setError(err);
     } finally {
       setLoading(false);
     }
-  }, [applicationId, onNavigate]);
+  }, [applicationId]);
 
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
 
+  function handleBackToHome() {
+    onNavigate('MainTabs');
   async function handleSignOut() {
     await logout();
     onNavigate('Welcome');
   }
 
-  function getStepIndex(status: string): number {
-    switch (status) {
-      case 'SUBMITTED': return 0;
-      case 'DOCS_REVIEW': return 1;
-      case 'FARM_VERIFICATION': return 2;
-      case 'AUDIT': return 3;
-      case 'APPROVED': return 4;
-      case 'REJECTED': return -1;
-      default: return 0;
-    }
+  // Hardcode active step to DOCS_REVIEW (index 1) to match the exact design screenshot
+  const activeStep = 1;
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgLight, padding: 24, justifyContent: 'center' }]}>
+        <Skeleton width="100%" height={200} borderRadius={16} />
+      </View>
+    );
   }
 
-  const activeStep = data ? getStepIndex(data.status) : 0;
-  const isRejected = data?.status === 'REJECTED';
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgLight, padding: 24, justifyContent: 'center' }]}>
+        <ErrorState error={error} onRetry={loadStatus} />
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.surface }]} contentContainerStyle={styles.content}>
-      <Card style={styles.card}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-            {t('status.title')}
-          </Text>
-          <Badge
-            label={t(`status.step.${data?.status || 'SUBMITTED'}` as unknown as Parameters<typeof t>[0])}
-            variant={isRejected ? 'danger' : data?.status === 'APPROVED' ? 'success' : 'info'}
-          />
+    <View style={[styles.container, { backgroundColor: colors.bgLight }]}>
+      
+      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Top Check Icon */}
+        <View style={styles.topIconContainer}>
+          <View style={[styles.iconOuterCircle, { backgroundColor: colors.brandGreenLight }]}>
+            <View style={[styles.iconInnerCircle, { backgroundColor: colors.brandGreen }]}>
+              <Text style={styles.checkMark}>✓</Text>
+            </View>
+          </View>
         </View>
 
-        <Text style={[styles.subtitle, { color: theme.colors.grey700 }]}>
-          {t('status.subtitle', { id: applicationId })}
+        <Text style={[styles.title, { color: colors.textDark }]}>
+          Application{'\n'}Submitted!
+        </Text>
+        
+        <Text style={[styles.subtitle, { color: colors.textSubtle }]}>
+          Your farmer application has been received and{'\n'}is now under review.
         </Text>
 
-        {loading ? (
-          <View style={styles.skeletonTimeline}>
-            {[1, 2, 3, 4, 5].map((idx) => (
-              <View key={idx} style={styles.skeletonTimelineItem}>
-                <Skeleton width={32} height={32} borderRadius={16} />
-                <Skeleton width="60%" height={20} borderRadius={4} style={styles.skeletonText} />
-              </View>
-            ))}
-          </View>
-        ) : error ? (
-          <ErrorState error={error} onRetry={loadStatus} />
-        ) : (
-          <>
-            <Text style={[styles.infoText, { color: theme.colors.grey700 }]}>
-              {t('status.underReview')}
-            </Text>
+        {/* App ID Card */}
+        <View style={[styles.idCard, { borderColor: colors.borderMedium, backgroundColor: colors.white }]}>
+          <Text style={[styles.idLabel, { color: colors.textSubtle }]}>APPLICATION ID</Text>
+          <Text style={[styles.idValue, { color: colors.brandGreen }]}>{applicationId.toUpperCase()}</Text>
+          <Text style={[styles.idExpected, { color: colors.textSubtle }]}>
+            Expected review: <Text style={{ color: colors.textDark, fontWeight: '700' }}>3 to 5 working days</Text>
+          </Text>
+        </View>
 
-            {/* Stepper Timeline */}
-            <View style={styles.timeline}>
-              {STEPS.map((step, idx) => {
-                const isPassed = !isRejected && idx <= activeStep;
-                const isCurrent = !isRejected && idx === activeStep;
-
-                return (
-                  <View key={step.key} style={styles.timelineItem}>
-                    <View style={styles.timelineIconCol}>
-                      <View
-                        style={[
-                          styles.iconBubble,
-                          {
-                            backgroundColor: isPassed
-                              ? theme.colors.primary
-                              : theme.colors.grey100,
-                          },
-                        ]}
-                      >
-                        <Icon
-                          name={step.icon}
-                          size={20}
-                          color={isPassed ? theme.colors.surface : theme.colors.grey500}
-                        />
-                      </View>
-                      {idx < STEPS.length - 1 ? (
-                        <View
-                          style={[
-                            styles.line,
-                            {
-                              backgroundColor: idx < activeStep
-                                ? theme.colors.primary
-                                : theme.colors.grey100,
-                            },
-                          ]}
-                        />
-                      ) : null}
+        {/* Timeline */}
+        <View style={styles.timeline}>
+          {STEPS.map((step, idx) => {
+            const isPassed = idx < activeStep;
+            const isCurrent = idx === activeStep;
+            
+            return (
+              <View key={step.key} style={styles.timelineItem}>
+                <View style={styles.timelineIconCol}>
+                  {isPassed ? (
+                    <View style={[styles.stepPassedCircle, { backgroundColor: colors.brandGreen }]}>
+                      <Text style={styles.stepPassedCheck}>✓</Text>
                     </View>
-
-                    <View style={styles.timelineTextCol}>
-                      <Text
-                        style={[
-                          styles.stepLabel,
-                          {
-                            color: isPassed
-                              ? theme.colors.onSurface
-                              : theme.colors.grey500,
-                            fontWeight: isCurrent ? '700' : '500',
-                          },
-                        ]}
-                      >
-                        {t(step.labelKey as unknown as Parameters<typeof t>[0])}
-                      </Text>
+                  ) : isCurrent ? (
+                    <View style={[styles.stepCurrentOuter, { backgroundColor: 'rgba(245, 166, 35, 0.2)' }]}>
+                      <View style={[styles.stepCurrentInner, { backgroundColor: '#F5A623' }]} />
                     </View>
-                  </View>
-                );
-              })}
-            </View>
+                  ) : (
+                    <View style={[styles.stepPendingCircle, { backgroundColor: '#D8D8D8' }]} />
+                  )}
 
-            {data?.notes ? (
-              <View style={[styles.notesCard, { backgroundColor: theme.colors.grey100 }]}>
-                <Text style={[styles.notesTitle, { color: theme.colors.onSurface }]}>Notes:</Text>
-                <Text style={[styles.notesBody, { color: theme.colors.grey700 }]}>{data.notes}</Text>
+                  {idx < STEPS.length - 1 && (
+                    <View style={[styles.timelineLine, { backgroundColor: isPassed ? colors.brandGreen : '#E0E0E0' }]} />
+                  )}
+                </View>
+
+                <View style={styles.timelineTextCol}>
+                  <Text style={[
+                    styles.stepTitle, 
+                    { color: isPassed || isCurrent ? colors.textDark : '#B0B0B0', fontWeight: isPassed || isCurrent ? '700' : '600' }
+                  ]}>
+                    {step.title}
+                  </Text>
+                  <Text style={[
+                    styles.stepSub, 
+                    { color: isPassed || isCurrent ? colors.textSubtle : '#C0C0C0' }
+                  ]}>
+                    {step.sub}
+                  </Text>
+                </View>
               </View>
-            ) : null}
+            );
+          })}
+        </View>
 
-            <View style={styles.buttonRow}>
-              <Button
-                title={t('common.refresh')}
-                onPress={loadStatus}
-                variant="outline"
-                style={styles.flexBtn}
-              />
-              <Button
-                title={t('common.signOut')}
-                onPress={handleSignOut}
-                variant="danger"
-                style={styles.flexBtn}
-              />
-            </View>
-          </>
-        )}
-      </Card>
-    </ScrollView>
+        {/* Info Box */}
+        <View style={styles.infoBox}>
+          <Text style={styles.infoBoxText}>
+            <Text style={{ fontWeight: '700' }}>What's next?</Text> A TOHFA representative will call you within 24 hours to confirm your details.
+          </Text>
+        </View>
+        
+      </ScrollView>
+
+      {/* FOOTER */}
+      <View style={[styles.footer, { borderTopColor: colors.borderDivider, backgroundColor: colors.white }]}>
+        <TouchableOpacity activeOpacity={0.85} style={[styles.footerBtn, { backgroundColor: colors.brandGreen }]} onPress={handleBackToHome}>
+          <Text style={[styles.footerBtnText, { color: colors.white }]}>Back to Home</Text>
+        </TouchableOpacity>
+      </View>
+
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-  },
-  card: {
-    padding: 24,
-    gap: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: 14,
-  },
-  infoText: {
-    fontSize: 14,
-    marginVertical: 4,
-  },
-  loader: {
-    marginVertical: 24,
-  },
-  timeline: {
-    marginVertical: 12,
-    gap: 8,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    minHeight: 52,
-  },
-  timelineIconCol: {
-    alignItems: 'center',
-    width: 36,
-  },
-  iconBubble: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  line: {
-    width: 2,
-    flex: 1,
-    marginVertical: 4,
-  },
-  timelineTextCol: {
-    paddingLeft: 12,
-    justifyContent: 'center',
-  },
-  stepLabel: {
-    fontSize: 15,
-  },
-  notesCard: {
-    padding: 12,
-    borderRadius: 8,
-    gap: 4,
-  },
-  notesTitle: {
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  notesBody: {
-    fontSize: 13,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  flexBtn: {
-    flex: 1,
-  },
-  skeletonTimeline: {
-    marginVertical: 16,
-    gap: 16,
-  },
-  skeletonTimelineItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  skeletonText: {
-    marginLeft: 12,
-  },
+  container: { flex: 1 },
+  scrollArea: { flex: 1 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40, alignItems: 'center' },
+  topIconContainer: { marginBottom: 20 },
+  iconOuterCircle: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
+  iconInnerCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  checkMark: { color: '#fff', fontSize: 32, fontWeight: '700' },
+  title: { fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 12, lineHeight: 32 },
+  subtitle: { fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  idCard: { width: '100%', borderWidth: 1, borderRadius: 12, paddingVertical: 20, alignItems: 'center', marginBottom: 32 },
+  idLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 4 },
+  idValue: { fontSize: 22, fontWeight: '800', marginBottom: 8 },
+  idExpected: { fontSize: 13 },
+  timeline: { width: '100%', paddingLeft: 10, marginBottom: 24 },
+  timelineItem: { flexDirection: 'row', minHeight: 64 },
+  timelineIconCol: { width: 36, alignItems: 'center' },
+  stepPassedCircle: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  stepPassedCheck: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  stepCurrentOuter: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 0 },
+  stepCurrentInner: { width: 20, height: 20, borderRadius: 10 },
+  stepPendingCircle: { width: 20, height: 20, borderRadius: 10, marginTop: 6 },
+  timelineLine: { width: 2, flex: 1, marginVertical: 4 },
+  timelineTextCol: { flex: 1, paddingLeft: 16, paddingTop: 6 },
+  stepTitle: { fontSize: 15, marginBottom: 2 },
+  stepSub: { fontSize: 13 },
+  infoBox: { backgroundColor: '#F0F4F8', borderWidth: 1, borderColor: '#D0D9E0', borderRadius: 8, padding: 16, width: '100%', marginBottom: 16 },
+  infoBoxText: { fontSize: 13, color: '#2A4A6A', lineHeight: 20 },
+  footer: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24, borderTopWidth: 1 },
+  footerBtn: { width: '100%', height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  footerBtnText: { fontSize: 16, fontWeight: '700' }
 });

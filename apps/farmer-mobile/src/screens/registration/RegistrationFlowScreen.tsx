@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../theme';
 import { Step1Personal } from './Step1Personal';
 import { Step2FarmDetails } from './Step2FarmDetails';
@@ -20,8 +20,17 @@ interface RegistrationFlowProps {
   onNavigate: (screen: 'ApplicationStatus' | 'Welcome', params?: Record<string, string | number | undefined>) => void;
 }
 
+const STEP_TITLES: Record<number, string> = {
+  1: 'Personal Details',
+  2: 'Farm Details',
+  3: 'Location & Map',
+  4: 'Documents & Certificates',
+  5: 'Review & Submit',
+};
+
 export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavigate }) => {
   const theme = useTheme();
+  const { colors } = theme;
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<RegistrationDraft>({
     applicationId: 'draft-temp',
@@ -115,93 +124,98 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
     );
   }
 
-  return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.surface }]} contentContainerStyle={styles.content}>
-      {/* Visual Stepper Header */}
-      <View style={styles.stepperHeader}>
-        {[1, 2, 3, 4, 5].map((s) => {
-          const isCurrent = s === draft.currentStep;
-          const isCompleted = s < draft.currentStep;
+  const stepTitle = STEP_TITLES[draft.currentStep] ?? 'Personal Details';
 
-          return (
-            <View key={s} style={styles.stepBubbleContainer}>
-              <View
-                style={[
-                  styles.stepBubble,
-                  {
-                    backgroundColor: isCompleted
-                      ? theme.colors.primary
-                      : isCurrent
-                      ? theme.colors.primaryPressed
-                      : theme.colors.grey100,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.stepNumber,
-                    {
-                      color: isCompleted || isCurrent
-                        ? theme.colors.surface
-                        : theme.colors.grey500,
-                    },
-                  ]}
-                >
-                  {s}
-                </Text>
-              </View>
-              {s < 5 ? (
+  return (
+    <View style={[styles.container, { backgroundColor: colors.bgLight }]}>
+      {/* Branding Spec Header */}
+      {draft.currentStep < 3 && (
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: colors.white,
+              borderBottomColor: colors.borderSoft,
+            },
+          ]}
+        >
+          <View style={styles.headerTitleRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.backButtonCircle,
+                {
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.white,
+                },
+              ]}
+              onPress={handleBack}
+            >
+              <Text style={[styles.backButtonArrow, { color: colors.brandGreen }]}>‹</Text>
+            </TouchableOpacity>
+            <View>
+              <Text style={[styles.headerTitle, { color: colors.textDark }]}>{stepTitle}</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.textSubtle }]}>
+                Step {draft.currentStep} of 5
+              </Text>
+            </View>
+          </View>
+
+          {/* 5 Progress Bar Segments */}
+          <View style={styles.progressRow}>
+            {[1, 2, 3, 4, 5].map((s) => {
+              const isActive = s <= draft.currentStep;
+              return (
                 <View
+                  key={s}
                   style={[
-                    styles.stepConnector,
-                    {
-                      backgroundColor: isCompleted
-                        ? theme.colors.primary
-                        : theme.colors.grey100,
-                    },
+                    styles.progressSegment,
+                    { backgroundColor: isActive ? colors.brandGreen : colors.borderMedium },
                   ]}
                 />
-              ) : null}
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Render Current Step */}
-      {draft.currentStep === 1 ? (
-        <Step1Personal
-          initialData={draft.step1}
-          onSave={(data) => updateStepAndAdvance(1, data)}
-          onBack={handleBack}
-        />
-      ) : draft.currentStep === 2 ? (
-        <Step2FarmDetails
-          initialData={draft.step2}
-          onSave={(data) => updateStepAndAdvance(2, data)}
-          onBack={handleBack}
-        />
-      ) : draft.currentStep === 3 ? (
-        <Step3Location
-          initialData={draft.step3}
-          onSave={(data) => updateStepAndAdvance(3, data)}
-          onBack={handleBack}
-        />
-      ) : draft.currentStep === 4 ? (
-        <Step4Documents
-          initialData={draft.step4}
-          onSave={(data) => updateStepAndAdvance(4, data)}
-          onBack={handleBack}
-        />
-      ) : (
-        <Step5Review
-          draft={draft}
-          onSubmitSuccess={(appId) =>
-            onNavigate('ApplicationStatus', { applicationId: appId })
-          }
-          onBack={handleBack}
-        />
+              );
+            })}
+          </View>
+        </View>
       )}
-    </ScrollView>
+
+      {/* Main Step Content */}
+      <View style={styles.stepContent}>
+        {draft.currentStep === 1 ? (
+          <Step1Personal
+            initialData={draft.step1}
+            onSave={(data) => updateStepAndAdvance(1, data)}
+            onBack={handleBack}
+          />
+        ) : draft.currentStep === 2 ? (
+          <Step2FarmDetails
+            initialData={draft.step2}
+            onSave={(data) => updateStepAndAdvance(2, data)}
+            onBack={handleBack}
+          />
+        ) : draft.currentStep === 3 ? (
+          <Step3Location
+            initialData={draft.step3}
+            onSave={(data) => updateStepAndAdvance(3, data)}
+            onBack={handleBack}
+          />
+        ) : draft.currentStep === 4 ? (
+          <Step4Documents
+            initialData={draft.step4}
+            onSave={(data) => updateStepAndAdvance(4, data)}
+            onBack={handleBack}
+          />
+        ) : (
+          <Step5Review
+            draft={draft}
+            onSubmitSuccess={(appId) =>
+              onNavigate('ApplicationStatus', { applicationId: appId })
+            }
+            onBack={handleBack}
+          />
+        )}
+      </View>
+    </View>
   );
 };
 
@@ -209,38 +223,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperHeader: {
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+  },
+  headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
+    gap: 14,
   },
-  stepBubbleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepBubble: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  backButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepNumber: {
-    fontSize: 14,
+  backButtonArrow: {
+    fontSize: 22,
     fontWeight: '700',
+    marginTop: -2,
   },
-  stepConnector: {
-    width: 32,
-    height: 3,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 14,
+  },
+  progressSegment: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+  },
+  stepContent: {
+    flex: 1,
   },
 });
