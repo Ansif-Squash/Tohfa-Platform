@@ -37,6 +37,7 @@ interface DashboardScreenProps {
   onNavigateToWallet?: () => void;
   onNavigateToProfile?: () => void;
   onNavigateToCertifications?: () => void;
+  onNavigateToNotifications?: () => void;
 }
 
 export function DashboardScreen({
@@ -45,6 +46,7 @@ export function DashboardScreen({
   onNavigateToWallet,
   onNavigateToProfile,
   onNavigateToCertifications,
+  onNavigateToNotifications,
 }: DashboardScreenProps): React.JSX.Element {
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -139,7 +141,12 @@ export function DashboardScreen({
               <TouchableOpacity style={styles.headerIconButton}>
                 <Text style={styles.headerIconEmoji}>🔍</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.headerIconButton}>
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={onNavigateToNotifications}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+              >
                 <Text style={styles.headerIconEmoji}>🔔</Text>
                 <View style={styles.notificationDot} />
               </TouchableOpacity>
@@ -737,5 +744,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2E7D32',
     lineHeight: 20,
+  },
+  skeletonContainer: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  skeletonItem: {
+    borderRadius: radius.sm,
+  },
+  skeletonCard: {
+    borderRadius: radius.card,
   },
 });

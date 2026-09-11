@@ -23,6 +23,7 @@ export type RootStackParamList = {
   CounterOffer: { listingId: string; offerId?: string };
   Certifications: undefined;
   AddCertification: undefined;
+  Notifications: undefined;
 };
 
 export const deepLinkingConfig = {
@@ -44,6 +45,7 @@ export const deepLinkingConfig = {
       ApplicationStatus: 'application/:applicationId',
       Certifications: 'certifications',
       AddCertification: 'certifications/new',
+      Notifications: 'notifications',
     },
   },
 };

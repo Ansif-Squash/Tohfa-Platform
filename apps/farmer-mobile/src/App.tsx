@@ -17,6 +17,7 @@ import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { CounterOfferScreen } from './screens/listings/CounterOfferScreen';
 import { CreateListingScreen } from './screens/listings/CreateListingScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
+import { NotificationsScreen } from './screens/notifications/NotificationsScreen';
 import { ProfileScreen } from './screens/profile/ProfileScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
@@ -37,7 +38,8 @@ export type ScreenName =
   | 'Certifications'
   | 'AddCertification'
   | 'CreateListing'
-  | 'CounterOffer';
+  | 'CounterOffer'
+  | 'Notifications';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -80,7 +82,7 @@ export default function App(): React.JSX.Element {
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
 
-      {screen !== 'Register' && screen !== 'RoleSelection' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
+      {screen !== 'Register' && screen !== 'RoleSelection' && screen !== 'Notifications' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
         <View style={styles.header}>
             <Text style={styles.headerText}>{t('app.name')}</Text>
             <View style={styles.localeRow}>
@@ -171,6 +173,18 @@ export default function App(): React.JSX.Element {
               navigate('MainTabs');
             }}
           />
+        ) : screen === 'Notifications' ? (
+          <NotificationsScreen
+            onBack={() => navigate('MainTabs')}
+            onNavigateToCounterOffer={() => {
+              if (selectedListing) {
+                navigate('CounterOffer');
+              } else {
+                setCurrentTab('Listings');
+                navigate('MainTabs');
+              }
+            }}
+          />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>
@@ -182,6 +196,7 @@ export default function App(): React.JSX.Element {
                   onNavigateToListings={() => setCurrentTab('Listings')}
                   onNavigateToWallet={() => setCurrentTab('Wallet')}
                   onNavigateToProfile={() => setCurrentTab('Profile')}
+                  onNavigateToNotifications={() => navigate('Notifications')}
                 />
               ) : currentTab === 'Listings' ? (
                 <ListingsScreen
