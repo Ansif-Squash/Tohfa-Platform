@@ -80,8 +80,7 @@ export default function App(): React.JSX.Element {
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
 
-      {screen !== 'Register' && screen !== 'RoleSelection' && (
-        {!isAuthLanding && (
+      {screen !== 'Register' && screen !== 'RoleSelection' && !isAuthLanding && (
         <View style={styles.header}>
             <Text style={styles.headerText}>{t('app.name')}</Text>
             <View style={styles.localeRow}>
@@ -99,7 +98,6 @@ export default function App(): React.JSX.Element {
               ))}
             </View>
           </View>
-      )}
       )}
 
       <View style={styles.content}>
