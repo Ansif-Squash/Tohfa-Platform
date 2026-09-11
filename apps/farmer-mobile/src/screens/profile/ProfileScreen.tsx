@@ -28,6 +28,7 @@ interface ProfileScreenProps {
   onNavigateToHome?: () => void;
   onNavigateToCertifications?: () => void;
   onNavigateToMarket?: () => void;
+  onNavigateToFMBSketch?: () => void;
 }
 
 interface PersonalDetailsData {
@@ -53,6 +54,7 @@ interface FarmDetailsData {
 export function ProfileScreen({
   onNavigateToHome,
   onNavigateToCertifications,
+  onNavigateToFMBSketch,
 }: ProfileScreenProps): React.JSX.Element {
   // --- Profile State ---
   const [personalDetails, setPersonalDetails] = useState<PersonalDetailsData>({
@@ -181,10 +183,14 @@ export function ProfileScreen({
   };
 
   const openFarmEdit = () => {
-    setTempAcres(farmDetails.acres);
-    setTempZones(farmDetails.zones);
-    setTempWaterSource(farmDetails.waterSource);
-    setIsEditFarmModalVisible(true);
+    if (onNavigateToFMBSketch) {
+      onNavigateToFMBSketch();
+    } else {
+      setTempAcres(farmDetails.acres);
+      setTempZones(farmDetails.zones);
+      setTempWaterSource(farmDetails.waterSource);
+      setIsEditFarmModalVisible(true);
+    }
   };
 
   const handleSaveFarmDetails = () => {

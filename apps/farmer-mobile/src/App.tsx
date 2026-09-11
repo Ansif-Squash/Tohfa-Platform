@@ -18,6 +18,10 @@ import { CounterOfferScreen } from './screens/listings/CounterOfferScreen';
 import { CreateListingScreen } from './screens/listings/CreateListingScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
 import { ProfileScreen } from './screens/profile/ProfileScreen';
+import { FMBSketchScreen } from './screens/profile/FMBSketchScreen';
+import { FieldContextScreen } from './screens/profile/FieldContextScreen';
+import { ZonesScreen } from './screens/profile/ZonesScreen';
+import { AddZoneScreen } from './screens/profile/AddZoneScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
 import { type Listing } from './api/listings';
@@ -37,7 +41,11 @@ export type ScreenName =
   | 'Certifications'
   | 'AddCertification'
   | 'CreateListing'
-  | 'CounterOffer';
+  | 'CounterOffer'
+  | 'FMBSketch'
+  | 'FieldContext'
+  | 'Zones'
+  | 'AddZone';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -171,6 +179,27 @@ export default function App(): React.JSX.Element {
               navigate('MainTabs');
             }}
           />
+        ) : screen === 'FMBSketch' ? (
+          <FMBSketchScreen 
+            onNavigateBack={() => navigate('MainTabs')} 
+            onNavigateToFieldContext={() => navigate('FieldContext')}
+          />
+        ) : screen === 'FieldContext' ? (
+          <FieldContextScreen 
+            onNavigateBack={() => navigate('MainTabs')}
+            onNavigateToZones={() => navigate('Zones')}
+          />
+        ) : screen === 'Zones' ? (
+          <ZonesScreen 
+            onNavigateBack={() => navigate('MainTabs')}
+            onNavigateToAddZone={() => navigate('AddZone')}
+            onSave={() => navigate('MainTabs')}
+          />
+        ) : screen === 'AddZone' ? (
+          <AddZoneScreen 
+            onNavigateBack={() => navigate('Zones')}
+            onSave={() => navigate('Zones')}
+          />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>
@@ -198,6 +227,7 @@ export default function App(): React.JSX.Element {
                   onNavigateToHome={() => setCurrentTab('Home')}
                   onNavigateToCertifications={() => navigate('Certifications')}
                   onNavigateToMarket={() => setCurrentTab('Listings')}
+                  onNavigateToFMBSketch={() => navigate('FMBSketch')}
                 />
               )}
             </View>
