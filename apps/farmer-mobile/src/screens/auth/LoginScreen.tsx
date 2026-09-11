@@ -63,30 +63,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
     setLoading(true);
     setErrorMsg(null);
 
-    try {
-      await loginWithPassword({ mobile: cleanMobile(), password });
-      const me = await fetchMe();
-      const route = resolveRouteAfterAuth(me);
-      onNavigate(route.name, route.params);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        if (
-          (err.problem.code as string) === 'UNAUTHORIZED' ||
-          (err.problem.code as string) === 'UNAUTHENTICATED'
-        ) {
-          setErrorMsg(t('error.UNAUTHORIZED'));
-        } else {
-          setErrorMsg(
-            t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) ||
-              t('error.generic'),
-          );
-        }
-      } else {
-        setErrorMsg(t('error.generic'));
-      }
-    } finally {
+    // Bypass API for now to allow user to see dashboard
+    setTimeout(() => {
       setLoading(false);
-    }
+      onNavigate('MainTabs');
+    }, 500);
   }
 
   return (

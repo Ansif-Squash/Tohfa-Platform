@@ -201,64 +201,71 @@ export default function App(): React.JSX.Element {
             </View>
 
             {/* Bottom Tab Bar */}
-            <View style={styles.bottomTabBar}>
+            <View style={[styles.bottomTabBar, { borderTopWidth: 0, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 10, height: 70 }]}>
               <Pressable
                 style={styles.tabItem}
                 onPress={() => setCurrentTab('Home')}
                 accessibilityRole="tab"
               >
-                <Icon
-                  name="home"
-                  size={24}
-                  color={currentTab === 'Home' ? colors.primary : colors.onSurfaceVariant}
-                />
+                <Text style={{ fontSize: 24 }}>🏠</Text>
                 <Text
                   style={[
                     styles.tabItemText,
                     currentTab === 'Home' && styles.tabItemTextActive,
+                    currentTab === 'Home' && { color: '#2E7D32' }
                   ]}
                 >
-                  {t('dashboard.title')}
+                  Home
                 </Text>
               </Pressable>
+
+              <Pressable
+                style={styles.tabItem}
+                onPress={() => {}}
+                accessibilityRole="tab"
+              >
+                <Text style={{ fontSize: 24, opacity: 0.5 }}>🌱</Text>
+                <Text style={styles.tabItemText}>Farm</Text>
+              </Pressable>
+
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Pressable
+                  style={{
+                    backgroundColor: '#1B5E20',
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: -30,
+                    shadowColor: '#1B5E20',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 5,
+                    elevation: 5,
+                    borderWidth: 4,
+                    borderColor: 'white',
+                  }}
+                  onPress={() => navigate('CreateListing')}
+                >
+                  <Text style={{ fontSize: 28, color: 'white' }}>➕</Text>
+                </Pressable>
+              </View>
 
               <Pressable
                 style={styles.tabItem}
                 onPress={() => setCurrentTab('Listings')}
                 accessibilityRole="tab"
               >
-                <Icon
-                  name="inventory_2"
-                  size={24}
-                  color={currentTab === 'Listings' ? colors.primary : colors.onSurfaceVariant}
-                />
+                <Text style={{ fontSize: 24, opacity: currentTab === 'Listings' ? 1 : 0.5 }}>🛒</Text>
                 <Text
                   style={[
                     styles.tabItemText,
                     currentTab === 'Listings' && styles.tabItemTextActive,
+                    currentTab === 'Listings' && { color: '#2E7D32' }
                   ]}
                 >
-                  {t('listings.title')}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={styles.tabItem}
-                onPress={() => setCurrentTab('Wallet')}
-                accessibilityRole="tab"
-              >
-                <Icon
-                  name="account_balance_wallet"
-                  size={24}
-                  color={currentTab === 'Wallet' ? colors.primary : colors.onSurfaceVariant}
-                />
-                <Text
-                  style={[
-                    styles.tabItemText,
-                    currentTab === 'Wallet' && styles.tabItemTextActive,
-                  ]}
-                >
-                  {t('wallet.title')}
+                  Market
                 </Text>
               </Pressable>
 
@@ -267,18 +274,15 @@ export default function App(): React.JSX.Element {
                 onPress={() => setCurrentTab('Profile')}
                 accessibilityRole="tab"
               >
-                <Icon
-                  name="person"
-                  size={24}
-                  color={currentTab === 'Profile' ? colors.primary : colors.onSurfaceVariant}
-                />
+                <Text style={{ fontSize: 24, opacity: currentTab === 'Profile' ? 1 : 0.5 }}>👤</Text>
                 <Text
                   style={[
                     styles.tabItemText,
                     currentTab === 'Profile' && styles.tabItemTextActive,
+                    currentTab === 'Profile' && { color: '#2E7D32' }
                   ]}
                 >
-                  {t('profile.title')}
+                  Profile
                 </Text>
               </Pressable>
             </View>
