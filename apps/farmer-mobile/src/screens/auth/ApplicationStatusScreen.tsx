@@ -7,7 +7,7 @@ import { fetchApplicationStatus, logout, type ApplicationStatusResponse } from '
 
 interface ApplicationStatusScreenProps {
   applicationId: string;
-  onNavigate: (screen: 'Login' | 'MainTabs') => void;
+  onNavigate: (screen: 'Welcome' | 'MainTabs') => void;
 }
 
 const STEPS = [
@@ -49,7 +49,7 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
 
   async function handleSignOut() {
     await logout();
-    onNavigate('Login');
+    onNavigate('Welcome');
   }
 
   function getStepIndex(status: string): number {

@@ -23,9 +23,9 @@
     ]
   },
   "splash": {
-    "backgroundColor": "#F7F5EE",
-    "brandLogo": "assets/logo-farmer-teal.svg",
-    "textColor": "#04342C",
-    "tagline": "Empowering Tamil Nadu Farmers with Direct Fair Trade"
+    "backgroundColor": "#1B5E20",
+    "brandLogo": "assets/tohfa-logo.png",
+    "textColor": "#FFFFFF",
+    "tagline": "Nilgiris Horticulture Organic Farmers Association"
   }
 }

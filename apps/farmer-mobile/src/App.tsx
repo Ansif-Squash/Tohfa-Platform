@@ -9,6 +9,7 @@ import { LoginScreen } from './screens/auth/LoginScreen';
 import { OtpScreen } from './screens/auth/OtpScreen';
 import { ResetPasswordScreen } from './screens/auth/ResetPasswordScreen';
 import { SplashScreen } from './screens/auth/SplashScreen';
+import { WelcomeScreen } from './screens/auth/WelcomeScreen';
 import { AddCertificationScreen } from './screens/certifications/AddCertificationScreen';
 import { CertificationsScreen } from './screens/certifications/CertificationsScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
@@ -19,10 +20,11 @@ import { ProfileScreen } from './screens/profile/ProfileScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
 import { type Listing } from './api/listings';
-import { colors, spacing, typography, weights } from './theme';
+import { authPalette, colors, spacing, typography, weights } from './theme';
 
 export type ScreenName =
   | 'Splash'
+  | 'Welcome'
   | 'Login'
   | 'Register'
   | 'Otp'
@@ -36,6 +38,9 @@ export type ScreenName =
   | 'CounterOffer';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
+
+/** Near-black green used behind the splash photo + status bar while Splash shows. */
+const SPLASH_DARK = authPalette.splashDark;
 
 export default function App(): React.JSX.Element {
   const [screen, setScreen] = useState<ScreenName>('Splash');
@@ -51,7 +56,7 @@ export default function App(): React.JSX.Element {
 
   useEffect(() => {
     setOnAuthFailure(() => {
-      setScreen('Login');
+      setScreen('Welcome');
     });
     return () => {
       setOnAuthFailure(null);
@@ -63,31 +68,41 @@ export default function App(): React.JSX.Element {
     setLocaleState(next);
   };
 
-  return (
-    <SafeAreaView style={styles.screen}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primaryPressed} />
+  // Splash and Welcome are full-bleed photo screens: no header, dark chrome.
+  const isAuthLanding = screen === 'Splash' || screen === 'Welcome';
 
-      <View style={styles.header}>
-        <Text style={styles.headerText}>{t('app.name')}</Text>
-        <View style={styles.localeRow}>
-          {LOCALES.map((code) => (
-            <Pressable
-              key={code}
-              accessibilityRole="button"
-              style={[styles.localeChip, locale === code && styles.localeChipActive]}
-              onPress={() => switchLocale(code)}
-            >
-              <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
-                {code.toUpperCase()}
-              </Text>
-            </Pressable>
-          ))}
+  return (
+    <SafeAreaView style={[styles.screen, isAuthLanding && styles.screenSplash]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
+      />
+
+      {!isAuthLanding && (
+        <View style={styles.header}>
+          <Text style={styles.headerText}>{t('app.name')}</Text>
+          <View style={styles.localeRow}>
+            {LOCALES.map((code) => (
+              <Pressable
+                key={code}
+                accessibilityRole="button"
+                style={[styles.localeChip, locale === code && styles.localeChipActive]}
+                onPress={() => switchLocale(code)}
+              >
+                <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
+                  {code.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.content}>
         {screen === 'Splash' ? (
           <SplashScreen onNavigate={(s, p) => navigate(s, p)} />
+        ) : screen === 'Welcome' ? (
+          <WelcomeScreen onNavigate={(s) => navigate(s)} />
         ) : screen === 'Login' ? (
           <LoginScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'Register' ? (
@@ -272,6 +287,9 @@ export default function App(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
+  screenSplash: {
+    backgroundColor: SPLASH_DARK,
+  },
   header: {
     backgroundColor: colors.primaryPressed,
     paddingHorizontal: spacing.lg,

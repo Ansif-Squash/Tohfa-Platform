@@ -1,22 +1,62 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
-import { useTheme } from '../../theme';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+} from 'react-native';
 import { t } from '../../i18n';
-import { Button, Card, ErrorState, Input } from '@tohfa/mobile-ui';
-import { loginWithPassword, requestOtp, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
+import { Button, ErrorState, Icon } from '@tohfa/mobile-ui';
+import { loginWithPassword, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
+import { authPalette as P } from '../../theme';
 
 interface LoginScreenProps {
-  onNavigate: (screen: 'Otp' | 'ForgotPassword' | 'ApplicationStatus' | 'MainTabs' | 'Register', params?: Record<string, string | number | undefined>) => void;
+  onNavigate: (
+    screen:
+      | 'Welcome'
+      | 'Otp'
+      | 'ForgotPassword'
+      | 'ApplicationStatus'
+      | 'MainTabs'
+      | 'Register',
+    params?: Record<string, string | number | undefined>,
+  ) => void;
 }
 
+/**
+ * Approved Login design (branding guidelines, Screen 10).
+ *
+ * Light screen: back button, green home icon, "Welcome back" title,
+ * +91 mobile field, password field with show/hide, remember-me + forgot row,
+ * solid Login button, "OR CONTINUE WITH" divider with Google / Apple /
+ * Facebook buttons, an "Apply as Farmer" register link, the EN / Tamil
+ * toggle and a legal footer.
+ */
+
+const MOBILE_PREFIX = '+91';
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
-  const theme = useTheme();
-  const [tab, setTab] = useState<'PASSWORD' | 'OTP'>('PASSWORD');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const cleanMobile = () => (mobile.startsWith('+') ? mobile.trim() : `+91${mobile.trim()}`);
+
+  /**
+   * Social sign-in. The design shows Google / Apple / Facebook, but the TOHFA
+   * API has no social OAuth endpoints yet — tapping is a safe no-op until the
+   * backend flow lands.
+   */
+  const onSocialLogin = (_provider: 'GOOGLE' | 'APPLE' | 'FACEBOOK') => {
+    // TODO: wire to OAuth flow once the API supports social sign-in.
+  };
 
   async function handlePasswordLogin() {
     if (!mobile.trim() || !password.trim()) return;
@@ -24,17 +64,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
     setErrorMsg(null);
 
     try {
-      const cleanMobile = mobile.startsWith('+') ? mobile.trim() : `+91${mobile.trim()}`;
-      await loginWithPassword({ mobile: cleanMobile, password });
+      await loginWithPassword({ mobile: cleanMobile(), password });
       const me = await fetchMe();
       const route = resolveRouteAfterAuth(me);
       onNavigate(route.name, route.params);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        if ((err.problem.code as string) === 'UNAUTHORIZED' || (err.problem.code as string) === 'UNAUTHENTICATED') {
+        if (
+          (err.problem.code as string) === 'UNAUTHORIZED' ||
+          (err.problem.code as string) === 'UNAUTHENTICATED'
+        ) {
           setErrorMsg(t('error.UNAUTHORIZED'));
         } else {
-          setErrorMsg(t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) || t('error.generic'));
+          setErrorMsg(
+            t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) ||
+              t('error.generic'),
+          );
         }
       } else {
         setErrorMsg(t('error.generic'));
@@ -44,160 +89,383 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
     }
   }
 
-  async function handleRequestOtp() {
-    if (!mobile.trim()) return;
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const cleanMobile = mobile.startsWith('+') ? mobile.trim() : `+91${mobile.trim()}`;
-      const res = await requestOtp({ mobile: cleanMobile, purpose: 'LOGIN' });
-      onNavigate('Otp', {
-        mobile: cleanMobile,
-        resendAvailableAt: res.resendAvailableAt,
-        attemptsRemaining: res.attemptsRemaining,
-      });
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setErrorMsg(t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) || t('error.generic'));
-      } else {
-        setErrorMsg(t('error.generic'));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.surface }]} contentContainerStyle={styles.content}>
-      <Card style={styles.card}>
-        <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-          {t('auth.login.title')}
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.colors.grey700 }]}>
-          {t('auth.login.subtitle')}
-        </Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.backRow}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.backButton}
+          onPress={() => onNavigate('Welcome')}
+        >
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: P.ink }}>{'<'}</Text>
+        </TouchableOpacity>
+      </View>
 
-        <View style={[styles.tabContainer, { backgroundColor: theme.colors.grey100 }]}>
+      <View style={styles.iconCircle}>
+        <Text style={{ fontSize: 32 }}>🏠</Text>
+      </View>
+
+      <Text style={styles.title}>{t('auth.login.title')}</Text>
+      <Text style={styles.subtitle}>{t('auth.login.subtitle')}</Text>
+
+      {errorMsg ? <ErrorState message={errorMsg} onRetry={() => setErrorMsg(null)} /> : null}
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>{t('auth.login.mobile')}</Text>
+        <View style={styles.fieldRow}>
+          <Text style={{ fontSize: 16 }}>📞</Text>
+          <Text style={styles.prefix}>{MOBILE_PREFIX}</Text>
+          <TextInput
+            value={mobile}
+            onChangeText={setMobile}
+            keyboardType="phone-pad"
+            placeholder="98765 43210"
+            placeholderTextColor={P.muted}
+            style={styles.fieldInput}
+            accessibilityLabel={t('auth.login.mobile')}
+          />
+        </View>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>{t('auth.login.password')}</Text>
+        <View style={styles.fieldRow}>
+          <Text style={{ fontSize: 16 }}>🔒</Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            placeholder="........"
+            placeholderTextColor={P.muted}
+            style={styles.fieldInput}
+            accessibilityLabel={t('auth.login.password')}
+          />
           <TouchableOpacity
-            style={[styles.tab, tab === 'PASSWORD' && { backgroundColor: theme.colors.surface }]}
-            onPress={() => { setTab('PASSWORD'); setErrorMsg(null); }}
+            accessibilityRole="button"
+            onPress={() => setShowPassword((s) => !s)}
           >
-            <Text style={[styles.tabText, { color: tab === 'PASSWORD' ? theme.colors.primary : theme.colors.grey700 }]}>
-              {t('auth.login.tabPassword')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, tab === 'OTP' && { backgroundColor: theme.colors.surface }]}
-            onPress={() => { setTab('OTP'); setErrorMsg(null); }}
-          >
-            <Text style={[styles.tabText, { color: tab === 'OTP' ? theme.colors.primary : theme.colors.grey700 }]}>
-              {t('auth.login.tabOtp')}
+            <Text style={{ fontSize: 16, color: P.muted }}>
+              {showPassword ? '👁️‍🗨️' : '👁️'}
             </Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        {errorMsg ? <ErrorState message={errorMsg} onRetry={() => setErrorMsg(null)} /> : null}
+      <View style={styles.optionRow}>
+        <TouchableOpacity
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: rememberMe }}
+          style={styles.rememberWrap}
+          onPress={() => setRememberMe((r) => !r)}
+        >
+          <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+            {rememberMe ? <Text style={{ fontSize: 12, color: P.white, fontWeight: 'bold' }}>✓</Text> : null}
+          </View>
+          <Text style={styles.rememberText}>{t('auth.login.rememberMe')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => onNavigate('ForgotPassword')}
+        >
+          <Text style={styles.forgotText}>{t('auth.login.forgotPassword')}</Text>
+        </TouchableOpacity>
+      </View>
 
-        <Input
-          label={t('auth.login.mobile')}
-          value={mobile}
-          onChangeText={setMobile}
-          keyboardType="phone-pad"
-          placeholder="9876543210"
-        />
+      <Button
+        title={t('auth.login.submit')}
+        onPress={handlePasswordLogin}
+        loading={loading}
+        disabled={!mobile || !password}
+        style={styles.loginButton}
+        textStyle={styles.loginButtonText}
+      />
 
-        {tab === 'PASSWORD' ? (
-          <>
-            <Input
-              label={t('auth.login.password')}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-            <TouchableOpacity onPress={() => onNavigate('ForgotPassword')} style={styles.forgotBtn}>
-              <Text style={[styles.forgotText, { color: theme.colors.primary }]}>
-                {t('auth.login.forgotPassword')}
-              </Text>
-            </TouchableOpacity>
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>{t('auth.login.orContinueWith')}</Text>
+        <View style={styles.dividerLine} />
+      </View>
 
-            <Button
-              title={t('auth.login.submit')}
-              onPress={handlePasswordLogin}
-              loading={loading}
-              disabled={!mobile || !password}
-              style={styles.submitBtn}
-            />
-          </>
-        ) : (
-          <Button
-            title={t('auth.login.requestOtp')}
-            onPress={handleRequestOtp}
-            loading={loading}
-            disabled={!mobile}
-            style={styles.submitBtn}
-          />
-        )}
+      <View style={styles.socialRow}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Google"
+          style={styles.socialButton}
+          onPress={() => onSocialLogin('GOOGLE')}
+        >
+          <Image source={require('../../assets/icons/googleee.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Apple"
+          style={styles.socialButton}
+          onPress={() => onSocialLogin('APPLE')}
+        >
+          <Image source={require('../../assets/icons/apple.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Facebook"
+          style={styles.socialButton}
+          onPress={() => onSocialLogin('FACEBOOK')}
+        >
+          <Image source={require('../../assets/icons/facebook.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
+        </TouchableOpacity>
+      </View>
 
-        <Button
-          title={t('registration.title')}
-          variant="outline"
-          onPress={() => onNavigate('Register')}
-          style={styles.registerBtn}
-        />
-      </Card>
+      <TouchableOpacity
+        accessibilityRole="button"
+        style={styles.registerWrap}
+        onPress={() => onNavigate('Register')}
+      >
+        <Text style={styles.registerText}>
+          {t('auth.login.newToTohfa')}{' '}
+          <Text style={styles.registerLink}>{t('auth.login.applyAsFarmer')} →</Text>
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.langRow}>
+        <View style={styles.langPillActive}>
+          <Text style={styles.langPillActiveText}>EN</Text>
+        </View>
+        <View style={styles.langPill}>
+          <Text style={styles.langPillText}>{'\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD'}</Text>
+        </View>
+      </View>
+
+      <View style={styles.legalRow}>
+        <Text style={styles.legalText}>
+          <Text style={styles.legalLink}>{t('auth.welcome.terms')}</Text>
+          {'  -  '}
+          <Text style={styles.legalLink}>{t('auth.welcome.privacy')}</Text>
+        </Text>
+      </View>
     </ScrollView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: P.bg,
   },
   content: {
-    padding: 20,
-    justifyContent: 'center',
-    minHeight: '100%',
+    paddingHorizontal: 24,
+    paddingBottom: 32,
   },
-  card: {
-    padding: 24,
-    gap: 16,
+  backRow: {
+    paddingTop: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: P.progressInactive,
+    backgroundColor: P.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: P.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginTop: 18,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 23,
+    fontWeight: '800',
+    color: P.ink,
+    textAlign: 'center',
+    marginTop: 18,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 12.8,
+    lineHeight: 19,
+    color: P.muted,
+    textAlign: 'center',
+    marginTop: 6,
   },
-  tabContainer: {
+  socialRow: {
     flexDirection: 'row',
-    borderRadius: 8,
-    padding: 4,
-    marginVertical: 8,
+    gap: 12,
   },
-  tab: {
+  socialButton: {
     flex: 1,
-    paddingVertical: 10,
+    height: 56,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: P.progressInactive,
+    backgroundColor: P.white,
     alignItems: 'center',
-    borderRadius: 6,
+    justifyContent: 'center',
   },
-  tabText: {
+  googleGlyph: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: P.googleBlue,
+  },
+  appleGlyph: {
+    fontSize: 24,
     fontWeight: '600',
-    fontSize: 14,
+    color: P.black,
   },
-  forgotBtn: {
-    alignSelf: 'flex-end',
-    marginVertical: 4,
+  facebookBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: P.facebookBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  facebookGlyph: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: P.white,
+    marginTop: -1,
+  },
+  fieldGroup: {
+    marginTop: 18,
+  },
+  fieldLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: P.ink,
+    marginBottom: 6,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: P.white,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+  },
+  prefix: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: P.ink,
+  },
+  fieldInput: {
+    flex: 1,
+    fontSize: 14,
+    color: P.ink,
+    paddingVertical: 0,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  rememberWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  checkbox: {
+    width: 19,
+    height: 19,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    backgroundColor: P.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: P.primary,
+    borderColor: P.primary,
+  },
+  rememberText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: P.ink,
   },
   forgotText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
+    color: P.primary,
   },
-  submitBtn: {
-    marginTop: 8,
+  loginButton: {
+    backgroundColor: P.primary,
+    borderRadius: 12,
+    height: 48,
+    marginTop: 22,
   },
-  registerBtn: {
-    marginTop: 4,
+  loginButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: P.divider,
+  },
+  dividerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.muted,
+  },
+  registerWrap: {
+    alignItems: 'center',
+  },
+  registerText: {
+    fontSize: 12.5,
+    color: P.muted,
+  },
+  registerLink: {
+    color: P.primary,
+    fontWeight: '700',
+  },
+  langRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 28,
+  },
+  langPillActive: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: P.lightGreen,
+  },
+  langPillActiveText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.primary,
+  },
+  langPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  langPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.muted,
+  },
+  legalRow: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  legalText: {
+    fontSize: 10,
+    color: P.legal,
+  },
+  legalLink: {
+    textDecorationLine: 'underline',
   },
 });

@@ -17,7 +17,7 @@ import {
 } from '../../api/registration';
 
 interface RegistrationFlowProps {
-  onNavigate: (screen: 'ApplicationStatus' | 'Login', params?: Record<string, string | number | undefined>) => void;
+  onNavigate: (screen: 'ApplicationStatus' | 'Welcome', params?: Record<string, string | number | undefined>) => void;
 }
 
 export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavigate }) => {
@@ -98,7 +98,7 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
 
   function handleBack() {
     if (draft.currentStep <= 1) {
-      onNavigate('Login');
+      onNavigate('Welcome');
       return;
     }
     const prevStep = draft.currentStep - 1;

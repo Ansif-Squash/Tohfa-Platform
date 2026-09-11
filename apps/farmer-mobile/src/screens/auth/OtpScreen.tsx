@@ -1,10 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  TextInput,
+  Pressable,
+} from 'react-native';
 import { useTheme } from '../../theme';
 import { t } from '../../i18n';
-import { Badge, Button, Card, ErrorState, Input } from '@tohfa/mobile-ui';
+import { Icon } from '@tohfa/mobile-ui';
 import { verifyOtp, requestOtp, renderOtpState, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
+
+const authPalette = {
+  background: '#F3F3E9',
+  primary: '#1A4314', // dark green text
+  primaryLight: '#E8F5E9',
+  buttonBg: '#A3C2A4',
+  text: '#1A4314',
+  textLight: '#5F735C',
+  inputBg: '#FFFFFF',
+  inputBorder: '#E0E5DF',
+  focusBorder: '#388E3C',
+  successLight: '#EAF4E8',
+};
 
 interface OtpScreenProps {
   mobile: string;
@@ -25,18 +49,17 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
   const [resendLoading, setResendLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // BR-32: Server state holders
+  const inputRef = useRef<TextInput>(null);
+
   const [resendAvailableAt, setResendAvailableAt] = useState<string | undefined>(initialResendAvailableAt);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number>(initialAttemptsRemaining);
   const [now, setNow] = useState(Date.now());
 
-  // BR-32: Tick live timer
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // BR-32: Derive state directly from server fields
   const otpState = renderOtpState({
     resendAvailableAt,
     attemptsRemaining,
@@ -44,12 +67,12 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
   });
 
   async function handleVerify() {
-    if (!code.trim() || otpState.isLocked) return;
+    if (code.length < 6 || otpState.isLocked) return;
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      await verifyOtp({ mobile, code: code.trim(), purpose: 'LOGIN' });
+      await verifyOtp({ mobile, code, purpose: 'LOGIN' });
       const me = await fetchMe();
       const route = resolveRouteAfterAuth(me);
       onNavigate(route.name, route.params);
@@ -74,12 +97,12 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
   }
 
   async function handleResend() {
+    if (!otpState.canResend) return;
     setResendLoading(true);
     setErrorMsg(null);
 
     try {
       const res = await requestOtp({ mobile, purpose: 'LOGIN' });
-      // BR-32: Read server fields directly from resend response
       setResendAvailableAt(res.resendAvailableAt);
       setAttemptsRemaining(res.attemptsRemaining);
       setCode('');
@@ -98,122 +121,320 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
     }
   }
 
+  const renderOtpBoxes = () => {
+    const boxes = [];
+    for (let i = 0; i < 6; i++) {
+      const isFilled = i < code.length;
+      const isActive = i === code.length;
+      
+      boxes.push(
+        <View
+          key={i}
+          style={[
+            styles.otpBox,
+            isFilled && styles.otpBoxFilled,
+            isActive && styles.otpBoxActive,
+          ]}
+        >
+          <Text style={[styles.otpBoxText, isFilled && styles.otpBoxTextFilled]}>
+            {code[i] || ''}
+          </Text>
+        </View>
+      );
+    }
+    return boxes;
+  };
+
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `0${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.surface }]} contentContainerStyle={styles.content}>
-      <Card style={styles.card}>
-        {otpState.isLocked ? (
-          <View style={styles.lockedContainer}>
-            <Badge label={t('auth.otp.lockedTitle')} variant="danger" />
-            <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-              {t('auth.otp.lockedTitle')}
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.colors.grey700 }]}>
-              {t('auth.otp.lockedSubtitle')}
-            </Text>
-
-            <Button
-              title={t('auth.otp.resendNow')}
-              onPress={handleResend}
-              loading={resendLoading}
-              style={styles.actionBtn}
-            />
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('Login')}>
+              <Text style={styles.backButtonText}>{'<'}</Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          <>
-            <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-                {t('auth.otp.title')}
-              </Text>
-              {/* BR-32: attempts indicator comes from attemptsRemaining */}
-              <Badge
-                label={t('auth.otp.attemptsRemaining', { count: otpState.attemptsRemaining })}
-                variant={otpState.attemptsRemaining <= 1 ? 'danger' : 'info'}
-              />
+
+          <View style={styles.iconWrapper}>
+            <View style={styles.iconCircle}>
+              <Text style={{ fontSize: 32 }}>✉️</Text>
             </View>
+          </View>
 
-            <Text style={[styles.subtitle, { color: theme.colors.grey700 }]}>
-              {t('auth.otp.subtitle', { mobile })}
-            </Text>
+          <Text style={styles.title}>Verify your mobile</Text>
+          <Text style={styles.subtitle}>
+            Enter the 6-digit code sent to
+          </Text>
+          <Text style={styles.phoneNumber}>{mobile || '+91 98XXX XX789'}</Text>
+          
+          <TouchableOpacity onPress={() => onNavigate('Login')}>
+            <Text style={styles.changeMobile}>Change mobile number</Text>
+          </TouchableOpacity>
 
-            {errorMsg ? <ErrorState message={errorMsg} onRetry={() => setErrorMsg(null)} /> : null}
+          {errorMsg && (
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          )}
 
-            <Input
-              label="OTP Code"
+          <Pressable style={styles.otpContainer} onPress={() => inputRef.current?.focus()}>
+            {renderOtpBoxes()}
+            <TextInput
+              ref={inputRef}
+              style={styles.hiddenInput}
               value={code}
-              onChangeText={setCode}
+              onChangeText={(text) => {
+                if (text.length <= 6) setCode(text.replace(/[^0-9]/g, ''));
+              }}
               keyboardType="number-pad"
               maxLength={6}
-              placeholder="123456"
+              autoFocus
             />
+          </Pressable>
 
-            <Button
-              title={t('common.continue')}
-              onPress={handleVerify}
-              loading={loading}
-              disabled={code.length < 4}
-              style={styles.actionBtn}
-            />
-
-            {/* BR-32: Resend timer counts down from resendAvailableAt */}
-            <View style={styles.resendRow}>
-              {otpState.canResend ? (
-                <Button
-                  title={t('auth.otp.resendNow')}
-                  variant="outline"
-                  onPress={handleResend}
-                  loading={resendLoading}
-                />
-              ) : (
-                <Text style={[styles.timerText, { color: theme.colors.grey700 }]}>
-                  {t('auth.otp.resendIn', { seconds: otpState.secondsUntilResend })}
+          <View style={styles.resendContainer}>
+            {otpState.canResend ? (
+              <TouchableOpacity onPress={handleResend} disabled={resendLoading}>
+                <Text style={[styles.resendLabel, { color: authPalette.primary, fontWeight: '700' }]}>
+                  {resendLoading ? 'Resending...' : 'Resend OTP now'}
                 </Text>
-              )}
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.resendLabel}>
+                Resend OTP in <Text style={styles.resendTimer}>{formatTimer(otpState.secondsUntilResend)}</Text>
+              </Text>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.verifyButton,
+              code.length < 6 && styles.verifyButtonDisabled,
+            ]}
+            onPress={handleVerify}
+            disabled={code.length < 6 || loading}
+          >
+            <Text style={styles.verifyButtonText}>
+              {loading ? 'Verifying...' : 'Verify'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.supportContainer}>
+            <Text style={styles.supportText}>
+              Having trouble?{' '}
+              <Text style={styles.supportLink} onPress={() => {}}>
+                Contact TOHFA support
+              </Text>
+            </Text>
+          </View>
+
+          <View style={styles.spacer} />
+
+          <View style={styles.languageContainer}>
+            <View style={styles.languageToggle}>
+              <View style={[styles.langOption, styles.langOptionActive]}>
+                <Text style={[styles.langText, styles.langTextActive]}>EN</Text>
+              </View>
+              <View style={styles.langOption}>
+                <Text style={styles.langText}>தமிழ்</Text>
+              </View>
             </View>
-          </>
-        )}
-      </Card>
-    </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: authPalette.background,
+  },
+  keyboardView: {
     flex: 1,
   },
-  content: {
-    padding: 20,
-    justifyContent: 'center',
-    minHeight: '100%',
-  },
-  card: {
-    padding: 24,
-    gap: 16,
-  },
-  headerRow: {
-    flexDirection: 'row',
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 24,
     alignItems: 'center',
-    justifyContent: 'space-between',
+  },
+  header: {
+    width: '100%',
+    flexDirection: 'row',
+    marginBottom: 40,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#D4D6D2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: authPalette.inputBg,
+  },
+  backButtonText: {
+    fontSize: 18,
+    color: authPalette.textLight,
+    fontWeight: '600',
+  },
+  iconWrapper: {
+    marginBottom: 24,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: authPalette.successLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
+    color: authPalette.text,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
+    color: authPalette.textLight,
+    marginBottom: 8,
   },
-  actionBtn: {
-    marginTop: 8,
+  phoneNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: authPalette.text,
+    marginBottom: 8,
   },
-  resendRow: {
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  timerText: {
+  changeMobile: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '700',
+    color: authPalette.focusBorder,
+    marginBottom: 32,
   },
-  lockedContainer: {
-    gap: 12,
-    alignItems: 'flex-start',
+  errorText: {
+    color: '#D32F2F',
+    fontSize: 14,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  otpContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 32,
+  },
+  otpBox: {
+    width: 48,
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: authPalette.inputBorder,
+    backgroundColor: authPalette.inputBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  otpBoxFilled: {
+    backgroundColor: authPalette.successLight,
+    borderColor: authPalette.focusBorder,
+  },
+  otpBoxActive: {
+    borderColor: authPalette.focusBorder,
+  },
+  otpBoxText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: authPalette.text,
+  },
+  otpBoxTextFilled: {
+    color: authPalette.primary,
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  resendContainer: {
+    marginBottom: 32,
+  },
+  resendLabel: {
+    fontSize: 14,
+    color: authPalette.textLight,
+  },
+  resendTimer: {
+    fontWeight: '700',
+    color: authPalette.focusBorder,
+  },
+  verifyButton: {
+    width: '100%',
+    height: 52,
+    backgroundColor: authPalette.buttonBg,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  verifyButtonDisabled: {
+    opacity: 0.7,
+  },
+  verifyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  supportContainer: {
+    marginBottom: 16,
+  },
+  supportText: {
+    fontSize: 14,
+    color: authPalette.textLight,
+  },
+  supportLink: {
+    fontWeight: '700',
+    color: authPalette.focusBorder,
+  },
+  spacer: {
+    flex: 1,
+  },
+  languageContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  languageToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  langOption: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  langOptionActive: {
+    backgroundColor: authPalette.successLight,
+  },
+  langText: {
+    fontSize: 14,
+    color: authPalette.textLight,
+    fontWeight: '600',
+  },
+  langTextActive: {
+    color: authPalette.primary,
   },
 });
+

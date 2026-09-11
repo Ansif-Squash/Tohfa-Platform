@@ -61,6 +61,32 @@ export const radius = {
  */
 export const MIN_TOUCH_TARGET = tokens.size.minTouchTarget;
 
+/**
+ * Palette for the approved auth-screen mockups (branding guidelines,
+ * Screens 10-12). The mockups use a fixed green/cream scheme that differs
+ * from the token primary, so it lives here where the hex-lint guard permits
+ * raw values. Screens must import from here — never inline hex literals.
+ */
+export const authPalette = {
+  primary: '#2E7D32',
+  ink: '#1a2e1a',
+  muted: '#6b7566',
+  lightGreen: '#EAF3DE',
+  border: '#e8e6dd',
+  bg: '#FCFCFC',
+  progressInactive: '#e0ddd2',
+  divider: '#eae7dd',
+  legal: '#b8b6aa',
+  white: '#FFFFFF',
+  googleBlue: '#4285F4',
+  facebookBlue: '#1877F2',
+  black: '#000000',
+  deepGreen: '#1B5E20',
+  leafGreen: '#66BB6A',
+  splashDark: '#0B1A16',
+  borderLight: '#EEEEEE',
+} as const;
+
 export const theme = {
   colors,
   typography,

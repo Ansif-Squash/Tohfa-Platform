@@ -15,7 +15,13 @@ describe('User Story 52 (S-52): Farmer Mobile Store Submission & Data Safety', (
     expect(manifest).toContain('android.permission.INTERNET');
     expect(manifest).toContain('android.permission.ACCESS_FINE_LOCATION');
     expect(manifest).toContain('android.permission.CAMERA');
-    expect(manifest).toContain('in.tohfa.farmer');
+  });
+
+  it('verifies the farmer bundle id in build.gradle (AGP 8: package no longer in manifest)', () => {
+    const gradlePath = path.join(farmerDir, 'android/app/build.gradle');
+    const gradle = fs.readFileSync(gradlePath, 'utf8');
+    expect(gradle).toContain('namespace "in.tohfa.farmer"');
+    expect(gradle).toContain('applicationId "in.tohfa.farmer"');
   });
 
   it('verifies Info.plist exists and contains usage descriptions for iOS review', () => {
