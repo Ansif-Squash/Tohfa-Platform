@@ -4,8 +4,8 @@
   "private": true,
   "description": "TOHFA farmer app. React Native 0.74. Tamil-first, low-end Android target.",
   "scripts": {
-    "start": "cross-env JAVA_HOME=\"C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.20.101-hotspot\" ANDROID_HOME=\"C:\\Users\\ansif\\AppData\\Local\\Android\\Sdk\" react-native start",
-    "android": "cross-env JAVA_HOME=\"C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.20.101-hotspot\" ANDROID_HOME=\"C:\\Users\\ansif\\AppData\\Local\\Android\\Sdk\" react-native run-android",
+    "start": "react-native start",
+    "android": "react-native run-android",
     "ios": "react-native run-ios",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
@@ -19,7 +19,7 @@
     "@tohfa/shared-types": "workspace:*",
     "react": "18.2.0",
     "react-native": "0.74.5",
-    "react-native-svg": "^15.2.0"
+    "react-native-svg": "15.2.0"
   },
   "devDependencies": {
     "@react-native/babel-preset": "0.74.87",

@@ -80,7 +80,7 @@ export default function App(): React.JSX.Element {
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
 
-      {screen !== 'Register' && screen !== 'RoleSelection' && !isAuthLanding && (
+      {screen !== 'Register' && screen !== 'RoleSelection' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
         <View style={styles.header}>
             <Text style={styles.headerText}>{t('app.name')}</Text>
             <View style={styles.localeRow}>
@@ -108,7 +108,7 @@ export default function App(): React.JSX.Element {
         ) : screen === 'Login' ? (
           <LoginScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'RoleSelection' ? (
-          <RoleSelectionScreen onNavigate={(s, p) => navigate(s, p)} />
+          <RoleSelectionScreen onNavigate={(s) => navigate(s)} />
         ) : screen === 'Register' ? (
           <RegistrationFlowScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'Otp' ? (
@@ -195,7 +195,9 @@ export default function App(): React.JSX.Element {
                 <WalletScreen />
               ) : (
                 <ProfileScreen
+                  onNavigateToHome={() => setCurrentTab('Home')}
                   onNavigateToCertifications={() => navigate('Certifications')}
+                  onNavigateToMarket={() => setCurrentTab('Listings')}
                 />
               )}
             </View>
