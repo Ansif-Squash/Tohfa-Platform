@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../theme';
-import { fetchApplicationStatus, type ApplicationStatusResponse } from '../../api/auth';
+import { fetchApplicationStatus, logout, type ApplicationStatusResponse } from '../../api/auth';
 import { ErrorState, Skeleton } from '@tohfa/mobile-ui';
 
 interface ApplicationStatusScreenProps {
@@ -47,6 +47,7 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
 
   function handleBackToHome() {
     onNavigate('MainTabs');
+  }
   async function handleSignOut() {
     await logout();
     onNavigate('Welcome');

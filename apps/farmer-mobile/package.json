@@ -19,7 +19,7 @@
     "@tohfa/shared-types": "workspace:*",
     "react": "18.2.0",
     "react-native": "0.74.5",
-    "react-native-svg": "^15.15.5"
+    "react-native-svg": "^15.2.0"
   },
   "devDependencies": {
     "@react-native/babel-preset": "0.74.87",
