@@ -14,6 +14,7 @@ import { WelcomeScreen } from './screens/auth/WelcomeScreen';
 import { AddCertificationScreen } from './screens/certifications/AddCertificationScreen';
 import { CertificationsScreen } from './screens/certifications/CertificationsScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
+import { WeatherScreen } from './screens/dashboard/WeatherScreen';
 import { CounterOfferScreen } from './screens/listings/CounterOfferScreen';
 import { CreateListingScreen } from './screens/listings/CreateListingScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
@@ -27,6 +28,9 @@ import { PersonalDetailsScreen } from './screens/profile/PersonalDetailsScreen';
 import { AuditsScreen } from './screens/audits/AuditsScreen';
 import { AuditResultScreen } from './screens/audits/AuditResultScreen';
 import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
+import { FarmRatingsScreen } from './screens/profile/FarmRatingsScreen';
+import { SoilTestScreen } from './screens/profile/SoilTestScreen';
+import { NewSoilTestScreen } from './screens/profile/NewSoilTestScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
 import { type Listing } from './api/listings';
@@ -55,7 +59,11 @@ export type ScreenName =
   | 'PersonalDetails'
   | 'Audits'
   | 'AuditResult'
-  | 'FarmManagement';
+  | 'FarmManagement'
+  | 'FarmRatings'
+  | 'SoilTest'
+  | 'NewSoilTest'
+  | 'Weather';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -262,6 +270,14 @@ export default function App(): React.JSX.Element {
             }
             onNavigateToAudits={() => navigate('Audits')}
           />
+        ) : screen === 'FarmRatings' ? (
+          <FarmRatingsScreen onNavigateBack={() => navigate('MainTabs')} />
+        ) : screen === 'SoilTest' ? (
+          <SoilTestScreen onNavigateBack={() => navigate('MainTabs')} onNavigateToNewSoilTest={() => navigate('NewSoilTest')} />
+        ) : screen === 'NewSoilTest' ? (
+          <NewSoilTestScreen onNavigateBack={() => navigate('SoilTest')} onSave={() => navigate('SoilTest')} />
+        ) : screen === 'Weather' ? (
+          <WeatherScreen onNavigateBack={() => navigate('MainTabs')} />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>
@@ -275,6 +291,7 @@ export default function App(): React.JSX.Element {
                   onNavigateToProfile={() => setCurrentTab('Profile')}
                   onNavigateToNotifications={() => navigate('Notifications')}
                   onNavigateToFarmManagement={() => navigate('FarmManagement')}
+                  onNavigateToWeather={() => navigate('Weather')}
                 />
               ) : currentTab === 'Listings' ? (
                 <ListingsScreen
@@ -294,6 +311,8 @@ export default function App(): React.JSX.Element {
                   onNavigateToFMBSketch={() => navigate('FMBSketch')}
                   onNavigateToPersonalDetails={() => navigate('PersonalDetails')}
                   onNavigateToAudits={() => navigate('Audits')}
+                  onNavigateToFarmRatings={() => navigate('FarmRatings')}
+                  onNavigateToSoilTest={() => navigate('SoilTest')}
                 />
               )}
             </View>

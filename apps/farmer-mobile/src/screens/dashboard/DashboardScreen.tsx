@@ -39,6 +39,7 @@ interface DashboardScreenProps {
   onNavigateToCertifications?: () => void;
   onNavigateToNotifications?: () => void;
   onNavigateToFarmManagement?: () => void;
+  onNavigateToWeather?: () => void;
 }
 
 export function DashboardScreen({
@@ -49,6 +50,7 @@ export function DashboardScreen({
   onNavigateToCertifications,
   onNavigateToNotifications,
   onNavigateToFarmManagement,
+  onNavigateToWeather,
 }: DashboardScreenProps): React.JSX.Element {
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -181,7 +183,7 @@ export function DashboardScreen({
         {/* Main Content Area */}
         <View style={styles.mainContent}>
           {/* Weather Card */}
-          <View style={styles.weatherCard}>
+          <TouchableOpacity style={styles.weatherCard} activeOpacity={0.9} onPress={onNavigateToWeather}>
             <View style={styles.weatherTop}>
               <View style={styles.weatherIconContainer}>
                 <Text style={styles.weatherSunEmoji}>☀️</Text>
@@ -196,7 +198,7 @@ export function DashboardScreen({
                   <Text style={styles.condition}>Sunny</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.forecastButton}>
+              <TouchableOpacity style={styles.forecastButton} onPress={onNavigateToWeather}>
                 <Text style={styles.forecastText}>7-day {'>'}</Text>
               </TouchableOpacity>
             </View>
@@ -217,7 +219,7 @@ export function DashboardScreen({
                 <Text style={styles.weatherStatLabel}>Rain</Text>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* Alert Card */}
           <View style={styles.alertCard}>

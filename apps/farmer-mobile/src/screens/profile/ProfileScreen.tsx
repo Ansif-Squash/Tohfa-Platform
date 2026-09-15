@@ -31,6 +31,8 @@ interface ProfileScreenProps {
   onNavigateToFMBSketch?: () => void;
   onNavigateToPersonalDetails?: () => void;
   onNavigateToAudits?: () => void;
+  onNavigateToFarmRatings?: () => void;
+  onNavigateToSoilTest?: () => void;
 }
 
 interface PersonalDetailsData {
@@ -59,6 +61,8 @@ export function ProfileScreen({
   onNavigateToFMBSketch,
   onNavigateToPersonalDetails,
   onNavigateToAudits,
+  onNavigateToFarmRatings,
+  onNavigateToSoilTest,
 }: ProfileScreenProps): React.JSX.Element {
   // --- Profile State ---
   const [personalDetails, setPersonalDetails] = useState<PersonalDetailsData>({
@@ -291,7 +295,7 @@ export function ProfileScreen({
 
             <TouchableOpacity
               style={styles.quickStatCard}
-              onPress={() => setIsRatingModalVisible(true)}
+              onPress={() => onNavigateToFarmRatings ? onNavigateToFarmRatings() : setIsRatingModalVisible(true)}
               activeOpacity={0.8}
             >
               <Text style={styles.statEmoji}>⭐</Text>
@@ -595,7 +599,7 @@ export function ProfileScreen({
               <Text style={styles.cardTitle}>Farm Rating</Text>
               <Text style={styles.cardSubtitle}>10-category framework</Text>
             </View>
-            <TouchableOpacity onPress={() => setIsRatingModalVisible(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={() => onNavigateToFarmRatings ? onNavigateToFarmRatings() : setIsRatingModalVisible(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.cardActionLink}>Details</Text>
             </TouchableOpacity>
           </View>
@@ -696,7 +700,7 @@ export function ProfileScreen({
               <Text style={styles.cardTitle}>Soil Test</Text>
               <Text style={styles.cardSubtitle}>Annual analysis</Text>
             </View>
-            <TouchableOpacity onPress={() => setIsSoilModalVisible(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={() => onNavigateToSoilTest ? onNavigateToSoilTest() : setIsSoilModalVisible(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.cardActionLink}>History</Text>
             </TouchableOpacity>
           </View>
