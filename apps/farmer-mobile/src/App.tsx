@@ -28,6 +28,11 @@ import { PersonalDetailsScreen } from './screens/profile/PersonalDetailsScreen';
 import { AuditsScreen } from './screens/audits/AuditsScreen';
 import { AuditResultScreen } from './screens/audits/AuditResultScreen';
 import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
+import { ProduceCalendarScreen } from './screens/farm/ProduceCalendarScreen';
+import { NewCropScreen } from './screens/farm/NewCropScreen';
+import { CropDetailsScreen } from './screens/farm/CropDetailsScreen';
+import { NPKContributionScreen } from './screens/farm/NPKContributionScreen';
+import { CropManagementScreen } from './screens/farm/CropManagementScreen';
 import { FarmRatingsScreen } from './screens/profile/FarmRatingsScreen';
 import { SoilTestScreen } from './screens/profile/SoilTestScreen';
 import { NewSoilTestScreen } from './screens/profile/NewSoilTestScreen';
@@ -60,6 +65,11 @@ export type ScreenName =
   | 'Audits'
   | 'AuditResult'
   | 'FarmManagement'
+  | 'ProduceCalendar'
+  | 'NewCrop'
+  | 'CropDetails'
+  | 'NPKContribution'
+  | 'CropManagement'
   | 'FarmRatings'
   | 'SoilTest'
   | 'NewSoilTest'
@@ -104,29 +114,11 @@ export default function App(): React.JSX.Element {
   return (
     <SafeAreaView style={[styles.screen, isAuthLanding && styles.screenSplash]}>
       <StatusBar
-        barStyle="light-content"
-        backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
+        barStyle={(screen === 'Login' || screen === 'Register' || screen === 'Otp' || screen === 'ForgotPassword' || screen === 'ResetPassword' || screen === 'ApplicationStatus' || screen === 'RoleSelection') ? 'dark-content' : 'light-content'}
+        backgroundColor={isAuthLanding ? SPLASH_DARK : (screen === 'Login' || screen === 'Register' || screen === 'Otp' || screen === 'ForgotPassword' || screen === 'ResetPassword' || screen === 'ApplicationStatus' || screen === 'RoleSelection') ? 'transparent' : colors.primaryPressed}
       />
 
-      {screen !== 'Register' && screen !== 'RoleSelection' && screen !== 'Notifications' && screen !== 'PersonalDetails' && screen !== 'Certifications' && screen !== 'AddCertification' && screen !== 'Audits' && screen !== 'AuditResult' && screen !== 'FarmManagement' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
-        <View style={styles.header}>
-          <Text style={styles.headerText}>{t('app.name')}</Text>
-          <View style={styles.localeRow}>
-            {LOCALES.map((code) => (
-              <Pressable
-                key={code}
-                accessibilityRole="button"
-                style={[styles.localeChip, locale === code && styles.localeChipActive]}
-                onPress={() => switchLocale(code)}
-              >
-                <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
-                  {code.toUpperCase()}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
+
 
       <View style={styles.content}>
         {screen === 'Splash' ? (
@@ -269,7 +261,20 @@ export default function App(): React.JSX.Element {
               )
             }
             onNavigateToAudits={() => navigate('Audits')}
+            onNavigateToProduceCalendar={() => navigate('ProduceCalendar')}
+            onNavigateToCropManagement={() => navigate('CropManagement')}
+            onNavigateToWeather={() => navigate('Weather')}
           />
+        ) : screen === 'CropManagement' ? (
+          <CropManagementScreen onBack={() => navigate('FarmManagement')} />
+        ) : screen === 'ProduceCalendar' ? (
+          <ProduceCalendarScreen onBack={() => navigate('FarmManagement')} onNavigateToNewCrop={() => navigate('NewCrop')} onNavigateToCropDetails={() => navigate('CropDetails')} />
+        ) : screen === 'NewCrop' ? (
+          <NewCropScreen onBack={() => navigate('ProduceCalendar')} onSave={() => navigate('ProduceCalendar')} />
+        ) : screen === 'CropDetails' ? (
+          <CropDetailsScreen onBack={() => navigate('ProduceCalendar')} onNavigateToNPKContribution={() => navigate('NPKContribution')} />
+        ) : screen === 'NPKContribution' ? (
+          <NPKContributionScreen onBack={() => navigate('CropDetails')} />
         ) : screen === 'FarmRatings' ? (
           <FarmRatingsScreen onNavigateBack={() => navigate('MainTabs')} />
         ) : screen === 'SoilTest' ? (
@@ -277,7 +282,7 @@ export default function App(): React.JSX.Element {
         ) : screen === 'NewSoilTest' ? (
           <NewSoilTestScreen onNavigateBack={() => navigate('SoilTest')} onSave={() => navigate('SoilTest')} />
         ) : screen === 'Weather' ? (
-          <WeatherScreen onNavigateBack={() => navigate('MainTabs')} />
+          <WeatherScreen onNavigateBack={() => navigate(previousScreen && previousScreen !== 'Weather' ? previousScreen : 'MainTabs')} />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>

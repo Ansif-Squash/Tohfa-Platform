@@ -231,11 +231,17 @@ function CheckmarkMiniIcon({ size = 14, color = '#15803D' }: { size?: number; co
 interface FarmManagementScreenProps {
   onBack?: () => void;
   onNavigateToAudits?: () => void;
+  onNavigateToProduceCalendar?: () => void;
+  onNavigateToCropManagement?: () => void;
+  onNavigateToWeather?: () => void;
 }
 
 export function FarmManagementScreen({
   onBack,
   onNavigateToAudits,
+  onNavigateToProduceCalendar,
+  onNavigateToCropManagement,
+  onNavigateToWeather,
 }: FarmManagementScreenProps): React.JSX.Element {
   const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false);
   const [diaryNote, setDiaryNote] = useState('');
@@ -364,7 +370,11 @@ export function FarmManagementScreen({
           </View>
 
           {/* 2. Weather */}
-          <View style={styles.moduleCard}>
+          <TouchableOpacity 
+            style={styles.moduleCard}
+            activeOpacity={0.8}
+            onPress={onNavigateToWeather}
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: '#E0F2FE' }]}>
                 <CloudWeatherIcon size={22} color="#0284C7" />
@@ -381,10 +391,14 @@ export function FarmManagementScreen({
               <SnowflakeIcon size={12} color="#0284C7" />
               <Text style={styles.weatherRiskText}>Frost risk tonight</Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* 3. Produce Calendar */}
-          <View style={styles.moduleCard}>
+          <TouchableOpacity 
+            style={styles.moduleCard} 
+            activeOpacity={0.8}
+            onPress={onNavigateToProduceCalendar}
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: '#DCFCE7' }]}>
                 <PlantSproutIcon size={20} color="#15803D" />
@@ -401,10 +415,14 @@ export function FarmManagementScreen({
               <CalendarMiniIcon size={12} color="#1B5E20" />
               <Text style={styles.producePillText}>Tomato harvest · 8 days</Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
-          {/* 4. Input Management */}
-          <View style={styles.moduleCard}>
+          {/* 4. Crop Management */}
+          <TouchableOpacity 
+            style={styles.moduleCard}
+            activeOpacity={0.8}
+            onPress={onNavigateToCropManagement}
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: '#FFEDD5' }]}>
                 <FlaskBeakerIcon size={20} color="#EA580C" />
@@ -418,7 +436,7 @@ export function FarmManagementScreen({
             </View>
 
             <View style={styles.moduleTextSection}>
-              <Text style={styles.moduleTitle}>Input Management</Text>
+              <Text style={styles.moduleTitle}>Crop Management</Text>
               <Text style={styles.moduleDesc}>
                 {isFertigationLogged
                   ? 'Carrot Zone 2 fertigation completed.'
@@ -426,20 +444,18 @@ export function FarmManagementScreen({
               </Text>
             </View>
 
-            <TouchableOpacity
+            <View
               style={[
                 styles.markLoggedBtn,
                 isFertigationLogged && { backgroundColor: '#F0FDF4' },
               ]}
-              activeOpacity={0.8}
-              onPress={handleToggleFertigation}
             >
               <CheckmarkMiniIcon size={14} color="#15803D" />
               <Text style={styles.markLoggedBtnText}>
                 {isFertigationLogged ? 'Logged' : 'Mark logged'}
               </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
 
           {/* 5. Workforce */}
           <View style={styles.moduleCard}>

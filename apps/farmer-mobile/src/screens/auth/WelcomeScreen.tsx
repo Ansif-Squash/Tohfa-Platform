@@ -8,7 +8,7 @@ import tohfaLogo from '../../assets/tohfa-logo.png';
 import welcomeFarmerVeggies from '../../assets/welcome-bg.jpg';
 
 interface WelcomeScreenProps {
-  onNavigate: (screen: 'Login' | 'Register') => void;
+  onNavigate: (screen: 'Login' | 'Register' | 'RoleSelection') => void;
 }
 
 type LangCode = 'en' | 'ta';
@@ -105,7 +105,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate }) => {
           />
           <Button
             title={t('auth.welcome.createAccount')}
-            onPress={() => onNavigate('Register')}
+            onPress={() => onNavigate('RoleSelection')}
             style={styles.createButton}
             textStyle={styles.createButtonText}
           />

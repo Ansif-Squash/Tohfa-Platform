@@ -3,7 +3,7 @@ import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Image } from 'rea
 import { useTheme } from '../../theme';
 
 interface RoleSelectionProps {
-  onNavigate: (screen: 'Login' | 'Register') => void;
+  onNavigate: (screen: 'Login' | 'Register' | 'PersonalDetails') => void;
 }
 
 export const RoleSelectionScreen: React.FC<RoleSelectionProps> = ({ onNavigate }) => {
@@ -58,7 +58,7 @@ export const RoleSelectionScreen: React.FC<RoleSelectionProps> = ({ onNavigate }
           }}
         >
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1595825833444-93b584d42898?auto=format&fit=crop&q=80&w=200&h=200' }}
+            source={require('../../assets/ootygirls.jpg')}
             style={styles.cardImage}
           />
           <View style={styles.cardTextContainer}>
@@ -72,11 +72,22 @@ export const RoleSelectionScreen: React.FC<RoleSelectionProps> = ({ onNavigate }
         {/* Farmer Card */}
         <TouchableOpacity
           activeOpacity={0.8}
-          style={[styles.card, { borderColor: colors.brandGreen, backgroundColor: colors.white }]}
+          style={[
+            styles.card, 
+            { 
+              borderColor: colors.brandGreen, 
+              backgroundColor: colors.white,
+              shadowColor: colors.brandGreen,
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.15,
+              shadowRadius: 16,
+              elevation: 8,
+            }
+          ]}
           onPress={() => onNavigate('Register')}
         >
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1592419044706-39796d40f98c?auto=format&fit=crop&q=80&w=200&h=200' }}
+            source={require('../../assets/farmer.jpg')}
             style={styles.cardImage}
           />
           <View style={styles.cardTextContainer}>

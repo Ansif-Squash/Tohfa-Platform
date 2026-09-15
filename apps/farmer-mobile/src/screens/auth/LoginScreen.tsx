@@ -13,6 +13,12 @@ import { Button, ErrorState, Icon } from '@tohfa/mobile-ui';
 import { loginWithPassword, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { authPalette as P } from '../../theme';
+import CallIcon from '../../assets/icons/call.svg';
+import LockIcon from '../../assets/icons/lock.svg';
+import EyeIcon from '../../assets/eye.svg';
+import EyeCloseIcon from '../../assets/eye-close.svg';
+import BackIcon from '../../assets/back.svg';
+import HomeIcon from '../../assets/icons/home.svg';
 
 interface LoginScreenProps {
   onNavigate: (
@@ -22,7 +28,8 @@ interface LoginScreenProps {
       | 'ForgotPassword'
       | 'ApplicationStatus'
       | 'MainTabs'
-      | 'Register',
+      | 'Register'
+      | 'RoleSelection',
     params?: Record<string, string | number | undefined>,
   ) => void;
 }
@@ -59,7 +66,36 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
   };
 
   async function handlePasswordLogin() {
-    if (!mobile.trim() || !password.trim()) return;
+    if (!mobile.trim() || !password.trim()) {
+      setErrorMsg('Please enter both mobile number and password.');
+      return;
+    }
+    const mobileDigits = mobile.replace(/\D/g, '');
+    if (mobileDigits.length !== 10) {
+      setErrorMsg('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMsg('Password must be at least 8 characters long.');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setErrorMsg('Password must contain at least one uppercase letter.');
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setErrorMsg('Password must contain at least one lowercase letter.');
+      return;
+    }
+    if (!/\d/.test(password)) {
+      setErrorMsg('Password must contain at least one number.');
+      return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      setErrorMsg('Password must contain at least one special character.');
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
 
@@ -78,23 +114,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
           style={styles.backButton}
           onPress={() => onNavigate('Welcome')}
         >
-          <Text style={{ fontSize: 20, fontWeight: 'bold', color: P.ink }}>{'<'}</Text>
+          <BackIcon width={20} height={20} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.iconCircle}>
-        <Text style={{ fontSize: 32 }}>🏠</Text>
+        <Image
+          source={require('../../assets/tohfa-logo.png')}
+          style={{ width: 60, height: 60 }}
+          resizeMode="contain"
+        />
       </View>
 
       <Text style={styles.title}>{t('auth.login.title')}</Text>
       <Text style={styles.subtitle}>{t('auth.login.subtitle')}</Text>
 
-      {errorMsg ? <ErrorState message={errorMsg} onRetry={() => setErrorMsg(null)} /> : null}
+      {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
       <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>{t('auth.login.mobile')}</Text>
         <View style={styles.fieldRow}>
-          <Text style={{ fontSize: 16 }}>📞</Text>
+          <CallIcon width={20} height={20} />
           <Text style={styles.prefix}>{MOBILE_PREFIX}</Text>
           <TextInput
             value={mobile}
@@ -111,7 +151,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>{t('auth.login.password')}</Text>
         <View style={styles.fieldRow}>
-          <Text style={{ fontSize: 16 }}>🔒</Text>
+          <LockIcon width={20} height={20} />
           <TextInput
             value={password}
             onChangeText={setPassword}
@@ -125,9 +165,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
             accessibilityRole="button"
             onPress={() => setShowPassword((s) => !s)}
           >
-            <Text style={{ fontSize: 16, color: P.muted }}>
-              {showPassword ? '👁️‍🗨️' : '👁️'}
-            </Text>
+            {showPassword ? (
+              <EyeIcon width={20} height={20} />
+            ) : (
+              <EyeCloseIcon width={20} height={20} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -197,7 +239,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       <TouchableOpacity
         accessibilityRole="button"
         style={styles.registerWrap}
-        onPress={() => onNavigate('Register')}
+        onPress={() => onNavigate('RoleSelection')}
       >
         <Text style={styles.registerText}>
           {t('auth.login.newToTohfa')}{' '}
@@ -217,7 +259,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       <View style={styles.legalRow}>
         <Text style={styles.legalText}>
           <Text style={styles.legalLink}>{t('auth.welcome.terms')}</Text>
-          {'  -  '}
+          {' · '}
           <Text style={styles.legalLink}>{t('auth.welcome.privacy')}</Text>
         </Text>
       </View>
@@ -240,8 +282,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: P.progressInactive,
+    borderWidth: 1,
+    borderColor: P.divider,
     backgroundColor: P.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -257,11 +299,11 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   title: {
-    fontSize: 23,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '700',
     color: P.ink,
     textAlign: 'center',
-    marginTop: 18,
+    marginTop: 24,
   },
   subtitle: {
     fontSize: 12.8,
@@ -270,16 +312,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
   },
+  errorText: {
+    color: '#D32F2F',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 12,
+  },
   socialRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
   },
   socialButton: {
     flex: 1,
-    height: 56,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: P.progressInactive,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     backgroundColor: P.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -309,22 +357,22 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
   fieldGroup: {
-    marginTop: 18,
+    marginTop: 20,
   },
   fieldLabel: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: P.ink,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     backgroundColor: P.white,
-    borderWidth: 1.5,
-    borderColor: P.border,
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: P.divider,
+    borderRadius: 10,
     paddingHorizontal: 14,
     height: 48,
   },
@@ -351,11 +399,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checkbox: {
-    width: 19,
-    height: 19,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: P.border,
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: P.divider,
     backgroundColor: P.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -376,9 +424,9 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: P.primary,
-    borderRadius: 12,
+    borderRadius: 10,
     height: 48,
-    marginTop: 22,
+    marginTop: 24,
   },
   loginButtonText: {
     fontSize: 14,
@@ -388,7 +436,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginVertical: 20,
+    marginTop: 32,
+    marginBottom: 24,
   },
   dividerLine: {
     flex: 1,
@@ -396,15 +445,16 @@ const styles = StyleSheet.create({
     backgroundColor: P.divider,
   },
   dividerText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
     color: P.muted,
   },
   registerWrap: {
     alignItems: 'center',
+    marginTop: 32,
   },
   registerText: {
-    fontSize: 12.5,
+    fontSize: 13,
     color: P.muted,
   },
   registerLink: {
@@ -414,39 +464,40 @@ const styles = StyleSheet.create({
   langRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 6,
-    marginTop: 28,
+    gap: 12,
+    marginTop: 80,
   },
   langPillActive: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: P.lightGreen,
   },
   langPillActiveText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: P.primary,
   },
   langPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
     borderRadius: 999,
   },
   langPillText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: P.muted,
   },
   legalRow: {
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
   },
   legalText: {
-    fontSize: 10,
-    color: P.legal,
+    fontSize: 11,
+    color: P.muted,
   },
   legalLink: {
     textDecorationLine: 'underline',
+    color: P.muted,
   },
 });

@@ -46,21 +46,16 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   const retryButtonTitle = retryTitle ?? (isNetwork ? 'Retry Connection' : 'Retry');
 
   return (
-    <View style={[styles.container, { padding: theme.spacing.xxl }]} accessibilityRole="alert">
-      <Icon
-        color={isNetwork ? theme.colors.secondary : theme.colors.danger}
-        name={isNetwork ? 'wifi_off' : 'error_outline'}
-        size={48}
-      />
+    <View style={styles.container} accessibilityRole="alert">
       {displayTitle ? (
         <Text
           style={[
             styles.title,
             {
-              fontSize: theme.typography.title,
+              fontSize: theme.typography.body,
               fontWeight: theme.weights.bold,
-              color: theme.colors.onSurface,
-              marginTop: theme.spacing.md,
+              color: theme.colors.danger,
+              marginBottom: theme.spacing.xs,
             },
           ]}
         >
@@ -71,39 +66,26 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         style={[
           styles.message,
           {
-            fontSize: theme.typography.body,
-            color: theme.colors.onSurface,
-            marginTop: theme.spacing.sm,
-            marginBottom: theme.spacing.lg,
+            fontSize: theme.typography.caption,
+            color: theme.colors.danger,
           },
         ]}
       >
         {displayMessage}
       </Text>
-      {onRetry ? (
-        <Button
-          onPress={onRetry}
-          style={styles.button}
-          title={retryButtonTitle}
-          variant="outline"
-        />
-      ) : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginVertical: 8,
+    paddingHorizontal: 4,
   },
   title: {
-    textAlign: 'center',
+    textAlign: 'left',
   },
   message: {
-    textAlign: 'center',
-  },
-  button: {
-    minWidth: 140,
+    textAlign: 'left',
   },
 });
