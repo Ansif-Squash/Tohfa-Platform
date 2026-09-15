@@ -24,6 +24,7 @@ export type RootStackParamList = {
   Certifications: undefined;
   AddCertification: undefined;
   Notifications: undefined;
+  PersonalDetails: undefined;
 };
 
 export const deepLinkingConfig = {
@@ -46,6 +47,7 @@ export const deepLinkingConfig = {
       Certifications: 'certifications',
       AddCertification: 'certifications/new',
       Notifications: 'notifications',
+      PersonalDetails: 'profile/personal-details',
     },
   },
 };

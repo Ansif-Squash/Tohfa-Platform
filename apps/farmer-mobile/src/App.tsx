@@ -19,6 +19,7 @@ import { CreateListingScreen } from './screens/listings/CreateListingScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
 import { NotificationsScreen } from './screens/notifications/NotificationsScreen';
 import { ProfileScreen } from './screens/profile/ProfileScreen';
+import { PersonalDetailsScreen } from './screens/profile/PersonalDetailsScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
 import { type Listing } from './api/listings';
@@ -39,7 +40,8 @@ export type ScreenName =
   | 'AddCertification'
   | 'CreateListing'
   | 'CounterOffer'
-  | 'Notifications';
+  | 'Notifications'
+  | 'PersonalDetails';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -48,12 +50,14 @@ const SPLASH_DARK = authPalette.splashDark;
 
 export default function App(): React.JSX.Element {
   const [screen, setScreen] = useState<ScreenName>('Splash');
+  const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
   function navigate(nextScreen: ScreenName, nextParams: Record<string, string | number | undefined> = {}) {
+    setPreviousScreen(screen);
     setParams(nextParams);
     setScreen(nextScreen);
   }
@@ -82,24 +86,24 @@ export default function App(): React.JSX.Element {
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
 
-      {screen !== 'Register' && screen !== 'RoleSelection' && screen !== 'Notifications' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
+      {screen !== 'Register' && screen !== 'RoleSelection' && screen !== 'Notifications' && screen !== 'PersonalDetails' && screen !== 'Certifications' && screen !== 'AddCertification' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
         <View style={styles.header}>
-            <Text style={styles.headerText}>{t('app.name')}</Text>
-            <View style={styles.localeRow}>
-              {LOCALES.map((code) => (
-                <Pressable
-                  key={code}
-                  accessibilityRole="button"
-                  style={[styles.localeChip, locale === code && styles.localeChipActive]}
-                  onPress={() => switchLocale(code)}
-                >
-                  <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
-                    {code.toUpperCase()}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+          <Text style={styles.headerText}>{t('app.name')}</Text>
+          <View style={styles.localeRow}>
+            {LOCALES.map((code) => (
+              <Pressable
+                key={code}
+                accessibilityRole="button"
+                style={[styles.localeChip, locale === code && styles.localeChipActive]}
+                onPress={() => switchLocale(code)}
+              >
+                <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
+                  {code.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
           </View>
+        </View>
       )}
 
       <View style={styles.content}>
@@ -142,6 +146,13 @@ export default function App(): React.JSX.Element {
           />
         ) : screen === 'Certifications' ? (
           <CertificationsScreen
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'AddCertification'
+                  ? previousScreen
+                  : 'MainTabs'
+              )
+            }
             onNavigateToAddCertification={() => navigate('AddCertification')}
           />
         ) : screen === 'AddCertification' ? (
@@ -172,6 +183,10 @@ export default function App(): React.JSX.Element {
               setCurrentTab('Listings');
               navigate('MainTabs');
             }}
+          />
+        ) : screen === 'PersonalDetails' ? (
+          <PersonalDetailsScreen
+            onBack={() => navigate('MainTabs')}
           />
         ) : screen === 'Notifications' ? (
           <NotificationsScreen
@@ -213,6 +228,7 @@ export default function App(): React.JSX.Element {
                   onNavigateToHome={() => setCurrentTab('Home')}
                   onNavigateToCertifications={() => navigate('Certifications')}
                   onNavigateToMarket={() => setCurrentTab('Listings')}
+                  onNavigateToPersonalDetails={() => navigate('PersonalDetails')}
                 />
               )}
             </View>
@@ -238,7 +254,7 @@ export default function App(): React.JSX.Element {
 
               <Pressable
                 style={styles.tabItem}
-                onPress={() => {}}
+                onPress={() => { }}
                 accessibilityRole="tab"
               >
                 <Text style={{ fontSize: 24, opacity: 0.5 }}>🌱</Text>

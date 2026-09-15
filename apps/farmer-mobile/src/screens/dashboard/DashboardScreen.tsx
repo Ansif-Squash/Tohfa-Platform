@@ -155,10 +155,16 @@ export function DashboardScreen({
 
           {/* Header Mini Cards */}
           <View style={styles.headerCardsRow}>
-            <View style={styles.headerMiniCard}>
+            <TouchableOpacity
+              style={styles.headerMiniCard}
+              onPress={onNavigateToCertifications}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="View certifications"
+            >
               <Text style={styles.miniCardTitle}>🛡️ Cert</Text>
               <Text style={styles.miniCardValue}>Valid</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.headerMiniCard}>
               <Text style={styles.miniCardTitle}>📅 Audit</Text>
               <Text style={styles.miniCardValue}>In 12 days</Text>
@@ -345,7 +351,7 @@ export function DashboardScreen({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F8F9FA' },
   scrollContent: { paddingBottom: 100 },
-  
+
   headerBackground: {
     backgroundColor: '#1B5E20',
     paddingTop: 60,
