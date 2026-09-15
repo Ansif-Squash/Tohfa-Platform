@@ -17,11 +17,16 @@ import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { CounterOfferScreen } from './screens/listings/CounterOfferScreen';
 import { CreateListingScreen } from './screens/listings/CreateListingScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
+import { NotificationsScreen } from './screens/notifications/NotificationsScreen';
 import { ProfileScreen } from './screens/profile/ProfileScreen';
 import { FMBSketchScreen } from './screens/profile/FMBSketchScreen';
 import { FieldContextScreen } from './screens/profile/FieldContextScreen';
 import { ZonesScreen } from './screens/profile/ZonesScreen';
 import { AddZoneScreen } from './screens/profile/AddZoneScreen';
+import { PersonalDetailsScreen } from './screens/profile/PersonalDetailsScreen';
+import { AuditsScreen } from './screens/audits/AuditsScreen';
+import { AuditResultScreen } from './screens/audits/AuditResultScreen';
+import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
 import { type Listing } from './api/listings';
@@ -45,7 +50,12 @@ export type ScreenName =
   | 'FMBSketch'
   | 'FieldContext'
   | 'Zones'
-  | 'AddZone';
+  | 'AddZone'
+  | 'Notifications'
+  | 'PersonalDetails'
+  | 'Audits'
+  | 'AuditResult'
+  | 'FarmManagement';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -54,12 +64,14 @@ const SPLASH_DARK = authPalette.splashDark;
 
 export default function App(): React.JSX.Element {
   const [screen, setScreen] = useState<ScreenName>('Splash');
+  const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
   function navigate(nextScreen: ScreenName, nextParams: Record<string, string | number | undefined> = {}) {
+    setPreviousScreen(screen);
     setParams(nextParams);
     setScreen(nextScreen);
   }
@@ -88,24 +100,24 @@ export default function App(): React.JSX.Element {
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
 
-      {screen !== 'Register' && screen !== 'RoleSelection' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
+      {screen !== 'Register' && screen !== 'RoleSelection' && screen !== 'Notifications' && screen !== 'PersonalDetails' && screen !== 'Certifications' && screen !== 'AddCertification' && screen !== 'Audits' && screen !== 'AuditResult' && screen !== 'FarmManagement' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
         <View style={styles.header}>
-            <Text style={styles.headerText}>{t('app.name')}</Text>
-            <View style={styles.localeRow}>
-              {LOCALES.map((code) => (
-                <Pressable
-                  key={code}
-                  accessibilityRole="button"
-                  style={[styles.localeChip, locale === code && styles.localeChipActive]}
-                  onPress={() => switchLocale(code)}
-                >
-                  <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
-                    {code.toUpperCase()}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+          <Text style={styles.headerText}>{t('app.name')}</Text>
+          <View style={styles.localeRow}>
+            {LOCALES.map((code) => (
+              <Pressable
+                key={code}
+                accessibilityRole="button"
+                style={[styles.localeChip, locale === code && styles.localeChipActive]}
+                onPress={() => switchLocale(code)}
+              >
+                <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
+                  {code.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
           </View>
+        </View>
       )}
 
       <View style={styles.content}>
@@ -148,6 +160,13 @@ export default function App(): React.JSX.Element {
           />
         ) : screen === 'Certifications' ? (
           <CertificationsScreen
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'AddCertification'
+                  ? previousScreen
+                  : 'MainTabs'
+              )
+            }
             onNavigateToAddCertification={() => navigate('AddCertification')}
           />
         ) : screen === 'AddCertification' ? (
@@ -200,6 +219,49 @@ export default function App(): React.JSX.Element {
             onNavigateBack={() => navigate('Zones')}
             onSave={() => navigate('Zones')}
           />
+        ) : screen === 'PersonalDetails' ? (
+          <PersonalDetailsScreen
+            onBack={() => navigate('MainTabs')}
+          />
+        ) : screen === 'Notifications' ? (
+          <NotificationsScreen
+            onBack={() => navigate('MainTabs')}
+            onNavigateToCounterOffer={() => {
+              if (selectedListing) {
+                navigate('CounterOffer');
+              } else {
+                setCurrentTab('Listings');
+                navigate('MainTabs');
+              }
+            }}
+          />
+        ) : screen === 'AuditResult' ? (
+          <AuditResultScreen
+            onBack={() => navigate('Audits')}
+            auditId={typeof params['auditId'] === 'string' ? params['auditId'] : undefined}
+          />
+        ) : screen === 'Audits' ? (
+          <AuditsScreen
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'Audits' && previousScreen !== 'AuditResult'
+                  ? previousScreen
+                  : 'MainTabs'
+              )
+            }
+            onNavigateToResult={(auditId) => navigate('AuditResult', { auditId })}
+          />
+        ) : screen === 'FarmManagement' ? (
+          <FarmManagementScreen
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'FarmManagement'
+                  ? previousScreen
+                  : 'MainTabs'
+              )
+            }
+            onNavigateToAudits={() => navigate('Audits')}
+          />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>
@@ -211,6 +273,8 @@ export default function App(): React.JSX.Element {
                   onNavigateToListings={() => setCurrentTab('Listings')}
                   onNavigateToWallet={() => setCurrentTab('Wallet')}
                   onNavigateToProfile={() => setCurrentTab('Profile')}
+                  onNavigateToNotifications={() => navigate('Notifications')}
+                  onNavigateToFarmManagement={() => navigate('FarmManagement')}
                 />
               ) : currentTab === 'Listings' ? (
                 <ListingsScreen
@@ -228,6 +292,8 @@ export default function App(): React.JSX.Element {
                   onNavigateToCertifications={() => navigate('Certifications')}
                   onNavigateToMarket={() => setCurrentTab('Listings')}
                   onNavigateToFMBSketch={() => navigate('FMBSketch')}
+                  onNavigateToPersonalDetails={() => navigate('PersonalDetails')}
+                  onNavigateToAudits={() => navigate('Audits')}
                 />
               )}
             </View>
@@ -253,10 +319,10 @@ export default function App(): React.JSX.Element {
 
               <Pressable
                 style={styles.tabItem}
-                onPress={() => {}}
+                onPress={() => navigate('FarmManagement')}
                 accessibilityRole="tab"
               >
-                <Text style={{ fontSize: 24, opacity: 0.5 }}>🌱</Text>
+                <Text style={{ fontSize: 24 }}>🌱</Text>
                 <Text style={styles.tabItemText}>Farm</Text>
               </Pressable>
 

@@ -26,6 +26,8 @@ export interface FarmItemData {
   typeOfFarming?: string | undefined;
   experienceYears?: number | undefined;
   numberOfFarms?: number | undefined;
+  waterSource?: string | undefined;
+  primaryCrops?: string[] | undefined;
 }
 
 export interface Step2FarmData {

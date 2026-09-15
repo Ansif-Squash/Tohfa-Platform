@@ -24,6 +24,7 @@ export const colors = {
   onSurfaceVariant: neutral('grey500'),
   textMuted: neutral('grey700'),
   brandGreen: '#2E7D32',
+  brandGreenLight: '#E8F5E9',
   bgLight: '#FCFCFC',
   borderLight: '#E8E6DD',
   borderMedium: '#E0DDD2',

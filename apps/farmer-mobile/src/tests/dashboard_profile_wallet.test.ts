@@ -137,4 +137,13 @@ describe('User Story 44 (S-44) Farmer Dashboard, Profile, Certifications and Wal
       expect(zeroFormatted).toBe('₹0.00');
     });
   });
+
+  describe('Audits: Inspection History & Audits Screen Navigation', () => {
+    it('audits route is properly registered in deep linking configuration', async () => {
+      const { deepLinkingConfig } = await import('../navigation');
+      expect(deepLinkingConfig.config.screens.Audits).toBe('audits');
+      expect(deepLinkingConfig.config.screens.AuditResult).toBe('audits/result/:auditId');
+      expect(deepLinkingConfig.config.screens.FarmManagement).toBe('farm-management');
+    });
+  });
 });

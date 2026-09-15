@@ -29,6 +29,8 @@ interface ProfileScreenProps {
   onNavigateToCertifications?: () => void;
   onNavigateToMarket?: () => void;
   onNavigateToFMBSketch?: () => void;
+  onNavigateToPersonalDetails?: () => void;
+  onNavigateToAudits?: () => void;
 }
 
 interface PersonalDetailsData {
@@ -55,6 +57,8 @@ export function ProfileScreen({
   onNavigateToHome,
   onNavigateToCertifications,
   onNavigateToFMBSketch,
+  onNavigateToPersonalDetails,
+  onNavigateToAudits,
 }: ProfileScreenProps): React.JSX.Element {
   // --- Profile State ---
   const [personalDetails, setPersonalDetails] = useState<PersonalDetailsData>({
@@ -259,7 +263,7 @@ export function ProfileScreen({
               />
               <TouchableOpacity
                 style={styles.avatarEditBadge}
-                onPress={openPersonalEdit}
+                onPress={() => onNavigateToPersonalDetails?.()}
                 activeOpacity={0.8}
                 accessibilityLabel="Edit profile picture"
               >
@@ -334,7 +338,7 @@ export function ProfileScreen({
               <Text style={styles.cardTitle}>Personal Details</Text>
               <Text style={styles.cardSubtitle}>Identity & contact info</Text>
             </View>
-            <TouchableOpacity onPress={openPersonalEdit} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={() => onNavigateToPersonalDetails?.()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.cardActionLink}>Edit</Text>
             </TouchableOpacity>
           </View>
@@ -477,7 +481,11 @@ export function ProfileScreen({
           {/* 2 Certification Badges side-by-side */}
           <View style={styles.certCardsRow}>
             {/* PGS Card */}
-            <View style={[styles.certSubCard, { backgroundColor: '#F8FAF6', borderColor: '#E8F0E6' }]}>
+            <TouchableOpacity
+              style={[styles.certSubCard, { backgroundColor: '#F8FAF6', borderColor: '#E8F0E6' }]}
+              onPress={() => onNavigateToCertifications?.()}
+              activeOpacity={0.8}
+            >
               <View style={styles.certCardTop}>
                 <Text style={styles.certIconEmoji}>🌱</Text>
                 <View style={styles.greenCheckmarkCircle}>
@@ -487,10 +495,14 @@ export function ProfileScreen({
               <Text style={styles.certTitle}>PGS Organic</Text>
               <Text style={[styles.certStatusText, { color: '#2E7D32' }]}>Valid</Text>
               <Text style={styles.certRenewText}>Renews in 214 days</Text>
-            </View>
+            </TouchableOpacity>
 
             {/* NPOP Card */}
-            <View style={[styles.certSubCard, { backgroundColor: '#FFF8F0', borderColor: '#FFE8D6' }]}>
+            <TouchableOpacity
+              style={[styles.certSubCard, { backgroundColor: '#FFF8F0', borderColor: '#FFE8D6' }]}
+              onPress={() => onNavigateToCertifications?.()}
+              activeOpacity={0.8}
+            >
               <View style={styles.certCardTop}>
                 <Text style={styles.certIconEmoji}>🏪</Text>
                 <View style={styles.orangeExclamationCircle}>
@@ -500,7 +512,7 @@ export function ProfileScreen({
               <Text style={styles.certTitle}>NPOP</Text>
               <Text style={[styles.certStatusText, { color: '#E65100' }]}>Expiring</Text>
               <Text style={styles.certRenewText}>Renews in 24 days</Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Expiry Warning Notice */}
@@ -1239,9 +1251,12 @@ export function ProfileScreen({
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={[styles.saveBtn, { width: '100%' }]}
-                onPress={() => setIsAuditsModalVisible(false)}
+                onPress={() => {
+                  setIsAuditsModalVisible(false);
+                  onNavigateToAudits?.();
+                }}
               >
-                <Text style={styles.saveBtnText}>Close</Text>
+                <Text style={styles.saveBtnText}>View Details</Text>
               </TouchableOpacity>
             </View>
           </View>

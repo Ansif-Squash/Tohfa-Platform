@@ -37,6 +37,8 @@ interface DashboardScreenProps {
   onNavigateToWallet?: () => void;
   onNavigateToProfile?: () => void;
   onNavigateToCertifications?: () => void;
+  onNavigateToNotifications?: () => void;
+  onNavigateToFarmManagement?: () => void;
 }
 
 export function DashboardScreen({
@@ -45,6 +47,8 @@ export function DashboardScreen({
   onNavigateToWallet,
   onNavigateToProfile,
   onNavigateToCertifications,
+  onNavigateToNotifications,
+  onNavigateToFarmManagement,
 }: DashboardScreenProps): React.JSX.Element {
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -139,7 +143,12 @@ export function DashboardScreen({
               <TouchableOpacity style={styles.headerIconButton}>
                 <Text style={styles.headerIconEmoji}>🔍</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.headerIconButton}>
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={onNavigateToNotifications}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+              >
                 <Text style={styles.headerIconEmoji}>🔔</Text>
                 <View style={styles.notificationDot} />
               </TouchableOpacity>
@@ -148,10 +157,16 @@ export function DashboardScreen({
 
           {/* Header Mini Cards */}
           <View style={styles.headerCardsRow}>
-            <View style={styles.headerMiniCard}>
+            <TouchableOpacity
+              style={styles.headerMiniCard}
+              onPress={onNavigateToCertifications}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="View certifications"
+            >
               <Text style={styles.miniCardTitle}>🛡️ Cert</Text>
               <Text style={styles.miniCardValue}>Valid</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.headerMiniCard}>
               <Text style={styles.miniCardTitle}>📅 Audit</Text>
               <Text style={styles.miniCardValue}>In 12 days</Text>
@@ -226,7 +241,7 @@ export function DashboardScreen({
               <Text style={styles.gridSubtitle}>Cert renewal in 24 days</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.gridCard}>
+            <TouchableOpacity style={styles.gridCard} onPress={onNavigateToFarmManagement}>
               <View style={[styles.gridIconCircle, { backgroundColor: '#F0FFF0' }]}>
                 <Text style={styles.gridEmoji}>🌱</Text>
               </View>
@@ -338,7 +353,7 @@ export function DashboardScreen({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F8F9FA' },
   scrollContent: { paddingBottom: 100 },
-  
+
   headerBackground: {
     backgroundColor: '#1B5E20',
     paddingTop: 60,
@@ -737,5 +752,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2E7D32',
     lineHeight: 20,
+  },
+  skeletonContainer: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  skeletonItem: {
+    borderRadius: radius.sm,
+  },
+  skeletonCard: {
+    borderRadius: radius.card,
   },
 });
