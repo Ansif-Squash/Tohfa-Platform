@@ -34,7 +34,7 @@ import { AdminInventoryService, type BatchSummary } from './inventory.service';
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
+        border-bottom: 1px solid var(--tohfa-neutral-300);
         padding-bottom: var(--tohfa-space-lg);
         margin-bottom: var(--tohfa-space-lg);
         flex-wrap: wrap;
@@ -51,7 +51,7 @@ import { AdminInventoryService, type BatchSummary } from './inventory.service';
         align-items: center;
         padding: var(--tohfa-space-xs) var(--tohfa-space-md);
         border-radius: var(--tohfa-radius-badge);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         font-weight: var(--tohfa-font-weight-semibold);
       }
       .badge-active {
@@ -78,9 +78,9 @@ import { AdminInventoryService, type BatchSummary } from './inventory.service';
         gap: var(--tohfa-space-xs);
       }
       .meta-label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
-        color: var(--tohfa-neutral-grey600);
+        color: var(--tohfa-neutral-600);
         text-transform: uppercase;
       }
       .meta-value {
@@ -100,13 +100,13 @@ import { AdminInventoryService, type BatchSummary } from './inventory.service';
       td {
         padding: var(--tohfa-space-md) var(--tohfa-space-lg);
         text-align: left;
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
-        font-size: var(--tohfa-font-size-body-small);
+        border-bottom: 1px solid var(--tohfa-neutral-300);
+        font-size: var(--tohfa-font-size-small);
       }
       th {
         background: var(--tohfa-surface);
         font-weight: var(--tohfa-font-weight-semibold);
-        color: var(--tohfa-neutral-grey700);
+        color: var(--tohfa-neutral-700);
       }
       .badge-pos {
         background: var(--tohfa-status-success-bg);
@@ -119,7 +119,7 @@ import { AdminInventoryService, type BatchSummary } from './inventory.service';
       .empty {
         padding: var(--tohfa-space-xl);
         text-align: center;
-        color: var(--tohfa-neutral-grey500);
+        color: var(--tohfa-neutral-500);
       }
     `,
   ],

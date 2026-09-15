@@ -94,9 +94,17 @@ export class RbacService {
     return scope !== 'none' && scope !== 'view';
   }
 
-  /** Brand colour for a role badge, straight from the matrix. */
+  /**
+   * Brand colour for a role badge, straight from the matrix. Since the approved
+   * design system dropped per-role colour coding, every role in `rbac.json` now
+   * carries the same universal primary — this returns one value in practice. The
+   * fallback is the design token rather than a literal, so it cannot drift.
+   */
   colorFor(role: RoleCode): string {
-    return this.document()?.roles.find((entry) => entry.code === role)?.colorHex ?? '#0F6E56';
+    return (
+      this.document()?.roles.find((entry) => entry.code === role)?.colorHex ??
+      'var(--tohfa-primary)'
+    );
   }
 
   firstAllowedPath(routes: readonly { path: string; permission: string }[]): string {

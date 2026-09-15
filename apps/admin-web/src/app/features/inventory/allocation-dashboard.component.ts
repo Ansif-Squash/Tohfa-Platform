@@ -61,8 +61,9 @@ import {
         --tohfa-font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
         --tohfa-font-size-title-1: 24px; /* H2 */
         --tohfa-font-size-title-2: 20px; /* H3 */
-        --tohfa-font-size-body-small: 14px;
-        --tohfa-font-size-footnote: 13px;
+        --tohfa-font-size-small: 14px;
+        /* Was two vars (footnote 13px, caption 12px); the design system has one
+           caption step, so the 13px declaration is gone rather than left dead. */
         --tohfa-font-size-caption: 12px;
         --tohfa-font-weight-semibold: 600;
         --tohfa-font-weight-bold: 700;
@@ -117,7 +118,7 @@ import {
         letter-spacing: -0.01em;
       }
       .subtitle {
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         color: var(--tohfa-neutral-600);
         margin: var(--tohfa-space-xs) 0 0 0;
       }
@@ -134,7 +135,7 @@ import {
         border-radius: var(--tohfa-radius-card-min);
       }
       .filter-label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
         color: var(--tohfa-neutral-700);
       }
@@ -145,7 +146,7 @@ import {
         border-radius: var(--tohfa-radius-input);
         background: var(--tohfa-neutral-white);
         font-family: var(--tohfa-font-sans);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         color: var(--tohfa-on-surface);
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
       }
@@ -233,7 +234,7 @@ import {
         line-height: 1.2;
       }
       .metric-main-label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         color: var(--tohfa-neutral-600);
         margin-top: 2px;
       }
@@ -249,7 +250,7 @@ import {
         flex-direction: column;
       }
       .sub-value {
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         font-weight: var(--tohfa-font-weight-semibold);
         color: var(--tohfa-neutral-black);
       }
@@ -276,12 +277,12 @@ import {
         padding: var(--tohfa-space-md) var(--tohfa-space-lg);
         text-align: left;
         border-bottom: 1px solid var(--tohfa-neutral-100);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         color: var(--tohfa-on-surface);
       }
       th {
         background: var(--tohfa-surface);
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
         color: var(--tohfa-neutral-700);
         text-transform: uppercase;
@@ -332,7 +333,7 @@ import {
         padding: var(--tohfa-space-xxl);
         text-align: center;
         color: var(--tohfa-neutral-500);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
     `,
   ],

@@ -17,17 +17,24 @@ export function toCssVariables(): Record<string, string> {
     out[`--tohfa-color-${kebab(name)}`] = token.hex;
   }
   for (const [name, token] of Object.entries(tokens.neutral)) {
-    out[`--tohfa-neutral-${kebab(name)}`] = token.hex;
+    out[neutralVar(name)] = token.hex;
   }
+  // A semantic name may target either palette, so the alias has to point at
+  // whichever custom property actually holds the value.
   for (const [name, colorName] of Object.entries(tokens.semanticColor)) {
-    out[`--tohfa-${kebab(name)}`] = `var(--tohfa-color-${kebab(colorName)})`;
+    const target =
+      colorName in tokens.color ? `--tohfa-color-${kebab(colorName)}` : neutralVar(colorName);
+    out[`--tohfa-${kebab(name)}`] = `var(${target})`;
   }
   for (const [name, colorName] of Object.entries(tokens.roleColor)) {
     out[`--tohfa-role-${kebab(name)}`] = `var(--tohfa-color-${kebab(colorName)})`;
   }
-  for (const [name, pt] of Object.entries(tokens.typeScale)) {
-    out[`--tohfa-font-size-${kebab(name)}`] = `${pt / 16}rem`;
+  for (const [name, px] of Object.entries(tokens.typeScale)) {
+    out[`--tohfa-font-size-${kebab(name)}`] = `${px / 16}rem`;
   }
+  // `typeStyle` is deliberately NOT emitted: its `body` line height would collide
+  // with the unitless `--tohfa-line-height-body` ratio below. Stylesheets that need
+  // an exact per-style line height should read it from the TS export.
   for (const [name, weight] of Object.entries(tokens.fontWeight)) {
     out[`--tohfa-font-weight-${kebab(name)}`] = String(weight);
   }
@@ -56,6 +63,17 @@ export function toCssBlock(selector = ':root'): string {
     .map(([k, v]) => `  ${k}: ${v};`)
     .join('\n');
   return `/* GENERATED from @tohfa/design-tokens — do not edit by hand. */\n${selector} {\n${body}\n}\n`;
+}
+
+/**
+ * Custom-property name for a neutral. The numbered ramp keys are `neutral950`
+ * … `neutral50`, so a naive prefix would emit `--tohfa-neutral-neutral950`; the
+ * redundant segment is dropped to give `--tohfa-neutral-950`. `white` and
+ * `black` are not part of the ramp and keep their names.
+ */
+function neutralVar(name: string): string {
+  const step = /^neutral(\d+)$/.exec(name);
+  return step ? `--tohfa-neutral-${step[1]}` : `--tohfa-neutral-${kebab(name)}`;
 }
 
 function kebab(input: string): string {

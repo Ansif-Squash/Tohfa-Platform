@@ -87,6 +87,6 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, padding: 16, borderRadius: 8, marginBottom: 16, shadowColor: neutral('black'), shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
   statusText: { fontSize: 20, color: colors.success, fontWeight: 'bold' },
-  timelineItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: neutral('grey100') },
-  timeText: { color: neutral('grey500') },
+  timelineItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: neutral('neutral300') },
+  timeText: { color: neutral('neutral500') },
 });

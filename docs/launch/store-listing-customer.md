@@ -1,7 +1,7 @@
 # Google Play & Apple App Store Listing: TOHFA (Customer)
 
 **Application Identifier:** `in.tohfa.customer`  
-**Primary Brand Colour:** Deep Blue (`#0C447C` / `deepBlue`)  
+**Primary Brand Colour:** TOHFA Green (`#3F7D32` / `primary`)  
 **Target Category:** Shopping / Food & Grocery  
 
 ---

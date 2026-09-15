@@ -37,10 +37,10 @@ h1 {
   font-size: var(--tohfa-font-size-display);
 }
 h2 {
-  font-size: var(--tohfa-font-size-headline);
+  font-size: var(--tohfa-font-size-h1);
 }
 h3 {
-  font-size: var(--tohfa-font-size-title);
+  font-size: var(--tohfa-font-size-h2);
 }
 
 a {

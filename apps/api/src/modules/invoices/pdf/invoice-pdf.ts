@@ -20,15 +20,16 @@ export function renderInvoicePdf(options: RenderPdfOptions): Promise<Buffer> {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', (err: Error) => reject(err));
 
-      const primaryColor = tokens.color.tohfaTeal.hex;
-      const deepTeal = tokens.color.deepTeal.hex;
-      const creamBg = tokens.color.backgroundCream.hex;
-      const greyBorder = tokens.neutral.grey100.hex;
-      const greyText = '#4A5568';
-      const blackText = '#1A202C';
+      const primaryColor = tokens.color.primary.hex;
+      const primaryDark = tokens.color.primaryDark.hex;
+      const pageBg = tokens.color.primaryPale.hex;
+      const greyBorder = tokens.neutral.neutral300.hex;
+      const greyText = tokens.neutral.neutral600.hex;
+      const blackText = tokens.neutral.neutral950.hex;
+      const white = tokens.neutral.white.hex;
 
       // 1. Header Banner
-      doc.rect(40, 40, 515, 65).fill(creamBg);
+      doc.rect(40, 40, 515, 65).fill(pageBg);
       doc.rect(40, 40, 515, 65).stroke(greyBorder);
 
       doc.fillColor(primaryColor).fontSize(20).font('Helvetica-Bold')
@@ -52,7 +53,7 @@ export function renderInvoicePdf(options: RenderPdfOptions): Promise<Buffer> {
               ? 'FARMER PURCHASE INVOICE'
               : 'INVOICE';
 
-      doc.fillColor(deepTeal).fontSize(12).font('Helvetica-Bold')
+      doc.fillColor(primaryDark).fontSize(12).font('Helvetica-Bold')
          .text(title, 350, 55, { width: 190, align: 'right' });
       doc.fillColor(greyText).fontSize(8).font('Helvetica')
          .text(`Invoice #: ${invoice.invoiceNumber}`, 350, 72, { width: 190, align: 'right' })
@@ -89,9 +90,9 @@ export function renderInvoicePdf(options: RenderPdfOptions): Promise<Buffer> {
 
       // 3. Line Items Table
       const tableTop = 220;
-      doc.rect(40, tableTop, 515, 22).fill(deepTeal);
+      doc.rect(40, tableTop, 515, 22).fill(primaryDark);
 
-      doc.fillColor('#FFFFFF').fontSize(8).font('Helvetica-Bold');
+      doc.fillColor(white).fontSize(8).font('Helvetica-Bold');
       doc.text('#', 45, tableTop + 6, { width: 20 });
       doc.text('Item Description', 70, tableTop + 6, { width: 170 });
       doc.text('HSN', 245, tableTop + 6, { width: 45 });
@@ -105,7 +106,7 @@ export function renderInvoicePdf(options: RenderPdfOptions): Promise<Buffer> {
       let idx = 1;
 
       for (const line of invoice.lines) {
-        const rowBg = idx % 2 === 0 ? creamBg : '#FFFFFF';
+        const rowBg = idx % 2 === 0 ? pageBg : white;
         doc.rect(40, currentY, 515, 20).fill(rowBg);
         doc.rect(40, currentY, 515, 20).stroke(greyBorder);
 

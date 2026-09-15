@@ -14,7 +14,7 @@
       "code": "SUPER_ADMIN",
       "name": "TOHFA Super Admin",
       "level": 1,
-      "colorHex": "#A32D2D",
+      "colorHex": "#3F7D32",
       "scopeDimension": null,
       "summary": "Full system. System configuration, role management, financial oversight, policy setting, override authority for all functions. Only role that can set the fair price ceiling, set allocation percentages, approve payouts above Rs 10,000, and create Super/TOHFA/Main Warehouse Admins. Business-level administrative access, not a DevOps role."
     },
@@ -22,23 +22,23 @@
       "code": "TOHFA_ADMIN",
       "name": "TOHFA Admin",
       "level": 2,
-      "colorHex": "#F0562A",
+      "colorHex": "#3F7D32",
       "scopeDimension": null,
-      "summary": "Operational head across farmers, produce, sales, customers and finance. Cannot create Super Admins or Main Warehouse Admins, cannot set the fair price ceiling, cannot initiate inter-warehouse transfers, cannot approve payouts above Rs 10,000. NOTE: reqs Ch.8.1 assigns no brand colour to this role; #F0562A (Admin app brand orange) is a placeholder — confirm with client."
+      "summary": "Operational head across farmers, produce, sales, customers and finance. Cannot create Super Admins or Main Warehouse Admins, cannot set the fair price ceiling, cannot initiate inter-warehouse transfers, cannot approve payouts above Rs 10,000. NOTE: the approved TOHFA Design System assigns ONE universal primary (#3F7D32) to every role; the per-role brand colours reqs Ch.8.1 left open are therefore no longer an open question."
     },
     {
       "code": "FARMER_ADMIN",
       "name": "Farmer Admin (Elected)",
       "level": 3,
-      "colorHex": "#0F6E56",
+      "colorHex": "#3F7D32",
       "scopeDimension": "zone_id",
-      "summary": "Elected farmer, not paid staff. Approves peer produce listings but never their own (auto-routed), supports audits, mediates disputes, moderates community groups, edits farm ratings for their own zone only. NOTE: reqs Ch.8.1 assigns no brand colour to this role; #0F6E56 (farmer teal) is a placeholder — confirm with client."
+      "summary": "Elected farmer, not paid staff. Approves peer produce listings but never their own (auto-routed), supports audits, mediates disputes, moderates community groups, edits farm ratings for their own zone only. NOTE: the approved TOHFA Design System assigns ONE universal primary (#3F7D32) to every role; the per-role brand colours reqs Ch.8.1 left open are therefore no longer an open question."
     },
     {
       "code": "MAIN_WH_ADMIN",
       "name": "Main Warehouse Admin",
       "level": 3,
-      "colorHex": "#854F0B",
+      "colorHex": "#3F7D32",
       "scopeDimension": null,
       "summary": "Oversees all 4 warehouses (Ooty, Coonoor, Kotagiri, Gudalur). Initiates inter-warehouse transfers, approves stock adjustments, manages Sub Warehouse Admins, aggregate reporting. No farmer-application, pricing, payout or GST-invoice authority."
     },
@@ -46,7 +46,7 @@
       "code": "SUB_WH_ADMIN",
       "name": "Sub Warehouse Admin",
       "level": 4,
-      "colorHex": "#E48932",
+      "colorHex": "#3F7D32",
       "scopeDimension": "warehouse_id",
       "summary": "Day-to-day operations of exactly one assigned warehouse: goods receipt, quality check, batch assignment, local stock ledger, stock verification, pickup OTP, cash top-up. Cannot access other warehouses, cannot assign orders to warehouses, cannot approve its own stock adjustments."
     },
@@ -54,7 +54,7 @@
       "code": "FARMER",
       "name": "Farmer",
       "level": 5,
-      "colorHex": "#0F6E56",
+      "colorHex": "#3F7D32",
       "scopeDimension": "farmer_id",
       "summary": "Farmer App end user. Own data only: profile, farms/zones, certifications, crops, listings, counter-offer responses, wallet, payouts, invoices, audit history."
     },
@@ -62,7 +62,7 @@
       "code": "CUSTOMER",
       "name": "Customer",
       "level": 5,
-      "colorHex": "#0C447C",
+      "colorHex": "#3F7D32",
       "scopeDimension": "customer_id",
       "summary": "Customer App end user. Own data only. Browses the catalog farm-anonymously — grade, certification badges and TOHFA branding only; never farmer or farm identity."
     }

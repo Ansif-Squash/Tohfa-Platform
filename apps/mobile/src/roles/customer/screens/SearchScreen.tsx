@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     padding: 16,
-    backgroundColor: neutral('grey100'),
+    backgroundColor: neutral('neutral300'),
   },
   input: {
     height: 40,
@@ -134,6 +134,6 @@ const styles = StyleSheet.create({
   recentItem: {
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: neutral('grey100'),
+    borderBottomColor: neutral('neutral300'),
   },
 });

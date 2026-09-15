@@ -99,6 +99,6 @@ const styles = StyleSheet.create({
   status: { fontSize: 16, textAlign: 'center', marginBottom: 16, fontStyle: 'italic' },
   loader: { marginBottom: 24 },
   btn: { backgroundColor: colors.primary, padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 'auto' },
-  btnDisabled: { backgroundColor: neutral('grey300') },
+  btnDisabled: { backgroundColor: neutral('neutral400') },
   btnText: { color: colors.white, fontSize: 18, fontWeight: 'bold' },
 });

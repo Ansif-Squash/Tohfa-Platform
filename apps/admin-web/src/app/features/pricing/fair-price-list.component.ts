@@ -116,14 +116,14 @@ import { PricingService, type FairPrice, type FairPriceCreate } from './pricing.
       }
       .drawer-header {
         padding: var(--tohfa-space-lg) var(--tohfa-space-xl);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
+        border-bottom: 1px solid var(--tohfa-neutral-300);
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
       .drawer-header h3 {
         margin: 0;
-        font-size: var(--tohfa-font-size-title);
+        font-size: var(--tohfa-font-size-h2);
         color: var(--tohfa-on-surface);
       }
       .drawer-body {
@@ -136,7 +136,7 @@ import { PricingService, type FairPrice, type FairPriceCreate } from './pricing.
       }
       .drawer-footer {
         padding: var(--tohfa-space-lg) var(--tohfa-space-xl);
-        border-top: 1px solid var(--tohfa-neutral-grey100);
+        border-top: 1px solid var(--tohfa-neutral-300);
         display: flex;
         justify-content: flex-end;
         gap: var(--tohfa-space-md);
@@ -148,7 +148,7 @@ import { PricingService, type FairPrice, type FairPriceCreate } from './pricing.
         gap: var(--tohfa-space-xs);
       }
       .form-group label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
         color: var(--tohfa-on-surface);
         text-transform: uppercase;
@@ -165,10 +165,10 @@ import { PricingService, type FairPrice, type FairPriceCreate } from './pricing.
         border: 1px solid var(--tohfa-danger);
         color: var(--tohfa-danger);
         border-radius: var(--tohfa-radius-input);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .btn-secondary {
-        background: var(--tohfa-neutral-grey100);
+        background: var(--tohfa-neutral-300);
         color: var(--tohfa-on-surface);
         padding: var(--tohfa-space-sm) var(--tohfa-space-lg);
         border: none;

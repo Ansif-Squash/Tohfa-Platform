@@ -229,7 +229,7 @@ type ModalMode = 'none' | 'approve' | 'counter' | 'reject';
       }
       .modal-header {
         padding: var(--tohfa-space-lg);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
+        border-bottom: 1px solid var(--tohfa-neutral-300);
       }
       .modal-title {
         margin: 0 0 var(--tohfa-space-xs) 0;
@@ -238,8 +238,8 @@ type ModalMode = 'none' | 'approve' | 'counter' | 'reject';
       }
       .modal-desc {
         margin: 0;
-        font-size: var(--tohfa-font-size-body-small);
-        color: var(--tohfa-neutral-grey600);
+        font-size: var(--tohfa-font-size-small);
+        color: var(--tohfa-neutral-600);
       }
       .modal-body {
         padding: var(--tohfa-space-lg);
@@ -254,13 +254,13 @@ type ModalMode = 'none' | 'approve' | 'counter' | 'reject';
         gap: var(--tohfa-space-xs);
       }
       .form-label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
         color: var(--tohfa-on-surface);
       }
       .modal-footer {
         padding: var(--tohfa-space-md) var(--tohfa-space-lg);
-        border-top: 1px solid var(--tohfa-neutral-grey100);
+        border-top: 1px solid var(--tohfa-neutral-300);
         display: flex;
         justify-content: flex-end;
         gap: var(--tohfa-space-sm);
@@ -270,7 +270,7 @@ type ModalMode = 'none' | 'approve' | 'counter' | 'reject';
         padding: var(--tohfa-space-sm) var(--tohfa-space-md);
         border-radius: var(--tohfa-radius-input);
         margin-bottom: var(--tohfa-space-md);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .alert-error {
         background: var(--tohfa-status-error-bg);

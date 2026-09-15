@@ -29,11 +29,11 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
       select,
       input {
         padding: var(--tohfa-space-sm) var(--tohfa-space-md);
-        border: 1px solid var(--tohfa-neutral-grey300);
+        border: 1px solid var(--tohfa-neutral-400);
         border-radius: var(--tohfa-radius-input);
         background: var(--tohfa-neutral-white);
         font-family: var(--tohfa-font-sans);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .btn-primary {
         background: var(--tohfa-primary);
@@ -43,7 +43,7 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
         border-radius: var(--tohfa-radius-button);
         font-weight: var(--tohfa-font-weight-semibold);
         cursor: pointer;
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .price-val {
         font-family: var(--tohfa-font-mono);
@@ -52,14 +52,14 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
       }
       .ceiling-val {
         font-family: var(--tohfa-font-mono);
-        color: var(--tohfa-neutral-grey700);
+        color: var(--tohfa-neutral-700);
       }
       .grade-badge {
         display: inline-block;
         padding: var(--tohfa-space-xs) var(--tohfa-space-sm);
         border-radius: var(--tohfa-radius-pill);
         font-size: var(--tohfa-font-size-caption);
-        background: var(--tohfa-neutral-grey100);
+        background: var(--tohfa-neutral-300);
       }
       /* Drawer */
       .drawer-backdrop {
@@ -81,7 +81,7 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
       }
       .drawer-header {
         padding: var(--tohfa-space-lg) var(--tohfa-space-xl);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
+        border-bottom: 1px solid var(--tohfa-neutral-300);
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -96,7 +96,7 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
       }
       .drawer-footer {
         padding: var(--tohfa-space-lg) var(--tohfa-space-xl);
-        border-top: 1px solid var(--tohfa-neutral-grey100);
+        border-top: 1px solid var(--tohfa-neutral-300);
         display: flex;
         justify-content: flex-end;
         gap: var(--tohfa-space-md);
@@ -108,7 +108,7 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
         gap: var(--tohfa-space-xs);
       }
       .form-group label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
         color: var(--tohfa-on-surface);
         text-transform: uppercase;
@@ -124,10 +124,10 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
         border: 1px solid var(--tohfa-danger);
         color: var(--tohfa-danger);
         border-radius: var(--tohfa-radius-input);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .btn-secondary {
-        background: var(--tohfa-neutral-grey100);
+        background: var(--tohfa-neutral-300);
         color: var(--tohfa-on-surface);
         padding: var(--tohfa-space-sm) var(--tohfa-space-lg);
         border: none;
@@ -230,7 +230,7 @@ import { PricingService, type RetailPrice, type RetailPriceCreate } from './pric
               [(ngModel)]="formPrice"
               placeholder="e.g. 50.00"
             />
-            <small style="color: var(--tohfa-neutral-grey700);">
+            <small style="color: var(--tohfa-neutral-700);">
               Must be at or below the governing fair price ceiling (BR-09a).
             </small>
           </div>

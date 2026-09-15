@@ -58,8 +58,8 @@ export const INVENTORY_STRINGS = {
         margin: 0;
       }
       .subtitle {
-        font-size: var(--tohfa-font-size-body-small);
-        color: var(--tohfa-neutral-grey600);
+        font-size: var(--tohfa-font-size-small);
+        color: var(--tohfa-neutral-600);
         margin: var(--tohfa-space-xs) 0 0 0;
       }
       .filters {
@@ -78,19 +78,19 @@ export const INVENTORY_STRINGS = {
         gap: var(--tohfa-space-xs);
       }
       .filter-group label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
-        color: var(--tohfa-neutral-grey700);
+        color: var(--tohfa-neutral-700);
       }
       select,
       input {
         min-height: 44px;
         padding: var(--tohfa-space-sm) var(--tohfa-space-md);
-        border: 1px solid var(--tohfa-neutral-grey300);
+        border: 1px solid var(--tohfa-neutral-400);
         border-radius: var(--tohfa-radius-input);
         background: var(--tohfa-neutral-white);
         font-family: var(--tohfa-font-sans);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         color: var(--tohfa-on-surface);
       }
       select:focus,
@@ -109,7 +109,7 @@ export const INVENTORY_STRINGS = {
         border-radius: var(--tohfa-radius-button);
         font-family: var(--tohfa-font-sans);
         font-weight: var(--tohfa-font-weight-semibold);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         cursor: pointer;
         border: none;
         display: inline-flex;
@@ -140,14 +140,14 @@ export const INVENTORY_STRINGS = {
       td {
         padding: var(--tohfa-space-md) var(--tohfa-space-lg);
         text-align: left;
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
-        font-size: var(--tohfa-font-size-body-small);
+        border-bottom: 1px solid var(--tohfa-neutral-300);
+        font-size: var(--tohfa-font-size-small);
       }
       th {
         background: var(--tohfa-surface);
         font-weight: var(--tohfa-font-weight-semibold);
-        color: var(--tohfa-neutral-grey700);
-        font-size: var(--tohfa-font-size-footnote);
+        color: var(--tohfa-neutral-700);
+        font-size: var(--tohfa-font-size-caption);
         text-transform: uppercase;
         letter-spacing: 0.04em;
       }
@@ -156,7 +156,7 @@ export const INVENTORY_STRINGS = {
         align-items: center;
         padding: 4px var(--tohfa-space-sm);
         border-radius: var(--tohfa-radius-badge);
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
       }
       .badge-positive {
@@ -169,12 +169,12 @@ export const INVENTORY_STRINGS = {
       }
       .badge-neutral {
         background: var(--tohfa-surface);
-        color: var(--tohfa-neutral-grey700);
+        color: var(--tohfa-neutral-700);
       }
       .empty {
         padding: var(--tohfa-space-xxl);
         text-align: center;
-        color: var(--tohfa-neutral-grey500);
+        color: var(--tohfa-neutral-500);
       }
       .pager {
         display: flex;
@@ -182,7 +182,7 @@ export const INVENTORY_STRINGS = {
         align-items: center;
         gap: var(--tohfa-space-md);
         padding: var(--tohfa-space-lg);
-        border-top: 1px solid var(--tohfa-neutral-grey100);
+        border-top: 1px solid var(--tohfa-neutral-300);
       }
     `,
   ],

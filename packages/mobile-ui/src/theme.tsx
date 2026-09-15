@@ -82,25 +82,29 @@ export const defaultMobileTheme: MobileTheme = {
     onSurface: semantic('onSurface'),
     accent: semantic('accent'),
     white: neutral('white'),
-    brand: hex('tohfaTeal'),
-    farmerBrand: hex('tohfaTeal'),
-    surfaceVariant: neutral('grey100'),
-    surfacePressed: neutral('grey300'),
-    onSurfaceVariant: neutral('grey500'),
-    textMuted: neutral('grey700'),
-    grey100: neutral('grey100'),
-    grey300: neutral('grey300'),
-    grey500: neutral('grey500'),
-    grey700: neutral('grey700'),
+    brand: hex('primary'),
+    farmerBrand: hex('primary'),
+    surfaceVariant: neutral('neutral100'),
+    surfacePressed: neutral('neutral300'),
+    onSurfaceVariant: neutral('neutral600'),
+    textMuted: neutral('neutral700'),
+    // The greyNNN keys are the legacy ramp positions screens still reference by
+    // name. They point into the new 50→950 neutral scale at the nearest step.
+    grey100: neutral('neutral300'),
+    grey300: neutral('neutral400'),
+    grey500: neutral('neutral500'),
+    grey700: neutral('neutral700'),
   },
+  // The theme keeps the names screens already use; the tokens behind them now
+  // follow the design system's own type vocabulary (h1/h2/small/…).
   typography: {
     caption: tokens.typeScale.caption,
-    footnote: tokens.typeScale.footnote,
-    bodySmall: tokens.typeScale.bodySmall,
+    footnote: tokens.typeScale.caption,
+    bodySmall: tokens.typeScale.small,
     body: tokens.typeScale.body,
     bodyLarge: tokens.typeScale.bodyLarge,
-    title: tokens.typeScale.title,
-    headline: tokens.typeScale.headline,
+    title: tokens.typeScale.h2,
+    headline: tokens.typeScale.h1,
     display: tokens.typeScale.display,
   },
   weights: {
@@ -111,21 +115,21 @@ export const defaultMobileTheme: MobileTheme = {
   },
   lineHeights: tokens.lineHeight,
   spacing: tokens.spacing,
-  radius: {
-    ...tokens.radius,
-    card: tokens.radius.cardMin,
-    sm: 6,
-    md: 8,
-    lg: tokens.radius.cardMin,
-  },
+  // card/sm/md/lg used to be hard-coded here; the design system now names every
+  // step, so the whole map comes straight from the tokens.
+  radius: tokens.radius,
   minTouchTarget: tokens.size.minTouchTarget,
 };
 
 /**
- * Role-flavoured theme. Only `primary` varies by role (via the role badge colour
- * from design-tokens); `brand` and `farmerBrand` are deliberately the same TOHFA
- * teal for every role, because they identify the platform and its farmers rather
- * than the signed-in user. Everything else comes through unchanged from the default.
+ * Role-flavoured theme.
+ *
+ * This function is now effectively an identity on colour: the approved design
+ * system dropped per-role and per-app colour coding, so `roleColor` maps every
+ * role to the one universal primary and `roleHex(role)` returns the same value
+ * for all of them. It is kept rather than inlined because it is the single place
+ * a future per-role accent would go back in, and because RootShell and
+ * CustomerMainApp already build their theme through it.
  */
 export function buildThemeForRole(role: RoleCode): MobileTheme {
   return {
@@ -133,8 +137,8 @@ export function buildThemeForRole(role: RoleCode): MobileTheme {
     colors: {
       ...defaultMobileTheme.colors,
       primary: roleHex(role),
-      brand: hex('tohfaTeal'),
-      farmerBrand: hex('tohfaTeal'),
+      brand: hex('primary'),
+      farmerBrand: hex('primary'),
     },
   };
 }

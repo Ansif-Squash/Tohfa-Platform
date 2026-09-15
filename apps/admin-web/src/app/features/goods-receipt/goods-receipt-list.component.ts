@@ -39,7 +39,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         gap: var(--tohfa-space-md);
       }
       .title-group h1 {
-        font-size: var(--tohfa-font-size-headline);
+        font-size: var(--tohfa-font-size-h1);
         font-weight: var(--tohfa-font-weight-bold);
         color: var(--tohfa-on-surface);
         margin: 0 0 var(--tohfa-space-xs) 0;
@@ -47,7 +47,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
       .title-group p {
         color: rgba(4, 52, 44, 0.6);
         margin: 0;
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .btn-primary {
         background: var(--tohfa-primary);
@@ -57,16 +57,16 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         border-radius: var(--tohfa-radius-button);
         font-weight: var(--tohfa-font-weight-semibold);
         cursor: pointer;
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .btn-primary:hover {
         background: var(--tohfa-primary-pressed);
       }
       .btn-secondary {
-        background: var(--tohfa-neutral-grey100);
+        background: var(--tohfa-neutral-300);
         color: var(--tohfa-on-surface);
         padding: var(--tohfa-space-xs) var(--tohfa-space-md);
-        border: 1px solid var(--tohfa-neutral-grey300);
+        border: 1px solid var(--tohfa-neutral-400);
         border-radius: var(--tohfa-radius-button);
         cursor: pointer;
         font-weight: var(--tohfa-font-weight-semibold);
@@ -75,7 +75,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
       .filter-tabs {
         display: flex;
         gap: var(--tohfa-space-xs);
-        border-bottom: 1px solid var(--tohfa-neutral-grey200);
+        border-bottom: 1px solid var(--tohfa-neutral-300);
         padding-bottom: var(--tohfa-space-xs);
       }
       .tab-btn {
@@ -83,7 +83,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         border: none;
         background: none;
         border-radius: var(--tohfa-radius-pill);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         cursor: pointer;
         color: var(--tohfa-on-surface);
         font-weight: var(--tohfa-font-weight-medium);
@@ -148,14 +148,14 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
       }
       .drawer-header {
         padding: var(--tohfa-space-lg) var(--tohfa-space-xl);
-        border-bottom: 1px solid var(--tohfa-neutral-grey100);
+        border-bottom: 1px solid var(--tohfa-neutral-300);
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
       .drawer-header h3 {
         margin: 0;
-        font-size: var(--tohfa-font-size-title);
+        font-size: var(--tohfa-font-size-h2);
         color: var(--tohfa-on-surface);
       }
       .drawer-body {
@@ -168,7 +168,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
       }
       .drawer-footer {
         padding: var(--tohfa-space-lg) var(--tohfa-space-xl);
-        border-top: 1px solid var(--tohfa-neutral-grey100);
+        border-top: 1px solid var(--tohfa-neutral-300);
         display: flex;
         justify-content: flex-end;
         gap: var(--tohfa-space-md);
@@ -180,7 +180,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         gap: var(--tohfa-space-xs);
       }
       .form-group label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
         color: var(--tohfa-on-surface);
       }
@@ -190,10 +190,10 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         width: 100%;
         box-sizing: border-box;
         padding: var(--tohfa-space-sm) var(--tohfa-space-md);
-        border: 1px solid var(--tohfa-neutral-grey300);
+        border: 1px solid var(--tohfa-neutral-400);
         border-radius: var(--tohfa-radius-input);
         font-family: var(--tohfa-font-sans);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .qc-item-card {
         background: var(--tohfa-surface);
@@ -202,7 +202,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         display: flex;
         flex-direction: column;
         gap: var(--tohfa-space-xs);
-        border: 1px solid var(--tohfa-neutral-grey200);
+        border: 1px solid var(--tohfa-neutral-300);
       }
       .qc-item-row {
         display: flex;
@@ -215,7 +215,7 @@ import { GOODS_RECEIPT_STRINGS } from './goods-receipt.strings';
         border: 1px solid var(--tohfa-danger);
         color: var(--tohfa-danger);
         border-radius: var(--tohfa-radius-input);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
     `,
   ],

@@ -37,7 +37,7 @@ interface ShellNotification {
         font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
 
         /* ---- TOHFA type scale ---- */
-        --tohfa-font-size-title: 20px;
+        --tohfa-font-size-h2: 20px;
         --tohfa-font-size-body: 14px;
         --tohfa-font-size-caption: 12px;
         --tohfa-font-weight-semibold: 600;
@@ -105,7 +105,7 @@ interface ShellNotification {
       }
       .brand-text {
         font-weight: var(--tohfa-font-weight-bold);
-        font-size: var(--tohfa-font-size-title);
+        font-size: var(--tohfa-font-size-h2);
         letter-spacing: 0.01em;
       }
 
@@ -540,7 +540,7 @@ export class ShellComponent {
   readonly roles = computed(() => this.auth.roles());
   readonly roleColor = computed(() => {
     const role = this.activeRole();
-    return role ? this.rbac.colorFor(role) : '#0F6E56';
+    return role ? this.rbac.colorFor(role) : 'var(--tohfa-primary)';
   });
 
   formatRole(role: string | null): string {

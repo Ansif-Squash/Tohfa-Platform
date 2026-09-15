@@ -2,10 +2,11 @@
  * Farmer app theme.
  *
  * Everything here is derived from @tohfa/design-tokens — no hex literals, no
- * magic numbers. The farmer app's primary is TOHFA Teal; the customer app uses
- * Deep Blue, which is the ONLY difference between the two theme files.
+ * magic numbers. The farmer and customer theme files used to differ in exactly
+ * one way, their brand colour; the approved design system dropped per-app brand
+ * colours, so both now resolve to the same universal primary.
  */
-import { tokens, hex, neutral, semantic } from '@tohfa/design-tokens';
+import { tokens, neutral, semantic } from '@tohfa/design-tokens';
 
 export const colors = {
   primary: semantic('primary'),
@@ -18,11 +19,11 @@ export const colors = {
   onSurface: semantic('onSurface'),
   accent: semantic('accent'),
   white: neutral('white'),
-  brand: hex('tohfaTeal'),
-  surfaceVariant: neutral('grey100'),
-  surfacePressed: neutral('grey300'),
-  onSurfaceVariant: neutral('grey500'),
-  textMuted: neutral('grey700'),
+  brand: semantic('primary'),
+  surfaceVariant: neutral('neutral100'),
+  surfacePressed: neutral('neutral300'),
+  onSurfaceVariant: neutral('neutral600'),
+  textMuted: neutral('neutral700'),
   brandGreen: '#2E7D32',
   brandGreenLight: '#E8F5E9',
   bgLight: '#FCFCFC',
@@ -35,18 +36,18 @@ export const colors = {
   textBody: '#3A3A3A',
   textSubtle: '#6B7566',
   textPlaceholder: '#8A927F',
-  requiredRed: semantic('danger'), // identical to `danger` above — byte-equal to the old '#E24B4A' literal
+  requiredRed: semantic('danger'), // identical to `danger` above — the shared error token
 } as const;
 
-/** Point values map 1:1 to React Native `dp`. */
+/** Values are px, which map 1:1 to React Native `dp`. */
 export const typography = {
   caption: tokens.typeScale.caption,
-  footnote: tokens.typeScale.footnote,
-  bodySmall: tokens.typeScale.bodySmall,
+  footnote: tokens.typeScale.caption,
+  bodySmall: tokens.typeScale.small,
   body: tokens.typeScale.body,
   bodyLarge: tokens.typeScale.bodyLarge,
-  title: tokens.typeScale.title,
-  headline: tokens.typeScale.headline,
+  title: tokens.typeScale.h2,
+  headline: tokens.typeScale.h1,
   display: tokens.typeScale.display,
 } as const;
 
@@ -59,13 +60,9 @@ export const weights = {
 
 export const lineHeights = tokens.lineHeight;
 export const spacing = tokens.spacing;
-export const radius = {
-  ...tokens.radius,
-  card: tokens.radius.cardMin,
-  sm: 6,
-  md: 8,
-  lg: tokens.radius.cardMin,
-} as const;
+// card/sm/md/lg used to be patched in here by hand; the design system now names
+// every step, so the whole map comes straight from the tokens.
+export const radius = tokens.radius;
 
 
 /**
@@ -248,10 +245,11 @@ export function useTheme() {
     ...theme,
     colors: {
       ...colors,
-      grey100: neutral('grey100'),
-      grey300: neutral('grey300'),
-      grey500: neutral('grey500'),
-      grey700: neutral('grey700'),
+      // Legacy ramp names, repointed at the nearest step of the new 50→950 scale.
+      grey100: neutral('neutral300'),
+      grey300: neutral('neutral400'),
+      grey500: neutral('neutral500'),
+      grey700: neutral('neutral700'),
     },
   };
 }

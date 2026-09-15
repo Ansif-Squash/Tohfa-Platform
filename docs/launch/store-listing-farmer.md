@@ -1,7 +1,7 @@
 # Google Play & Apple App Store Listing: TOHFA Farmer
 
 **Application Identifier:** `in.tohfa.farmer`  
-**Primary Brand Colour:** TOHFA Teal (`#0F6E56` / `tohfaTeal`)  
+**Primary Brand Colour:** TOHFA Green (`#3F7D32` / `primary`)  
 **Target Category:** Business / Agriculture & Produce Management  
 
 ---

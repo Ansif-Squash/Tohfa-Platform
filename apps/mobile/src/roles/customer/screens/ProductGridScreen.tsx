@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: neutral('grey100'),
+    backgroundColor: neutral('neutral300'),
   },
   chipText: {
     fontSize: 12,

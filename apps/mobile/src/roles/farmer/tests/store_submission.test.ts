@@ -53,12 +53,20 @@ describe('User Story 52 (S-52): Farmer Mobile Store Submission & Data Safety', (
     expect(plist).toContain('in.tohfa.mobile');
   });
 
-  it('verifies branding configuration uses exact design token color (tohfaTeal)', () => {
+  // The farmer app used to assert its own brand colour (tohfaTeal) here, distinct
+  // from the customer app's. The approved design system dropped per-app brand
+  // colours in favour of one universal primary, so this now asserts that the
+  // farmer branding tracks that single token — the spec changed, not the rigour.
+  it('verifies branding configuration uses the universal design token primary', () => {
     const brandingPath = path.join(roleDir, 'assets/branding.json');
     expect(fs.existsSync(brandingPath)).toBe(true);
 
     const branding = JSON.parse(fs.readFileSync(brandingPath, 'utf8'));
-    expect(branding.theme.primaryColor.toUpperCase()).toBe(tokens.color.tohfaTeal.hex.toUpperCase());
+    expect(branding.theme.primaryColor.toUpperCase()).toBe(tokens.color.primary.hex.toUpperCase());
+    expect(branding.theme.primaryColorName).toBe('primary');
+    expect(branding.theme.backgroundColor.toUpperCase()).toBe(
+      tokens.color.primaryPale.hex.toUpperCase(),
+    );
     expect(branding.bundleId).toBe('in.tohfa.mobile');
   });
 

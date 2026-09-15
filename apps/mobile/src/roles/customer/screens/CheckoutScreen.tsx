@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
   total: { fontSize: 18, fontWeight: 'bold', marginTop: 16 },
   payBtn: { backgroundColor: colors.success, padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 'auto' },
-  payBtnDisabled: { backgroundColor: neutral('grey300') },
+  payBtnDisabled: { backgroundColor: neutral('neutral400') },
   payBtnText: { color: colors.white, fontSize: 18, fontWeight: 'bold' },
   errorText: { color: colors.danger, marginBottom: 16, textAlign: 'center' },
 });

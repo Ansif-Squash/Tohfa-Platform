@@ -10,17 +10,16 @@ Never write `*ngIf="role === 'SUPER_ADMIN'"` — write `*ngIf="can('fair_price.s
 Guarding a route in the UI is a courtesy to the user, not a security control. The API refuses
 the same request independently. Both must be present.
 
-## Role colours
+## Role colours — there is only one now
 
-| Role | Token |
-|---|---|
-| Super Admin | Deep Maroon `#A32D2D` |
-| TOHFA Admin | TOHFA Orange `#F0562A` |
-| Farmer Admin | TOHFA Teal `#0F6E56` |
-| Main Warehouse Admin | Brown Accent `#854F0B` |
-| Sub Warehouse Admin | Sub Warehouse Orange `#E48932` |
+Roles used to be colour-coded (Super Admin maroon, TOHFA Admin orange, Farmer Admin teal, Main
+Warehouse brown, Sub Warehouse orange). The approved TOHFA Design System replaced that with a
+single universal primary, so **every role renders in the same brand colour** — `--tohfa-primary`.
+`roleColor` in `tokens.json` and `colorHex` in `docs/rbac.json` are still per-role keys, but
+every one of them now holds that same value. Do not reintroduce per-role hues without a new
+design decision.
 
-Read them from `tokens.generated.css`, never as literals.
+Read colours from `tokens.generated.css`, never as literals.
 
 ## Components
 
@@ -29,7 +28,7 @@ it. If it is missing something your screen needs, extend the shared component ra
 building a second table.
 
 Every edit screen has the sticky Cancel/Save footer specified in the design system. Button
-minimum height 44px, radius 12px, inputs radius 12px with the teal focus ring.
+minimum height 44px, radius 8px (`--tohfa-radius-button`), inputs radius 8px with the primary focus ring.
 
 ## Data tables and scope
 

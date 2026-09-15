@@ -1,37 +1,39 @@
 /**
  * Customer app theme.
  *
- * Identical in structure to the farmer app's theme — the ONE difference is the
- * brand: the customer app leads with Deep Blue (`deepBlue`) while the farmer app
- * leads with TOHFA Teal. Everything else comes from @tohfa/design-tokens, so a
- * token change lands in both apps at once.
+ * Identical in structure AND in palette to the farmer app's theme. The customer
+ * app used to lead with Deep Blue against the farmer app's TOHFA Teal; the
+ * approved design system dropped per-app brand colours in favour of one
+ * universal primary, so there is no longer any colour difference between the two
+ * roles. Everything comes from @tohfa/design-tokens, so a token change lands in
+ * both at once.
  */
-import { tokens, hex, neutral, semantic } from '@tohfa/design-tokens';
+import { tokens, neutral, semantic } from '@tohfa/design-tokens';
 
 export const colors = {
-  /** Customer brand: Deep Blue. */
-  primary: hex('deepBlue'),
-  primaryPressed: hex('deepTeal'),
+  /** The one TOHFA brand colour — same in every app and for every role. */
+  primary: semantic('primary'),
+  primaryPressed: semantic('primaryPressed'),
   secondary: semantic('secondary'),
   danger: semantic('danger'),
   success: semantic('success'),
-  info: hex('deepBlue'),
+  info: semantic('info'),
   surface: semantic('surface'),
   onSurface: semantic('onSurface'),
   accent: semantic('accent'),
   white: neutral('white'),
   /** Used only on "grown by TOHFA farmers" trust badges. */
-  farmerBrand: hex('tohfaTeal'),
+  farmerBrand: semantic('primary'),
 } as const;
 
 export const typography = {
   caption: tokens.typeScale.caption,
-  footnote: tokens.typeScale.footnote,
-  bodySmall: tokens.typeScale.bodySmall,
+  footnote: tokens.typeScale.caption,
+  bodySmall: tokens.typeScale.small,
   body: tokens.typeScale.body,
   bodyLarge: tokens.typeScale.bodyLarge,
-  title: tokens.typeScale.title,
-  headline: tokens.typeScale.headline,
+  title: tokens.typeScale.h2,
+  headline: tokens.typeScale.h1,
   display: tokens.typeScale.display,
 } as const;
 
@@ -64,10 +66,11 @@ export function useTheme() {
     ...theme,
     colors: {
       ...colors,
-      grey100: neutral('grey100'),
-      grey300: neutral('grey300'),
-      grey500: neutral('grey500'),
-      grey700: neutral('grey700'),
+      // Legacy ramp names, repointed at the nearest step of the new 50→950 scale.
+      grey100: neutral('neutral300'),
+      grey300: neutral('neutral400'),
+      grey500: neutral('neutral500'),
+      grey700: neutral('neutral700'),
     },
   };
 }

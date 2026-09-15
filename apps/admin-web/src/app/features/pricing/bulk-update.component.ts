@@ -28,9 +28,9 @@ import { PricingService, type BulkFairPriceItem, type FairPriceCreate } from './
       .raw-input {
         width: 100%;
         font-family: var(--tohfa-font-mono);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
         padding: var(--tohfa-space-md);
-        border: 1px solid var(--tohfa-neutral-grey300);
+        border: 1px solid var(--tohfa-neutral-400);
         border-radius: var(--tohfa-radius-input);
         margin-bottom: var(--tohfa-space-md);
         box-sizing: border-box;
@@ -51,7 +51,7 @@ import { PricingService, type BulkFairPriceItem, type FairPriceCreate } from './
         cursor: pointer;
       }
       .btn-secondary {
-        background: var(--tohfa-neutral-grey100);
+        background: var(--tohfa-neutral-300);
         color: var(--tohfa-on-surface);
         padding: var(--tohfa-space-sm) var(--tohfa-space-lg);
         border: none;
@@ -70,7 +70,7 @@ import { PricingService, type BulkFairPriceItem, type FairPriceCreate } from './
       .error-text {
         color: var(--tohfa-danger);
         font-weight: var(--tohfa-font-weight-medium);
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
       }
       .row-success {
         background: rgba(23, 52, 4, 0.08);

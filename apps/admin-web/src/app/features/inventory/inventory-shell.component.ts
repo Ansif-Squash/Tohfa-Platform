@@ -132,12 +132,12 @@ import { StockLedgerListComponent } from './stock-ledger-list.component';
 
         --tohfa-font-size-title-2: 20px; /* H3 */
 
-        --tohfa-font-size-body-small: 14px;
+        --tohfa-font-size-small: 14px;
 
         --tohfa-font-size-body-medium: 14px;
 
-        --tohfa-font-size-footnote: 13px;
-
+        /* Was two vars (footnote 13px, caption 12px); the design system has one
+           caption step, so the 13px declaration is gone rather than left dead. */
         --tohfa-font-size-caption: 12px;
 
         --tohfa-font-weight-semibold: 600;
@@ -254,7 +254,7 @@ import { StockLedgerListComponent } from './stock-ledger-list.component';
 
       .subtitle {
 
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
 
         color: var(--tohfa-neutral-600);
 
@@ -440,7 +440,7 @@ import { StockLedgerListComponent } from './stock-ledger-list.component';
 
         border-bottom: 1px solid var(--tohfa-neutral-100);
 
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
 
         color: var(--tohfa-on-surface);
 
@@ -450,7 +450,7 @@ import { StockLedgerListComponent } from './stock-ledger-list.component';
 
         background: var(--tohfa-primary-pale);
 
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
 
         font-weight: var(--tohfa-font-weight-semibold);
 
@@ -603,7 +603,7 @@ import { StockLedgerListComponent } from './stock-ledger-list.component';
 
         color: var(--tohfa-neutral-500);
 
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
 
       }
 
