@@ -29,18 +29,18 @@ export type PricingTab = 'fair-prices' | 'bulk-update' | 'retail-prices' | 'hist
       }
       .page-header h1 {
         margin: 0 0 var(--tohfa-space-xs) 0;
-        font-size: var(--tohfa-font-size-headline);
+        font-size: var(--tohfa-font-size-h1);
         color: var(--tohfa-on-surface);
       }
       .page-header p {
         margin: 0;
-        color: var(--tohfa-neutral-grey700);
+        color: var(--tohfa-neutral-700);
         font-size: var(--tohfa-font-size-body);
       }
       .tabs {
         display: flex;
         gap: var(--tohfa-space-sm);
-        border-bottom: 2px solid var(--tohfa-neutral-grey100);
+        border-bottom: 2px solid var(--tohfa-neutral-300);
         margin-bottom: var(--tohfa-space-xl);
       }
       .tab-btn {
@@ -53,7 +53,7 @@ export type PricingTab = 'fair-prices' | 'bulk-update' | 'retail-prices' | 'hist
         font-family: var(--tohfa-font-sans);
         font-size: var(--tohfa-font-size-body);
         font-weight: var(--tohfa-font-weight-medium);
-        color: var(--tohfa-neutral-grey700);
+        color: var(--tohfa-neutral-700);
         cursor: pointer;
       }
       .tab-btn:hover {

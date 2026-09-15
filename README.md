@@ -32,8 +32,7 @@ apps/
     src/modules/_example/   COPY THIS for every new module.
     src/rbac/               Permission resolution — read before touching auth.
   admin-web/        Angular 17 standalone admin console.
-  farmer-mobile/    React Native 0.74 farmer app.
-  customer-mobile/  React Native 0.74 customer app.
+  mobile/           React Native 0.74, single app for farmer/customer/admin roles.
 packages/
   shared-types/     Enums, ErrorCode union, Problem, Money. No runtime deps.
   design-tokens/    Brand colours, type scale, spacing. Single source of truth.

@@ -50,12 +50,12 @@ export interface Column<T extends Row = Row> {
         padding: var(--tohfa-space-md) var(--tohfa-space-lg);
         text-align: left;
         border-bottom: 1px solid rgba(4, 52, 44, 0.08);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       th {
         background: var(--tohfa-surface);
         font-weight: var(--tohfa-font-weight-semibold);
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         text-transform: uppercase;
         letter-spacing: 0.04em;
       }
@@ -71,7 +71,7 @@ export interface Column<T extends Row = Row> {
       }
       .pager {
         justify-content: flex-end;
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       button[disabled] {
         opacity: 0.4;

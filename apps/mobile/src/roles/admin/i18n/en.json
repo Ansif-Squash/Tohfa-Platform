@@ -1,0 +1,5 @@
+{
+  "scaffold.role": "Admin",
+  "scaffold.heading": "TOHFA Admin",
+  "scaffold.body": "Admin flavor scaffold is running. Real screens are built new in src/roles/admin in a later step."
+}

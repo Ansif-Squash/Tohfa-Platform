@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>TOHFA</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>in.tohfa.mobile</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>1001</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TOHFA needs your farm GPS location to verify land parcel boundaries during crop listing.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>TOHFA needs camera access to capture harvest photos and organic certification documents.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>TOHFA needs photo library access to upload certification proofs and crop images.</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<!-- Declarative only: the font file at Fonts/MaterialSymbolsOutlined.ttf
+	     still needs to be added as a resource in Xcode (pbxproj) before this
+	     actually bundles it. Not done here — no Xcode in this repo's dev
+	     environment to verify the project-file surgery. See
+	     packages/mobile-ui/src/Icon.tsx for why this font is needed and how
+	     Android links it (which IS wired and verified). -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>MaterialSymbolsOutlined.ttf</string>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,57 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+project.ext.react = [
+    enableHermes: true,
+]
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    // Single app for every role (farmer/customer/admin) -- one namespace,
+    // one applicationId, no product flavors. Role-based screens are decided
+    // by the JS bundle at runtime after login (see src/shell/auth/RootShell.tsx),
+    // not by which native flavor was installed.
+    namespace "in.tohfa.mobile"
+
+    defaultConfig {
+        applicationId "in.tohfa.mobile"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation("org.webkit:android-jsc:+")
+    }
+}
+
+def getPackagePath(String packageName) {
+    def proc = ['node', '--print', "require.resolve('${packageName}/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir)
+    proc.waitFor()
+    return new File(proc.in.text.trim()).parentFile
+}
+
+def cliPlatformAndroid = getPackagePath('@react-native-community/cli-platform-android')
+apply from: new File(cliPlatformAndroid, 'native_modules.gradle'); applyNativeModulesAppBuildGradle(project)
+

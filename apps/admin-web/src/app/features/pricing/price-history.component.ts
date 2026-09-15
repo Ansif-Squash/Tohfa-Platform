@@ -33,7 +33,7 @@ import { PricingService, type FairPrice } from './pricing.service';
         gap: var(--tohfa-space-xs);
       }
       label {
-        font-size: var(--tohfa-font-size-footnote);
+        font-size: var(--tohfa-font-size-caption);
         font-weight: var(--tohfa-font-weight-semibold);
         color: var(--tohfa-on-surface);
         text-transform: uppercase;
@@ -41,11 +41,11 @@ import { PricingService, type FairPrice } from './pricing.service';
       input,
       select {
         padding: var(--tohfa-space-sm) var(--tohfa-space-md);
-        border: 1px solid var(--tohfa-neutral-grey300);
+        border: 1px solid var(--tohfa-neutral-400);
         border-radius: var(--tohfa-radius-input);
         background: var(--tohfa-neutral-white);
         font-family: var(--tohfa-font-sans);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .btn-primary {
         background: var(--tohfa-primary);
@@ -55,7 +55,7 @@ import { PricingService, type FairPrice } from './pricing.service';
         border-radius: var(--tohfa-radius-button);
         cursor: pointer;
         font-weight: var(--tohfa-font-weight-semibold);
-        font-size: var(--tohfa-font-size-body-small);
+        font-size: var(--tohfa-font-size-small);
       }
       .money-val {
         font-family: var(--tohfa-font-mono);

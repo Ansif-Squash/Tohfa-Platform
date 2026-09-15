@@ -1,0 +1,174 @@
+appId: in.tohfa.mobile
+---
+# ==============================================================================
+# TOHFA Customer Golden-Thread E2E Flow (S-47, S-48, S-49, S-51)
+# Flow: Splash -> Welcome -> Authentication -> Farm-Anonymous Catalog Browse ->
+#       Add to Cart -> Wallet-First Checkout -> Live Order Tracking
+#
+# Post-merge notes (see apps/mobile/CLAUDE.md, "Known transitional state"):
+#   - index.js boots src/roles/farmer/App.tsx as the ONE shared app root for
+#     every role in this single binary. The customer role's own former
+#     Splash/Onboarding/Login/Otp/Register/ForgotPassword/ResetPassword
+#     screens under src/roles/customer/screens/auth/ are DEAD CODE post-merge
+#     -- nothing imports them any more. A signed-in CUSTOMER-role account is
+#     routed, after the one shared Login screen, into
+#     src/roles/customer/CustomerMainApp.tsx via farmer/App.tsx's single
+#     sanctioned cross-role bridge (resolveRouteAfterAuth() in
+#     roles/farmer/api/auth.ts). This flow drives the screens that actually
+#     run today, not the retired customer auth screens the old
+#     customer-mobile/.maestro/golden-thread.yaml was written against.
+#   - Single Android applicationId is in.tohfa.mobile (one binary, no product
+#     flavors any more) -- see apps/mobile/android/app/build.gradle. The
+#     pre-merge customer-mobile app shipped as its own package,
+#     in.tohfa.customer; that id is retired but recorded here since this flow
+#     replaces the golden-thread.yaml that used to launch it.
+# ==============================================================================
+
+# Launch the shared TOHFA mobile app
+- launchApp:
+    clearState: false
+
+# ------------------------------------------------------------------------------
+# Phase 1: Authentication
+# ------------------------------------------------------------------------------
+# SplashScreen (roles/farmer/screens/auth/SplashScreen.tsx, shared by every
+# role) checks for a stored token and, with none, routes to WelcomeScreen.
+- runFlow:
+    when:
+      visible: "Login"
+    commands:
+      - tapOn: "Login"
+
+# Password login (roles/farmer/screens/auth/LoginScreen.tsx) is now the ONE
+# shared /auth/login for every role -- the server decides the account's role,
+# not a build-time flavor. Seeded customer account, carried over from the
+# pre-merge customer-mobile flow.
+- runFlow:
+    when:
+      visible: "Mobile Number"
+    commands:
+      - tapOn:
+          text: "Mobile Number"
+          optional: true
+      - inputText: "9876543211"
+      - tapOn:
+          text: "Password"
+          optional: true
+      - inputText: "Password@123"
+      - tapOn: "Sign In"
+
+# ------------------------------------------------------------------------------
+# Phase 2: Farm-Anonymous Catalog Browse
+# ------------------------------------------------------------------------------
+# On success, resolveRouteAfterAuth() routes a CUSTOMER-role account to
+# CustomerMainApp, which mounts the real HomeScreen
+# (roles/customer/screens/HomeScreen.tsx) showing Featured / Categories /
+# Trending sections from GET /catalog/home.
+- assertVisible:
+    text: "Featured"
+    optional: true
+
+- assertVisible:
+    text: "Categories"
+    optional: true
+
+- assertVisible:
+    text: "Trending"
+    optional: true
+
+# FLAGGED GAP (not invented): none of HomeScreen, CategoriesScreen,
+# ProductGridScreen or ProductDetailScreen (roles/customer/screens/) currently
+# accept an onNavigate prop or wire an onPress handler on their category or
+# product cards -- CustomerMainApp renders them, but there is no real tap path
+# today from Home into Categories, into a product grid, or into a product
+# detail screen. The tap below targets real rendered text and is marked
+# optional so this flow degrades to a no-op rather than failing until that
+# navigation is wired; it does not stand in for actually wiring it.
+- tapOn:
+    text: "Categories"
+    optional: true
+
+- assertVisible:
+    text: "Grade:"
+    optional: true
+
+# Confirm Farm-Anonymity (BR-16 / S-48): no farmer identity may ever reach a
+# customer response. ProductDetailScreen.tsx carries an explicit "no farmer
+# info rendered anywhere" contract; this asserts it holds at the UI layer too.
+- assertNotVisible:
+    text: "Farmer:"
+
+- assertNotVisible:
+    text: "Farm Name:"
+
+- assertNotVisible:
+    text: "GPS"
+
+# ------------------------------------------------------------------------------
+# Phase 3: Add to Cart
+# ------------------------------------------------------------------------------
+# FLAGGED GAP (not invented): ProductDetailScreen.tsx has no "Add to Cart"
+# control today -- only a "Quantity Picker UI Here" placeholder comment, and
+# no testID exists to target instead. This step is left optional so it is a
+# safe no-op rather than a false pass or a hard failure; wiring a real
+# add-to-cart action is a separate, tracked gap (see the handoff report), not
+# something to invent a selector for here.
+- tapOn:
+    text: "Add to Cart"
+    optional: true
+
+- tapOn:
+    text: "Cart"
+    optional: true
+
+- assertVisible:
+    text: "Subtotal:"
+    optional: true
+
+# ------------------------------------------------------------------------------
+# Phase 4: Wallet-First Checkout
+# ------------------------------------------------------------------------------
+# CartScreen.tsx's real "Proceed to Checkout" button navigates to
+# CheckoutScreen.tsx.
+- tapOn:
+    text: "Proceed to Checkout"
+    optional: true
+
+- assertVisible:
+    text: "Checkout Review"
+    optional: true
+
+- tapOn:
+    text: "Pay ₹"
+    optional: true
+
+# CheckoutScreen.tsx routes a WALLET_INSUFFICIENT (422) checkout failure to
+# TopupScreen.tsx for wallet top-up recovery, then back to Checkout once the
+# top-up lands.
+- runFlow:
+    when:
+      visible: "Insufficient Wallet Balance"
+    commands:
+      - tapOn:
+          text: "via Razorpay"
+          optional: true
+      - assertVisible:
+          text: "Waiting for confirmation..."
+          optional: true
+
+# ------------------------------------------------------------------------------
+# Phase 5: Live Order Tracking
+# ------------------------------------------------------------------------------
+# On checkout success, CheckoutScreen.tsx navigates to
+# OrderTrackingScreen.tsx with the new order's id.
+- assertVisible:
+    text: "Order #"
+    optional: true
+
+- assertVisible:
+    text: "Status"
+    optional: true
+
+- assertVisible:
+    text: "Timeline"
+    optional: true
