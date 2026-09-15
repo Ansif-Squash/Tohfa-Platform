@@ -25,6 +25,9 @@ export type RootStackParamList = {
   AddCertification: undefined;
   Notifications: undefined;
   PersonalDetails: undefined;
+  Audits: undefined;
+  AuditResult: { auditId?: string } | undefined;
+  FarmManagement: undefined;
 };
 
 export const deepLinkingConfig = {
@@ -48,6 +51,9 @@ export const deepLinkingConfig = {
       AddCertification: 'certifications/new',
       Notifications: 'notifications',
       PersonalDetails: 'profile/personal-details',
+      Audits: 'audits',
+      AuditResult: 'audits/result/:auditId',
+      FarmManagement: 'farm-management',
     },
   },
 };

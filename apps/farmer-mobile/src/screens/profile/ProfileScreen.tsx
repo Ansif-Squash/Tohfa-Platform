@@ -29,6 +29,7 @@ interface ProfileScreenProps {
   onNavigateToCertifications?: () => void;
   onNavigateToMarket?: () => void;
   onNavigateToPersonalDetails?: () => void;
+  onNavigateToAudits?: () => void;
 }
 
 interface PersonalDetailsData {
@@ -55,6 +56,7 @@ export function ProfileScreen({
   onNavigateToHome,
   onNavigateToCertifications,
   onNavigateToPersonalDetails,
+  onNavigateToAudits,
 }: ProfileScreenProps): React.JSX.Element {
   // --- Profile State ---
   const [personalDetails, setPersonalDetails] = useState<PersonalDetailsData>({
@@ -1243,9 +1245,12 @@ export function ProfileScreen({
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={[styles.saveBtn, { width: '100%' }]}
-                onPress={() => setIsAuditsModalVisible(false)}
+                onPress={() => {
+                  setIsAuditsModalVisible(false);
+                  onNavigateToAudits?.();
+                }}
               >
-                <Text style={styles.saveBtnText}>Close</Text>
+                <Text style={styles.saveBtnText}>View Details</Text>
               </TouchableOpacity>
             </View>
           </View>

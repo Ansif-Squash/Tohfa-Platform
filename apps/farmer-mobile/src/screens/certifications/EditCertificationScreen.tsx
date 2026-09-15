@@ -240,7 +240,7 @@ export function EditCertificationScreen({
                         accessibilityRole="button"
                         accessibilityLabel="Select certification type"
                     >
-                        <Text style={[E.inputTxt, !displayName && { color: '#9CA3AF' }]}>
+                        <Text style={[E.inputText, !displayName && { color: '#9CA3AF' }]}>
                             {name === 'Other' ? (customName || 'Other (custom)') : name}
                         </Text>
                         <ChevronDown />
@@ -257,7 +257,7 @@ export function EditCertificationScreen({
                                         setShowTypeMenu(false);
                                     }}
                                 >
-                                    <Text style={[E.typeMenuTxt, name === opt && { color: '#15803D', fontWeight: '700' }]}>
+                                    <Text style={[E.typeMenuText, name === opt && { color: '#15803D', fontWeight: '700' }]}>
                                         {opt}
                                     </Text>
                                 </TouchableOpacity>
@@ -416,7 +416,7 @@ export function EditCertificationScreen({
     );
 }
 
-const KNOWN_TYPES = ['PGS Organic', 'NPOP', 'GlobalG.A.P.', 'Fair Trade'];
+
 
 // ─────────────────────────────────────────────
 // Styles

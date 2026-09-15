@@ -38,6 +38,7 @@ interface DashboardScreenProps {
   onNavigateToProfile?: () => void;
   onNavigateToCertifications?: () => void;
   onNavigateToNotifications?: () => void;
+  onNavigateToFarmManagement?: () => void;
 }
 
 export function DashboardScreen({
@@ -47,6 +48,7 @@ export function DashboardScreen({
   onNavigateToProfile,
   onNavigateToCertifications,
   onNavigateToNotifications,
+  onNavigateToFarmManagement,
 }: DashboardScreenProps): React.JSX.Element {
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -239,7 +241,7 @@ export function DashboardScreen({
               <Text style={styles.gridSubtitle}>Cert renewal in 24 days</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.gridCard}>
+            <TouchableOpacity style={styles.gridCard} onPress={onNavigateToFarmManagement}>
               <View style={[styles.gridIconCircle, { backgroundColor: '#F0FFF0' }]}>
                 <Text style={styles.gridEmoji}>🌱</Text>
               </View>

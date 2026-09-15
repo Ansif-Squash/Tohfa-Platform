@@ -124,7 +124,7 @@ function Plus({ size = 24, color = '#FFFFFF' }: { size?: number; color?: string 
 
 type CertStatus = 'active' | 'expiring' | 'expired';
 
-interface CertItem {
+export interface CertItem {
   id: string;
   name: string;
   status: CertStatus;
