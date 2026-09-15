@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
-import { tokens, neutral, semantic, hex } from '@tohfa/design-tokens';
+import { tokens, neutral, semantic, hex, roleHex } from '@tohfa/design-tokens';
+import type { RoleCode } from '@tohfa/shared-types';
 
 export interface MobileThemeColors {
   primary: string;
@@ -82,6 +83,7 @@ export const defaultMobileTheme: MobileTheme = {
     accent: semantic('accent'),
     white: neutral('white'),
     brand: hex('tohfaTeal'),
+    farmerBrand: hex('tohfaTeal'),
     surfaceVariant: neutral('grey100'),
     surfacePressed: neutral('grey300'),
     onSurfaceVariant: neutral('grey500'),
@@ -118,6 +120,24 @@ export const defaultMobileTheme: MobileTheme = {
   },
   minTouchTarget: tokens.size.minTouchTarget,
 };
+
+/**
+ * Role-flavoured theme. Only `primary` varies by role (via the role badge colour
+ * from design-tokens); `brand` and `farmerBrand` are deliberately the same TOHFA
+ * teal for every role, because they identify the platform and its farmers rather
+ * than the signed-in user. Everything else comes through unchanged from the default.
+ */
+export function buildThemeForRole(role: RoleCode): MobileTheme {
+  return {
+    ...defaultMobileTheme,
+    colors: {
+      ...defaultMobileTheme.colors,
+      primary: roleHex(role),
+      brand: hex('tohfaTeal'),
+      farmerBrand: hex('tohfaTeal'),
+    },
+  };
+}
 
 let activeTheme: MobileTheme = defaultMobileTheme;
 

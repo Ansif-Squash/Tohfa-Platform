@@ -10,7 +10,7 @@
 
 | Specification Source | Mentioned Target | Authoritative Decision |
 | :--- | :--- | :--- |
-| `apps/farmer-mobile/README.md` | Android 10 (2GB RAM) | Resolved to **Android 8.0 (API 26)** as the authoritative project baseline (the lower of the two) per PRD and system architecture specifications. |
+| `apps/mobile/README.md` | Android 10 (2GB RAM) | Resolved to **Android 8.0 (API 26)** as the authoritative project baseline (the lower of the two) per PRD and system architecture specifications. |
 | Requirements PRD §2 | Android 8.0 (API 26)+ & iOS 13.0+ | **Authoritative baseline** for both Farmer and Customer mobile applications. |
 
 ---

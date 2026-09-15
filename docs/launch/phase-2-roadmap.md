@@ -26,7 +26,7 @@ graph TD
 - **Duration:** 20 Developer Days
 - **Prerequisite Dependencies:** Resolution of Contradiction 3; 3PL Aggregator API credentials (Shadowfax / Dunzo).
 - **Deliverables:**
-  1. Delivery slot selection engine on customer checkout (`apps/customer-mobile/src/screens/CheckoutScreen.tsx`).
+  1. Delivery slot selection engine on customer checkout (`apps/mobile/src/roles/customer/screens/CheckoutScreen.tsx`).
   2. Warehouse dispatch & 3PL courier manifest generation API (`/v1/orders/{id}/dispatch`).
   3. Real-time courier webhook tracking and live SSE driver status stream.
   4. Doorstep delivery confirmation with customer-held OTP verification.
@@ -46,7 +46,7 @@ graph TD
 
 ### Sprint 3: Offline-First Mobile Resilience
 - **Duration:** 14 Developer Days
-- **Prerequisite Dependencies:** WatermelonDB / SQLite local schema migration in `farmer-mobile`.
+- **Prerequisite Dependencies:** WatermelonDB / SQLite local schema migration in `apps/mobile` (farmer role).
 - **Deliverables:**
   1. SQLite local persistence for farmer produce draft listings and crop photos.
   2. Background synchronization worker with exponential backoff and conflict resolution.

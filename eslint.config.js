@@ -40,8 +40,10 @@ export default tseslint.config(
     },
   },
   {
-    // Browser and React Native surfaces.
-    files: ['apps/admin-web/**/*.ts', 'apps/*-mobile/**/*.{ts,tsx}'],
+    // Browser and React Native surfaces. apps/mobile (the merged farmer/
+    // customer/admin RN codebase) doesn't match the `*-mobile` suffix the
+    // three standalone RN apps use, so it needs its own glob entry.
+    files: ['apps/admin-web/**/*.ts', 'apps/*-mobile/**/*.{ts,tsx}', 'apps/mobile/**/*.{ts,tsx}'],
     languageOptions: {
       globals: { ...globals.browser, ...globals.es2022 },
     },

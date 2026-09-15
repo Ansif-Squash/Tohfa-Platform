@@ -85,8 +85,7 @@ packages/shared-types/   enums, ErrorCode, Problem, Money
 packages/design-tokens/  tokens.json + typed export + CSS custom property emitter
 apps/api/                Node + Express + TypeScript. The backbone.
 apps/admin-web/          Angular 17, standalone components
-apps/farmer-mobile/      React Native 0.74
-apps/customer-mobile/    React Native 0.74
+apps/mobile/             React Native 0.74, one app serving farmer/customer/admin roles
 scripts/                 rbac drift check, module scaffolder
 ```
 

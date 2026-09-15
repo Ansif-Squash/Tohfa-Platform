@@ -10,8 +10,8 @@
 
 | Application | Platform | Package / Bundle ID | Version Name | Build Number (VersionCode) | Release Target |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **TOHFA Farmer** | Android | `in.tohfa.farmer` | `1.0.0` | `1001` | Google Play Internal Testing |
-| **TOHFA Farmer** | iOS | `in.tohfa.farmer` | `1.0.0` | `1001` | Apple TestFlight (Internal Group) |
+| **TOHFA Farmer** | Android | `in.tohfa.mobile` | `1.0.0` | `1001` | Google Play Internal Testing |
+| **TOHFA Farmer** | iOS | `in.tohfa.mobile` | `1.0.0` | `1001` | Apple TestFlight (Internal Group) |
 | **TOHFA Customer** | Android | `in.tohfa.customer` | `1.0.0` | `2001` | Google Play Internal Testing |
 | **TOHFA Customer** | iOS | `in.tohfa.customer` | `1.0.0` | `2001` | Apple TestFlight (Internal Group) |
 
@@ -65,6 +65,5 @@ ls docs/launch/store-listing-farmer.md docs/launch/store-listing-customer.md doc
 git status --porcelain | grep -Ei '\.(keystore|jks|p12|mobileprovision)$|service-account' || echo 'no secrets staged'
 
 # 4. Manifest permissions audit
-grep -n 'permission' apps/farmer-mobile/android/app/src/main/AndroidManifest.xml
-grep -n 'permission' apps/customer-mobile/android/app/src/main/AndroidManifest.xml
+grep -n 'permission' apps/mobile/android/app/src/main/AndroidManifest.xml
 ```

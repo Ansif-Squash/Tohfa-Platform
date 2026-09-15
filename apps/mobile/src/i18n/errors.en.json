@@ -1,0 +1,13 @@
+{
+  "error.CART_LOCK_EXPIRED": "Your basket reservation expired. Please review it again.",
+  "error.CERT_EXPIRED": "Your certification has expired. Renew it to keep listing.",
+  "error.COUNTER_OFFER_EXPIRED": "This counter-offer has expired.",
+  "error.generic": "Something went wrong. Please try again.",
+  "error.OTP_INVALID": "That code is not correct or has expired.",
+  "error.OTP_LOCKED": "Verification locked due to too many failed attempts.",
+  "error.OTP_RESEND_TOO_SOON": "Please wait before requesting another OTP.",
+  "error.PRICE_ABOVE_CEILING": "This price is above the fair price ceiling for this crop.",
+  "error.STOCK_UNAVAILABLE": "Sorry, that quantity just sold out.",
+  "error.UNAUTHORIZED": "Invalid mobile number or password.",
+  "error.WALLET_INSUFFICIENT": "Your wallet balance is too low for this order."
+}

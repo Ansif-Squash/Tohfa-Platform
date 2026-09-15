@@ -1,0 +1,6 @@
+<resources>
+    <!-- Unused by the manifest (android:label uses a literal string per
+         flavor, see src/farmer|customer|admin/AndroidManifest.xml) but AGP's
+         default template expects an app_name resource to exist. -->
+    <string name="app_name">TohfaMobile</string>
+</resources>

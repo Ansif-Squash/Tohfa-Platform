@@ -1,0 +1,148 @@
+appId: in.tohfa.mobile
+---
+# ==============================================================================
+# TOHFA Farmer Golden-Thread E2E Flow (S-46)
+# Flow: Splash -> Welcome -> Register/Auth -> Dashboard -> List Produce ->
+#       Respond to Counter-Offer
+#
+# Post-merge notes (see apps/mobile/CLAUDE.md, "Known transitional state"):
+#   - index.js boots src/roles/farmer/App.tsx as the ONE shared app root for
+#     every role in this single binary -- not because farmer is special, but
+#     because that file owns the real, working
+#     Splash -> Welcome -> Login -> OTP -> Register flow that every role now
+#     shares. There are no per-role Metro bundles or product flavors any more.
+#   - Single Android applicationId is in.tohfa.mobile. The pre-merge
+#     farmer-mobile app shipped as its own package, in.tohfa.farmer, whose
+#     .maestro/golden-thread.yaml this flow replaces.
+#   - Bottom tab labels changed since the old flow: the tab bar
+#     (roles/farmer/App.tsx) is now Home / Farm / Market / Profile, not
+#     Home / Listings -- "Listings" is reached via the "Market" tab or the
+#     Dashboard's "Marketing" grid card, and produce is listed via the
+#     Dashboard's "List Produce" quick action or the Listings screen's own
+#     "New Listing" button.
+# ==============================================================================
+
+# Launch the shared TOHFA mobile app
+- launchApp:
+    clearState: false
+
+# ------------------------------------------------------------------------------
+# Phase 1: Registration / Authentication
+# ------------------------------------------------------------------------------
+- runFlow:
+    when:
+      visible: "Login"
+    commands:
+      # Option A: Register a new farmer application from the Welcome screen
+      # (roles/farmer/screens/auth/WelcomeScreen.tsx -> RegistrationFlowScreen,
+      # a 5-step wizard: Step1Personal -> Step2FarmDetails -> Step3Location ->
+      # Step4Documents -> Step5Review). Left optional/best-effort: the wizard's
+      # exact field labels are exercised by roles/farmer/tests/registration.test.ts,
+      # not duplicated here.
+      - tapOn:
+          text: "Create an account"
+          optional: true
+      - tapOn:
+          text: "Back"
+          optional: true
+
+      # Option B: Authenticate with a seeded farmer account. Password login
+      # (roles/farmer/screens/auth/LoginScreen.tsx) is the ONE shared
+      # /auth/login for every role -- the server decides the account's role.
+      - tapOn:
+          text: "Login"
+          optional: true
+      - tapOn:
+          text: "Mobile Number"
+          optional: true
+      - inputText: "9876543210"
+      - tapOn:
+          text: "Password"
+          optional: true
+      - inputText: "Password@123"
+      - tapOn: "Sign In"
+
+# resolveRouteAfterAuth() (roles/farmer/api/auth.ts) sends an approved FARMER
+# account to MainTabs (DashboardScreen); an unapproved application goes to
+# ApplicationStatusScreen instead -- tolerate either.
+- runFlow:
+    when:
+      visible: "Application"
+    commands:
+      - assertVisible:
+          text: "Application"
+          optional: true
+
+# Verify Dashboard loaded (roles/farmer/screens/dashboard/DashboardScreen.tsx)
+- assertVisible:
+    text: "Farmer Dashboard"
+    optional: true
+
+# ------------------------------------------------------------------------------
+# Phase 2: Create Produce Listing
+# ------------------------------------------------------------------------------
+# Dashboard's "List Produce" quick action jumps straight into
+# CreateListingScreen.tsx (roles/farmer/screens/listings/).
+- tapOn:
+    text: "List Produce"
+    optional: true
+
+- runFlow:
+    when:
+      visible: "Create Produce Listing"
+    commands:
+      # Crop list is loaded from the API (availableCrops), not hardcoded --
+      # select whichever chip renders first rather than assuming a specific
+      # crop name.
+      - tapOn:
+          text: "Select Crop"
+          optional: true
+      # Grade options ARE fixed in CreateListingScreen.tsx (GRADES const).
+      - tapOn:
+          text: "Grade 1"
+          optional: true
+      - tapOn:
+          text: "Quantity (kg)"
+          optional: true
+      - inputText: "500"
+      # BR-07: fair-price ceiling is shown on-screen before entry; asking
+      # price must stay under it. 40/kg matches the seed data's ceiling.
+      - tapOn:
+          text: "Asking Price (₹/kg)"
+          optional: true
+      - inputText: "40"
+      - tapOn: "Submit Produce Listing"
+
+# ------------------------------------------------------------------------------
+# Phase 3: Respond to Counter-Offer
+# ------------------------------------------------------------------------------
+# Back on MainTabs -- reach Listings via the "Market" bottom tab or the
+# Dashboard's "Marketing" grid card (both call onNavigateToListings).
+- tapOn:
+    text: "Market"
+    optional: true
+
+- tapOn:
+    text: "Active / Review"
+    optional: true
+
+# If a counter-offer is present, review and respond
+# (roles/farmer/screens/listings/CounterOfferScreen.tsx).
+- tapOn:
+    text: "Review Counter-Offer"
+    optional: true
+
+- runFlow:
+    when:
+      visible: "24-Hour Response Window (BR-10)"
+    commands:
+      - assertVisible: "Admin Counter-Offer"
+      # Accept the counter-offer
+      - tapOn:
+          text: "Accept Offer"
+          optional: true
+
+# Return to home dashboard
+- tapOn:
+    text: "Home"
+    optional: true

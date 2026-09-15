@@ -5,6 +5,7 @@
  * console and both React Native apps. If a type is used by more than one
  * deployable, it belongs here.
  */
+export * from './auth.js';
 export * from './enums.js';
 export * from './errors.js';
 export * from './money.js';
