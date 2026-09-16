@@ -35,6 +35,11 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    adbOptions {
+        timeOutInMs 600000
+        installOptions "-r", "-d"
+    }
 }
 
 dependencies {
