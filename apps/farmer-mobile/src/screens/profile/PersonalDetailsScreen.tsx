@@ -11,8 +11,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // ──────────────────────────────────────────────────────────────────────────
 // SVG Icons
@@ -173,6 +175,12 @@ export function PersonalDetailsScreen({
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<PersonalData>(data);
   const [saving, setSaving] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const parseDate = (dateString: string) => {
+    const d = new Date(dateString);
+    return isNaN(d.getTime()) ? new Date() : d;
+  };
 
   const startEdit = () => {
     setDraft({ ...data });
@@ -273,7 +281,20 @@ export function PersonalDetailsScreen({
               <View style={styles.detailIcon}><CalendarIcon /></View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Date of Birth</Text>
-                {field('dob', 'DD Mon YYYY')}
+                {isEditing ? (
+                  <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                    <View pointerEvents="none">
+                      <TextInput
+                        style={styles.editInput}
+                        value={draft.dob}
+                        placeholder="DD Mon YYYY"
+                        editable={false}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.detailValue}>{data.dob}</Text>
+                )}
               </View>
             </View>
             <View style={styles.splitCell}>
@@ -385,6 +406,23 @@ export function PersonalDetailsScreen({
           <Pressable style={styles.cancelBtn} onPress={cancelEdit}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
           </Pressable>
+        )}
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={parseDate(draft.dob)}
+            mode="date"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              if (selectedDate) {
+                const day = selectedDate.getDate().toString().padStart(2, '0');
+                const month = selectedDate.toLocaleString('default', { month: 'short' });
+                const year = selectedDate.getFullYear();
+                setDraft(d => ({ ...d, dob: `${day} ${month} ${year}` }));
+              }
+            }}
+          />
         )}
 
         <View style={{ height: 40 }} />

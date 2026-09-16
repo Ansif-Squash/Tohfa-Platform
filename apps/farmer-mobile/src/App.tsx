@@ -363,12 +363,12 @@ export default function App(): React.JSX.Element {
                 onPress={() => setCurrentTab('Home')}
                 accessibilityRole="tab"
               >
-                <Text style={{ fontSize: 24 }}>🏠</Text>
+                <Icon name="home" size={24} color={currentTab === 'Home' ? '#1B5E20' : '#757575'} />
                 <Text
                   style={[
                     styles.tabItemText,
                     currentTab === 'Home' && styles.tabItemTextActive,
-                    currentTab === 'Home' && { color: '#2E7D32' }
+                    currentTab === 'Home' && { color: '#1B5E20' }
                   ]}
                 >
                   Home
@@ -380,7 +380,7 @@ export default function App(): React.JSX.Element {
                 onPress={() => navigate('FarmManagement')}
                 accessibilityRole="tab"
               >
-                <Text style={{ fontSize: 24 }}>🌱</Text>
+                <Icon name="eco" size={24} color="#757575" />
                 <Text style={styles.tabItemText}>Farm</Text>
               </Pressable>
 
@@ -404,7 +404,7 @@ export default function App(): React.JSX.Element {
                   }}
                   onPress={() => navigate('CreateListing')}
                 >
-                  <Text style={{ fontSize: 28, color: 'white' }}>➕</Text>
+                  <Icon name="add" size={28} color="white" />
                 </Pressable>
               </View>
 
@@ -413,12 +413,12 @@ export default function App(): React.JSX.Element {
                 onPress={() => setCurrentTab('Listings')}
                 accessibilityRole="tab"
               >
-                <Text style={{ fontSize: 24, opacity: currentTab === 'Listings' ? 1 : 0.5 }}>🛒</Text>
+                <Icon name="shopping_cart" size={24} color={currentTab === 'Listings' ? '#1B5E20' : '#757575'} />
                 <Text
                   style={[
                     styles.tabItemText,
                     currentTab === 'Listings' && styles.tabItemTextActive,
-                    currentTab === 'Listings' && { color: '#2E7D32' }
+                    currentTab === 'Listings' && { color: '#1B5E20' }
                   ]}
                 >
                   Market
@@ -430,7 +430,7 @@ export default function App(): React.JSX.Element {
                 onPress={() => setCurrentTab('Profile')}
                 accessibilityRole="tab"
               >
-                <Text style={{ fontSize: 24, opacity: currentTab === 'Profile' ? 1 : 0.5 }}>👤</Text>
+                <Icon name="person" size={24} color={currentTab === 'Profile' ? '#1B5E20' : '#757575'} />
                 <Text
                   style={[
                     styles.tabItemText,

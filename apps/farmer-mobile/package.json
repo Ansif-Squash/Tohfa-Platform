@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^8.0.0",
+    "@react-native-community/datetimepicker": "^9.2.1",
     "@tanstack/react-query": "^5.28.0",
     "@tohfa/design-tokens": "workspace:*",
     "@tohfa/mobile-ui": "workspace:*",

@@ -358,11 +358,9 @@ const styles = StyleSheet.create({
 
   headerBackground: {
     backgroundColor: '#1B5E20',
-    paddingTop: 60,
+    paddingTop: 20,
     paddingHorizontal: 20,
-    paddingBottom: 40,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingBottom: 40
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -510,8 +508,6 @@ const styles = StyleSheet.create({
   forecastButton: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#F1F8E9',
-    borderRadius: 12,
   },
   forecastText: {
     color: '#2E7D32',
