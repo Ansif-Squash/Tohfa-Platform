@@ -28,6 +28,9 @@ interface DashboardScreenProps {
   onNavigateToWallet?: () => void;
   onNavigateToProfile?: () => void;
   onNavigateToCertifications?: () => void;
+  onNavigateToNotifications?: () => void;
+  onNavigateToFarmManagement?: () => void;
+  onNavigateToWeather?: () => void;
 }
 
 export function DashboardScreen({
@@ -40,6 +43,9 @@ export function DashboardScreen({
   onNavigateToWallet: _onNavigateToWallet,
   onNavigateToProfile,
   onNavigateToCertifications,
+  onNavigateToNotifications,
+  onNavigateToFarmManagement,
+  onNavigateToWeather,
 }: DashboardScreenProps): React.JSX.Element {
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -133,7 +139,12 @@ export function DashboardScreen({
               <TouchableOpacity style={styles.headerIconButton}>
                 <Icon name="search" size={18} color={colors.white} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.headerIconButton}>
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={onNavigateToNotifications}
+                accessibilityRole="button"
+                accessibilityLabel={t('farmer.dashboard.header.notifications')}
+              >
                 <Icon name="notifications" size={18} color={colors.white} />
                 <View style={styles.notificationDot} />
               </TouchableOpacity>
@@ -142,13 +153,19 @@ export function DashboardScreen({
 
           {/* Header Mini Cards */}
           <View style={styles.headerCardsRow}>
-            <View style={styles.headerMiniCard}>
+            <TouchableOpacity
+              style={styles.headerMiniCard}
+              onPress={onNavigateToCertifications}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={t('farmer.dashboard.header.certLabel')}
+            >
               <View style={styles.miniCardTitleRow}>
                 <Icon name="shield" size={12} color={P.green200} />
                 <Text style={styles.miniCardTitle}> Cert</Text>
               </View>
               <Text style={styles.miniCardValue}>Valid</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.headerMiniCard}>
               <View style={styles.miniCardTitleRow}>
                 <Icon name="calendar_today" size={12} color={P.green200} />
@@ -169,7 +186,7 @@ export function DashboardScreen({
         {/* Main Content Area */}
         <View style={styles.mainContent}>
           {/* Weather Card */}
-          <View style={styles.weatherCard}>
+          <TouchableOpacity style={styles.weatherCard} activeOpacity={0.9} onPress={onNavigateToWeather}>
             <View style={styles.weatherTop}>
               <View style={styles.weatherIconContainer}>
                 <Icon name="wb_sunny" size={32} color={P.orange500} />
@@ -184,7 +201,7 @@ export function DashboardScreen({
                   <Text style={styles.condition}>Sunny</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.forecastButton}>
+              <TouchableOpacity style={styles.forecastButton} onPress={onNavigateToWeather}>
                 <Text style={styles.forecastText}>7-day {'>'}</Text>
               </TouchableOpacity>
             </View>
@@ -205,7 +222,7 @@ export function DashboardScreen({
                 <Text style={styles.weatherStatLabel}>Rain</Text>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* BR-01/BR-02: market-blocked banner. Computed above via
               evalMarketBlock but was never rendered in the redesign --
@@ -267,7 +284,7 @@ export function DashboardScreen({
               <Text style={styles.gridSubtitle}>Cert renewal in 24 days</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.gridCard}>
+            <TouchableOpacity style={styles.gridCard} onPress={onNavigateToFarmManagement}>
               <View style={[styles.gridIconCircle, { backgroundColor: P.paleMintBg }]}>
                 <Icon name="eco" size={20} color={colors.brandGreen} />
               </View>

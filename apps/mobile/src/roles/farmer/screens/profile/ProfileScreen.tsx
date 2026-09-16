@@ -30,6 +30,10 @@ interface ProfileScreenProps {
   onNavigateToCertifications?: () => void;
   onNavigateToMarket?: () => void;
   onNavigateToFMBSketch?: () => void;
+  onNavigateToPersonalDetails?: () => void;
+  onNavigateToAudits?: () => void;
+  onNavigateToFarmRatings?: () => void;
+  onNavigateToSoilTest?: () => void;
 }
 
 interface PersonalDetailsData {
@@ -56,6 +60,10 @@ export function ProfileScreen({
   onNavigateToHome,
   onNavigateToCertifications,
   onNavigateToFMBSketch,
+  onNavigateToPersonalDetails,
+  onNavigateToAudits,
+  onNavigateToFarmRatings,
+  onNavigateToSoilTest,
 }: ProfileScreenProps): React.JSX.Element {
   // --- Profile State ---
   const [personalDetails, setPersonalDetails] = useState<PersonalDetailsData>({
@@ -260,7 +268,7 @@ export function ProfileScreen({
               />
               <TouchableOpacity
                 style={styles.avatarEditBadge}
-                onPress={openPersonalEdit}
+                onPress={() => (onNavigateToPersonalDetails ? onNavigateToPersonalDetails() : openPersonalEdit())}
                 activeOpacity={0.8}
                 accessibilityLabel="Edit profile picture"
               >
@@ -291,7 +299,7 @@ export function ProfileScreen({
 
             <TouchableOpacity
               style={styles.quickStatCard}
-              onPress={() => setIsRatingModalVisible(true)}
+              onPress={() => (onNavigateToFarmRatings ? onNavigateToFarmRatings() : setIsRatingModalVisible(true))}
               activeOpacity={0.8}
             >
               <Icon name="star" size={18} color={P.deepGreen} style={styles.statEmoji} />
@@ -339,7 +347,7 @@ export function ProfileScreen({
               <Text style={styles.cardTitle}>Personal Details</Text>
               <Text style={styles.cardSubtitle}>Identity & contact info</Text>
             </View>
-            <TouchableOpacity onPress={openPersonalEdit} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={() => (onNavigateToPersonalDetails ? onNavigateToPersonalDetails() : openPersonalEdit())} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.cardActionLink}>Edit</Text>
             </TouchableOpacity>
           </View>
@@ -488,7 +496,11 @@ export function ProfileScreen({
           {/* 2 Certification Badges side-by-side */}
           <View style={styles.certCardsRow}>
             {/* PGS Card */}
-            <View style={[styles.certSubCard, { backgroundColor: P.certCardBg, borderColor: P.sageTintBg }]}>
+            <TouchableOpacity
+              style={[styles.certSubCard, { backgroundColor: P.certCardBg, borderColor: P.sageTintBg }]}
+              onPress={() => onNavigateToCertifications?.()}
+              activeOpacity={0.8}
+            >
               <View style={styles.certCardTop}>
                 <Icon name="eco" size={22} color={colors.brandGreen} />
                 <View style={styles.greenCheckmarkCircle}>
@@ -498,10 +510,14 @@ export function ProfileScreen({
               <Text style={styles.certTitle}>PGS Organic</Text>
               <Text style={[styles.certStatusText, { color: colors.brandGreen }]}>Valid</Text>
               <Text style={styles.certRenewText}>Renews in 214 days</Text>
-            </View>
+            </TouchableOpacity>
 
             {/* NPOP Card */}
-            <View style={[styles.certSubCard, { backgroundColor: P.warnCardBg, borderColor: P.warnCardBorder }]}>
+            <TouchableOpacity
+              style={[styles.certSubCard, { backgroundColor: P.warnCardBg, borderColor: P.warnCardBorder }]}
+              onPress={() => onNavigateToCertifications?.()}
+              activeOpacity={0.8}
+            >
               <View style={styles.certCardTop}>
                 <Icon name="storefront" size={22} color={P.orange900} />
                 <View style={styles.orangeExclamationCircle}>
@@ -511,7 +527,7 @@ export function ProfileScreen({
               <Text style={styles.certTitle}>NPOP</Text>
               <Text style={[styles.certStatusText, { color: P.orange900 }]}>Expiring</Text>
               <Text style={styles.certRenewText}>Renews in 24 days</Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Expiry Warning Notice */}
@@ -594,7 +610,7 @@ export function ProfileScreen({
               <Text style={styles.cardTitle}>Farm Rating</Text>
               <Text style={styles.cardSubtitle}>10-category framework</Text>
             </View>
-            <TouchableOpacity onPress={() => setIsRatingModalVisible(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={() => (onNavigateToFarmRatings ? onNavigateToFarmRatings() : setIsRatingModalVisible(true))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.cardActionLink}>Details</Text>
             </TouchableOpacity>
           </View>
@@ -696,7 +712,7 @@ export function ProfileScreen({
               <Text style={styles.cardTitle}>Soil Test</Text>
               <Text style={styles.cardSubtitle}>Annual analysis</Text>
             </View>
-            <TouchableOpacity onPress={() => setIsSoilModalVisible(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={() => (onNavigateToSoilTest ? onNavigateToSoilTest() : setIsSoilModalVisible(true))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.cardActionLink}>History</Text>
             </TouchableOpacity>
           </View>
@@ -1275,9 +1291,12 @@ export function ProfileScreen({
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={[styles.saveBtn, { width: '100%' }]}
-                onPress={() => setIsAuditsModalVisible(false)}
+                onPress={() => {
+                  setIsAuditsModalVisible(false);
+                  onNavigateToAudits?.();
+                }}
               >
-                <Text style={styles.saveBtnText}>Close</Text>
+                <Text style={styles.saveBtnText}>View Details</Text>
               </TouchableOpacity>
             </View>
           </View>
