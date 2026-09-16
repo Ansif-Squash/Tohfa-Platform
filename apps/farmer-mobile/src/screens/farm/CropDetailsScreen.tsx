@@ -11,9 +11,13 @@ import {
 
 interface CropDetailsScreenProps {
   onBack: () => void;
+  onNavigateToNPKContribution?: () => void;
 }
 
-export function CropDetailsScreen({ onBack }: CropDetailsScreenProps): React.JSX.Element {
+export function CropDetailsScreen({
+  onBack,
+  onNavigateToNPKContribution,
+}: CropDetailsScreenProps): React.JSX.Element {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#C2410C" />
@@ -138,7 +142,11 @@ export function CropDetailsScreen({ onBack }: CropDetailsScreenProps): React.JSX
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.linkedCard, styles.linkedCardWarning]} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={[styles.linkedCard, styles.linkedCardWarning]}
+              activeOpacity={0.8}
+              onPress={onNavigateToNPKContribution}
+            >
               <View style={[styles.linkedIconBox, { backgroundColor: '#FFF7ED' }]}>
                 <Text style={styles.linkedIcon}>📈</Text>
               </View>

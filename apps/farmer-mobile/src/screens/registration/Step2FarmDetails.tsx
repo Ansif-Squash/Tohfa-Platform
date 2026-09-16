@@ -6,7 +6,9 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Modal,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '../../theme';
 import { ErrorState } from '@tohfa/mobile-ui';
 import { validateStep } from './validation';
@@ -193,57 +195,22 @@ export const Step2FarmDetails: React.FC<Step2Props> = ({ initialData, onSave, on
           <Text style={[styles.label, { color: colors.textBody }]}>
             Number of Separate Farms <Text style={{ color: colors.requiredRed }}>*</Text>
           </Text>
-          <View style={{ position: 'relative', zIndex: 10 }}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[
-                styles.dropdownSelect,
-                {
-                  borderColor: colors.borderLight,
-                  backgroundColor: colors.white,
-                },
-              ]}
-              onPress={() => setShowFarmsMenu(!showFarmsMenu)}
-            >
-              <Text style={[styles.dropdownText, { color: colors.onSurface }]}>
-                {numberOfFarms}
-              </Text>
-              <Text style={[styles.dropdownArrow, { color: colors.textSubtle }]}>▾</Text>
-            </TouchableOpacity>
-
-            {showFarmsMenu ? (
-              <View
-                style={[
-                  styles.dropdownMenu,
-                  {
-                    backgroundColor: colors.white,
-                    borderColor: colors.borderLight,
-                  },
-                ]}
-              >
-                {numFarmsOptions.map((opt) => (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[styles.dropdownOption, { borderBottomColor: colors.borderSoft }]}
-                    onPress={() => {
-                      setNumberOfFarms(opt);
-                      setShowFarmsMenu(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.dropdownOptionText,
-                        { color: colors.onSurface },
-                        opt === numberOfFarms && { fontWeight: '700', color: colors.brandGreen },
-                      ]}
-                    >
-                      {opt}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.dropdownSelect,
+              {
+                borderColor: colors.borderLight,
+                backgroundColor: colors.white,
+              },
+            ]}
+            onPress={() => setShowFarmsMenu(true)}
+          >
+            <Text style={[styles.dropdownText, { color: colors.onSurface }]}>
+              {numberOfFarms}
+            </Text>
+            <Text style={[styles.dropdownArrow, { color: colors.textSubtle }]}>▾</Text>
+          </TouchableOpacity>
           <Text style={[styles.helperText, { color: colors.textSubtle }]}>
             You'll mark each farm's location on the map next
           </Text>
@@ -284,6 +251,74 @@ export const Step2FarmDetails: React.FC<Step2Props> = ({ initialData, onSave, on
           <Text style={[styles.footerBtnText, { color: colors.white }]}>Next</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Number of Separate Farms Picker Modal */}
+      <Modal
+        visible={showFarmsMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFarmsMenu(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowFarmsMenu(false)}
+        >
+          <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Number of Separate Farms</Text>
+              <TouchableOpacity
+                onPress={() => setShowFarmsMenu(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalList}>
+              {numFarmsOptions.map((opt) => {
+                const isSelected = opt === numberOfFarms;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[
+                      styles.modalOptionRow,
+                      isSelected && styles.modalOptionSelected,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setNumberOfFarms(opt);
+                      setShowFarmsMenu(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        isSelected && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {opt} {opt === '1' ? 'Farm' : 'Farms'}
+                    </Text>
+                    {isSelected && (
+                      <View style={styles.checkmarkWrap}>
+                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                          <Path
+                            d="M5 13l4 4L19 7"
+                            stroke="#FFFFFF"
+                            strokeWidth={3}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -298,7 +333,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 12,
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   errorContainer: {
     marginBottom: 16,
@@ -357,27 +392,6 @@ const styles = StyleSheet.create({
   dropdownArrow: {
     fontSize: 14,
   },
-  dropdownMenu: {
-    position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    elevation: 4,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    zIndex: 100,
-  },
-  dropdownOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-  },
-  dropdownOptionText: {
-    fontSize: 14,
-  },
   helperText: {
     fontSize: 11,
     marginTop: 5,
@@ -406,5 +420,72 @@ const styles = StyleSheet.create({
   footerBtnText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 36,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalCloseText: {
+    fontSize: 18,
+    color: '#6B7280',
+    padding: 4,
+  },
+  modalList: {
+    gap: 8,
+  },
+  modalOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  modalOptionSelected: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#266E2B',
+  },
+  modalOptionText: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  modalOptionTextSelected: {
+    color: '#266E2B',
+    fontWeight: '700',
+  },
+  checkmarkWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#266E2B',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

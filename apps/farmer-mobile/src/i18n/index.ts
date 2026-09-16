@@ -9,6 +9,7 @@
  * key falls back to English so the screen still works, and `missingKeys()`
  * exists so a test can assert the gap is shrinking.
  */
+import { useState, useEffect } from 'react';
 import en from './en.json';
 import ta from './ta.json';
 
@@ -24,12 +25,27 @@ const CATALOGUES: Record<Locale, Record<string, string>> = {
 
 let current: Locale = 'en';
 
+type LocaleListener = (locale: Locale) => void;
+const listeners = new Set<LocaleListener>();
+
 export function setLocale(locale: Locale): void {
   current = locale;
+  listeners.forEach((fn) => fn(locale));
 }
 
 export function getLocale(): Locale {
   return current;
+}
+
+export function useLocale(): [Locale, (next: Locale) => void] {
+  const [locale, setLocal] = useState<Locale>(current);
+  useEffect(() => {
+    listeners.add(setLocal);
+    return () => {
+      listeners.delete(setLocal);
+    };
+  }, []);
+  return [locale, setLocale];
 }
 
 /**

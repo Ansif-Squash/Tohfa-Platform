@@ -18,6 +18,7 @@ export interface Step1PersonalData {
   taluk?: string | undefined;
   district?: string | undefined;
   pincode?: string | undefined;
+  otp?: string | undefined;
 }
 
 export interface FarmItemData {
@@ -41,6 +42,8 @@ export interface Step3LocationData {
   village?: string | undefined;
   taluk?: string | undefined;
   district?: string | undefined;
+  zonesCount?: number | undefined;
+  totalAreaAcres?: number | undefined;
 }
 
 export interface DocumentItemData {

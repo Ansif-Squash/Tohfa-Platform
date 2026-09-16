@@ -11,24 +11,12 @@ import {
   TextInput,
   Pressable,
 } from 'react-native';
-import { useTheme } from '../../theme';
-import { t } from '../../i18n';
-import { Icon } from '@tohfa/mobile-ui';
+import { t, useLocale } from '../../i18n';
 import { verifyOtp, requestOtp, renderOtpState, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
-
-const authPalette = {
-  background: '#F3F3E9',
-  primary: '#1A4314', // dark green text
-  primaryLight: '#E8F5E9',
-  buttonBg: '#A3C2A4',
-  text: '#1A4314',
-  textLight: '#5F735C',
-  inputBg: '#FFFFFF',
-  inputBorder: '#E0E5DF',
-  focusBorder: '#388E3C',
-  successLight: '#EAF4E8',
-};
+import { authPalette as P } from '../../theme';
+import LockIcon from '../../assets/lock.svg';
+import BackIcon from '../../assets/back.svg';
 
 interface OtpScreenProps {
   mobile: string;
@@ -43,7 +31,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
   attemptsRemaining: initialAttemptsRemaining = 3,
   onNavigate,
 }) => {
-  const theme = useTheme();
+  const [currentLocale, setCurrentLocale] = useLocale();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -126,7 +114,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
     for (let i = 0; i < 6; i++) {
       const isFilled = i < code.length;
       const isActive = i === code.length;
-      
+
       boxes.push(
         <View
           key={i}
@@ -163,23 +151,39 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('Login')}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              style={styles.backButton}
+              onPress={() => onNavigate('Login')}
+            >
               <Text style={styles.backButtonText}>{'<'}</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.iconWrapper}>
-            <View style={styles.iconCircle}>
-              <Text style={{ fontSize: 32 }}>✉️</Text>
-            </View>
+          {/* 4-Step Progress Indicator (Step 2 active) */}
+          <View style={styles.progressContainer}>
+            {[1, 2, 3, 4].map((index) => (
+              <View
+                key={index}
+                style={[
+                  styles.progressPill,
+                  index <= 2 ? styles.progressPillActive : styles.progressPillInactive,
+                ]}
+              />
+            ))}
           </View>
 
-          <Text style={styles.title}>Verify your mobile</Text>
+          <View style={styles.iconCircle}>
+            <LockIcon width={36} height={36} color={P.primary} />
+          </View>
+
+          <Text style={styles.title}>OTP Verification</Text>
           <Text style={styles.subtitle}>
             Enter the 6-digit code sent to
           </Text>
-          <Text style={styles.phoneNumber}>{mobile || '+91 98XXX XX789'}</Text>
-          
+          <Text style={styles.phoneNumber}>{mobile || '+91 98765 43210'}</Text>
+
           <TouchableOpacity onPress={() => onNavigate('Login')}>
             <Text style={styles.changeMobile}>Change mobile number</Text>
           </TouchableOpacity>
@@ -206,7 +210,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
           <View style={styles.resendContainer}>
             {otpState.canResend ? (
               <TouchableOpacity onPress={handleResend} disabled={resendLoading}>
-                <Text style={[styles.resendLabel, { color: authPalette.primary, fontWeight: '700' }]}>
+                <Text style={[styles.resendLabel, { color: P.primary, fontWeight: '700' }]}>
                   {resendLoading ? 'Resending...' : 'Resend OTP now'}
                 </Text>
               </TouchableOpacity>
@@ -226,7 +230,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
             disabled={code.length < 6 || loading}
           >
             <Text style={styles.verifyButtonText}>
-              {loading ? 'Verifying...' : 'Verify'}
+              {loading ? 'Verifying...' : 'Verify & Proceed'}
             </Text>
           </TouchableOpacity>
 
@@ -243,12 +247,26 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
 
           <View style={styles.languageContainer}>
             <View style={styles.languageToggle}>
-              <View style={[styles.langOption, styles.langOptionActive]}>
-                <Text style={[styles.langText, styles.langTextActive]}>EN</Text>
-              </View>
-              <View style={styles.langOption}>
-                <Text style={styles.langText}>தமிழ்</Text>
-              </View>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Switch to English"
+                style={[styles.langOption, currentLocale === 'en' && styles.langOptionActive]}
+                onPress={() => setCurrentLocale('en')}
+              >
+                <Text style={[styles.langText, currentLocale === 'en' && styles.langTextActive]}>
+                  EN
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Switch to Tamil"
+                style={[styles.langOption, currentLocale === 'ta' && styles.langOptionActive]}
+                onPress={() => setCurrentLocale('ta')}
+              >
+                <Text style={[styles.langText, currentLocale === 'ta' && styles.langTextActive]}>
+                  {'\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -260,7 +278,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: authPalette.background,
+    backgroundColor: P.bg,
   },
   keyboardView: {
     flex: 1,
@@ -268,100 +286,120 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 16,
     paddingBottom: 24,
     alignItems: 'center',
   },
   header: {
     width: '100%',
     flexDirection: 'row',
-    marginBottom: 40,
+    marginBottom: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#D4D6D2',
+    borderWidth: 1.5,
+    borderColor: P.border,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: authPalette.inputBg,
+    backgroundColor: P.white,
   },
   backButtonText: {
     fontSize: 18,
-    color: authPalette.textLight,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: P.muted,
   },
-  iconWrapper: {
-    marginBottom: 24,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: authPalette.successLight,
+  progressContainer: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  progressPill: {
+    width: 26,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  progressPillActive: {
+    backgroundColor: P.primary,
+  },
+  progressPillInactive: {
+    backgroundColor: P.progressInactive,
+  },
+  iconCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: P.lightGreen,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22,
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: authPalette.text,
+    color: P.ink,
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: authPalette.textLight,
-    marginBottom: 8,
+    fontSize: 13.5,
+    color: P.muted,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   phoneNumber: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: authPalette.text,
-    marginBottom: 8,
+    color: P.ink,
+    marginBottom: 6,
   },
   changeMobile: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
-    color: authPalette.focusBorder,
-    marginBottom: 32,
+    color: P.primary,
+    marginBottom: 24,
   },
   errorText: {
-    color: '#D32F2F',
-    fontSize: 14,
-    marginBottom: 16,
+    color: P.errorRed,
+    fontSize: 13,
+    marginBottom: 14,
     textAlign: 'center',
   },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   otpBox: {
-    width: 48,
-    height: 56,
+    width: 46,
+    height: 54,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: authPalette.inputBorder,
-    backgroundColor: authPalette.inputBg,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    backgroundColor: P.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
   otpBoxFilled: {
-    backgroundColor: authPalette.successLight,
-    borderColor: authPalette.focusBorder,
+    backgroundColor: P.lightGreen,
+    borderColor: P.primary,
   },
   otpBoxActive: {
-    borderColor: authPalette.focusBorder,
+    borderColor: P.primary,
   },
   otpBoxText: {
     fontSize: 22,
     fontWeight: '700',
-    color: authPalette.text,
+    color: P.ink,
   },
   otpBoxTextFilled: {
-    color: authPalette.primary,
+    color: P.primary,
   },
   hiddenInput: {
     position: 'absolute',
@@ -370,49 +408,49 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   resendContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   resendLabel: {
-    fontSize: 14,
-    color: authPalette.textLight,
+    fontSize: 13.5,
+    color: P.muted,
   },
   resendTimer: {
     fontWeight: '700',
-    color: authPalette.focusBorder,
+    color: P.primary,
   },
   verifyButton: {
     width: '100%',
     height: 52,
-    backgroundColor: authPalette.buttonBg,
+    backgroundColor: P.primary,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   verifyButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.45,
   },
   verifyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: P.white,
+    fontSize: 15,
     fontWeight: '700',
   },
   supportContainer: {
     marginBottom: 16,
   },
   supportText: {
-    fontSize: 14,
-    color: authPalette.textLight,
+    fontSize: 13.5,
+    color: P.muted,
   },
   supportLink: {
     fontWeight: '700',
-    color: authPalette.focusBorder,
+    color: P.primary,
   },
   spacer: {
     flex: 1,
   },
   languageContainer: {
-    marginTop: 20,
+    marginTop: 16,
     alignItems: 'center',
   },
   languageToggle: {
@@ -426,15 +464,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   langOptionActive: {
-    backgroundColor: authPalette.successLight,
+    backgroundColor: P.lightGreen,
   },
   langText: {
-    fontSize: 14,
-    color: authPalette.textLight,
+    fontSize: 13,
+    color: P.muted,
     fontWeight: '600',
   },
   langTextActive: {
-    color: authPalette.primary,
+    color: P.primary,
   },
 });
-

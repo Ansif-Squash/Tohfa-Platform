@@ -57,8 +57,13 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
           preferredLocale: 'en',
         });
 
+        const formattedAppId =
+          appRes.id && appRes.id.startsWith('TOHFA-')
+            ? appRes.id
+            : `TOHFA-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
         const newDraft: RegistrationDraft = {
-          applicationId: appRes.id,
+          applicationId: formattedAppId,
           currentStep: 1,
         };
         await saveRegistrationDraft(newDraft);
@@ -69,7 +74,7 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
       } catch {
         // Fallback for offline or local preview
         const fallbackDraft: RegistrationDraft = {
-          applicationId: `app-${Date.now().toString(36)}`,
+          applicationId: `TOHFA-2026-4817`,
           currentStep: 1,
         };
         await saveRegistrationDraft(fallbackDraft);
@@ -196,6 +201,8 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
         ) : draft.currentStep === 3 ? (
           <Step3Location
             initialData={draft.step3}
+            farmName={draft.step2?.farms?.[0]?.name}
+            totalAreaAcres={draft.step2?.farms?.[0]?.totalAreaAcres}
             onSave={(data) => updateStepAndAdvance(3, data)}
             onBack={handleBack}
           />
@@ -212,6 +219,11 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
               onNavigate('ApplicationStatus', { applicationId: appId })
             }
             onBack={handleBack}
+            onEditStep={(step) => {
+              const updatedDraft = { ...draft, currentStep: step };
+              setDraft(updatedDraft);
+              saveRegistrationDraft(updatedDraft);
+            }}
           />
         )}
       </View>

@@ -234,6 +234,7 @@ interface FarmManagementScreenProps {
   onNavigateToProduceCalendar?: () => void;
   onNavigateToCropManagement?: () => void;
   onNavigateToWeather?: () => void;
+  onNavigateToDiary?: () => void;
 }
 
 export function FarmManagementScreen({
@@ -242,6 +243,7 @@ export function FarmManagementScreen({
   onNavigateToProduceCalendar,
   onNavigateToCropManagement,
   onNavigateToWeather,
+  onNavigateToDiary,
 }: FarmManagementScreenProps): React.JSX.Element {
   const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false);
   const [diaryNote, setDiaryNote] = useState('');
@@ -334,7 +336,13 @@ export function FarmManagementScreen({
         <TouchableOpacity
           style={styles.attentionBanner}
           activeOpacity={0.85}
-          onPress={() => setIsDiaryModalOpen(true)}
+          onPress={() => {
+            if (onNavigateToDiary) {
+              onNavigateToDiary();
+            } else {
+              setIsDiaryModalOpen(true);
+            }
+          }}
         >
           <ExclamationCircleIcon size={24} color="#EA580C" />
           <View style={styles.attentionContent}>
@@ -347,7 +355,17 @@ export function FarmManagementScreen({
         {/* ── Grid of Modules (2 Columns) ── */}
         <View style={styles.modulesGrid}>
           {/* 1. Farm Diary */}
-          <View style={styles.moduleCard}>
+          <TouchableOpacity
+            style={styles.moduleCard}
+            activeOpacity={0.9}
+            onPress={() => {
+              if (onNavigateToDiary) {
+                onNavigateToDiary();
+              } else {
+                setIsDiaryModalOpen(true);
+              }
+            }}
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: '#FFEDD5' }]}>
                 <PencilEditIcon size={20} color="#EA580C" />
@@ -363,14 +381,20 @@ export function FarmManagementScreen({
             <TouchableOpacity
               style={styles.logEntryBtn}
               activeOpacity={0.85}
-              onPress={() => setIsDiaryModalOpen(true)}
+              onPress={() => {
+                if (onNavigateToDiary) {
+                  onNavigateToDiary();
+                } else {
+                  setIsDiaryModalOpen(true);
+                }
+              }}
             >
               <Text style={styles.logEntryBtnText}>+ Log entry</Text>
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
 
           {/* 2. Weather */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.moduleCard}
             activeOpacity={0.8}
             onPress={onNavigateToWeather}
@@ -394,8 +418,8 @@ export function FarmManagementScreen({
           </TouchableOpacity>
 
           {/* 3. Produce Calendar */}
-          <TouchableOpacity 
-            style={styles.moduleCard} 
+          <TouchableOpacity
+            style={styles.moduleCard}
             activeOpacity={0.8}
             onPress={onNavigateToProduceCalendar}
           >
@@ -418,7 +442,7 @@ export function FarmManagementScreen({
           </TouchableOpacity>
 
           {/* 4. Crop Management */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.moduleCard}
             activeOpacity={0.8}
             onPress={onNavigateToCropManagement}

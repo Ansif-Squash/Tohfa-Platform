@@ -28,6 +28,9 @@ export type RootStackParamList = {
   Audits: undefined;
   AuditResult: { auditId?: string } | undefined;
   FarmManagement: undefined;
+  FarmDiary: undefined;
+  NewDiaryEntry: undefined;
+  DiaryCalendar: undefined;
 };
 
 export const deepLinkingConfig = {
@@ -54,6 +57,9 @@ export const deepLinkingConfig = {
       Audits: 'audits',
       AuditResult: 'audits/result/:auditId',
       FarmManagement: 'farm-management',
+      FarmDiary: 'farm-diary',
+      NewDiaryEntry: 'farm-diary/new',
+      DiaryCalendar: 'farm-diary/calendar',
     },
   },
 };

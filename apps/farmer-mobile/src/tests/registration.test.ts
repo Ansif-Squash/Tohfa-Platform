@@ -155,4 +155,30 @@ describe('User Story 43 (S-43) Registration Tests', () => {
       expect(/^\d{4}$/.test(step1.aadhaarLast4)).toBe(true);
     });
   });
+
+  describe('Step 3 Farm Location Dynamic Data', () => {
+    it('persists dynamic zones and acreage in Step 3 draft data', async () => {
+      const draft: RegistrationDraft = {
+        applicationId: 'app-loc-123',
+        currentStep: 3,
+        step3: {
+          gpsCaptured: true,
+          latitude: 11.4064,
+          longitude: 76.6932,
+          village: 'Ooty Rural',
+          taluk: 'Ooty',
+          district: 'Nilgiris',
+          zonesCount: 4,
+          totalAreaAcres: 2.85,
+        },
+      };
+
+      await saveRegistrationDraft(draft);
+      const retrieved = await getRegistrationDraft();
+      expect(retrieved?.step3?.latitude).toBe(11.4064);
+      expect(retrieved?.step3?.longitude).toBe(76.6932);
+      expect(retrieved?.step3?.zonesCount).toBe(4);
+      expect(retrieved?.step3?.totalAreaAcres).toBe(2.85);
+    });
+  });
 });

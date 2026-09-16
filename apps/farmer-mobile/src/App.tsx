@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { setOnAuthFailure } from './api/client';
 import { Icon } from '@tohfa/mobile-ui';
-import { LOCALES, setLocale, t, type Locale } from './i18n';
 import { ApplicationStatusScreen } from './screens/auth/ApplicationStatusScreen';
 import { ForgotPasswordScreen } from './screens/auth/ForgotPasswordScreen';
 import { LoginScreen } from './screens/auth/LoginScreen';
@@ -33,6 +32,9 @@ import { NewCropScreen } from './screens/farm/NewCropScreen';
 import { CropDetailsScreen } from './screens/farm/CropDetailsScreen';
 import { NPKContributionScreen } from './screens/farm/NPKContributionScreen';
 import { CropManagementScreen } from './screens/farm/CropManagementScreen';
+import { FarmDiaryScreen } from './screens/farm/FarmDiaryScreen';
+import { NewDiaryEntryScreen } from './screens/farm/NewDiaryEntryScreen';
+import { DiaryCalendarScreen } from './screens/farm/DiaryCalendarScreen';
 import { FarmRatingsScreen } from './screens/profile/FarmRatingsScreen';
 import { SoilTestScreen } from './screens/profile/SoilTestScreen';
 import { NewSoilTestScreen } from './screens/profile/NewSoilTestScreen';
@@ -70,6 +72,9 @@ export type ScreenName =
   | 'CropDetails'
   | 'NPKContribution'
   | 'CropManagement'
+  | 'FarmDiary'
+  | 'NewDiaryEntry'
+  | 'DiaryCalendar'
   | 'FarmRatings'
   | 'SoilTest'
   | 'NewSoilTest'
@@ -86,7 +91,6 @@ export default function App(): React.JSX.Element {
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
-  const [locale, setLocaleState] = useState<Locale>('en');
 
   function navigate(nextScreen: ScreenName, nextParams: Record<string, string | number | undefined> = {}) {
     setPreviousScreen(screen);
@@ -103,29 +107,41 @@ export default function App(): React.JSX.Element {
     };
   }, []);
 
-  const switchLocale = (next: Locale): void => {
-    setLocale(next);
-    setLocaleState(next);
-  };
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const isFullBleed = screen === 'Splash' || screen === 'Welcome';
+      StatusBar.setTranslucent(isFullBleed);
+      StatusBar.setBackgroundColor('transparent', true);
+    }
+  }, [screen]);
 
-  // Splash and Welcome are full-bleed photo screens: no header, dark chrome.
-  const isAuthLanding = screen === 'Splash' || screen === 'Welcome';
-
-  return (
-    <SafeAreaView style={[styles.screen, isAuthLanding && styles.screenSplash]}>
-      <StatusBar
-        barStyle={(screen === 'Login' || screen === 'Register' || screen === 'Otp' || screen === 'ForgotPassword' || screen === 'ResetPassword' || screen === 'ApplicationStatus' || screen === 'RoleSelection') ? 'dark-content' : 'light-content'}
-        backgroundColor={isAuthLanding ? SPLASH_DARK : (screen === 'Login' || screen === 'Register' || screen === 'Otp' || screen === 'ForgotPassword' || screen === 'ResetPassword' || screen === 'ApplicationStatus' || screen === 'RoleSelection') ? 'transparent' : colors.primaryPressed}
-      />
-
-
-
-      <View style={styles.content}>
+  // Splash and Welcome are full-bleed photo screens: no upper green bar, translucent status bar.
+  if (screen === 'Splash' || screen === 'Welcome') {
+    return (
+      <View style={styles.fullBleedContainer}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle="light-content"
+        />
         {screen === 'Splash' ? (
           <SplashScreen onNavigate={(s, p) => navigate(s, p)} />
-        ) : screen === 'Welcome' ? (
+        ) : (
           <WelcomeScreen onNavigate={(s) => navigate(s)} />
-        ) : screen === 'Login' ? (
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.screen, (screen === 'Login' || screen === 'Register' || screen === 'Otp' || screen === 'ForgotPassword' || screen === 'ResetPassword' || screen === 'ApplicationStatus' || screen === 'RoleSelection') && { backgroundColor: authPalette.bg }]}>
+      <StatusBar
+        barStyle={(screen === 'Login' || screen === 'Register' || screen === 'Otp' || screen === 'ForgotPassword' || screen === 'ResetPassword' || screen === 'ApplicationStatus' || screen === 'RoleSelection') ? 'dark-content' : 'light-content'}
+        backgroundColor="transparent"
+      />
+
+      <View style={styles.content}>
+        {screen === 'Login' ? (
           <LoginScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'RoleSelection' ? (
           <RoleSelectionScreen onNavigate={(s) => navigate(s)} />
@@ -147,7 +163,7 @@ export default function App(): React.JSX.Element {
             onNavigate={(s, p) => navigate(s, p)}
           />
         ) : screen === 'ForgotPassword' ? (
-          <ForgotPasswordScreen onNavigate={(s) => navigate(s)} />
+          <ForgotPasswordScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'ResetPassword' ? (
           <ResetPasswordScreen
             token={String(params['token'] ?? '')}
@@ -155,7 +171,7 @@ export default function App(): React.JSX.Element {
           />
         ) : screen === 'ApplicationStatus' ? (
           <ApplicationStatusScreen
-            applicationId={String(params['applicationId'] ?? 'DEMO-APP-001')}
+            applicationId={String(params['applicationId'] ?? 'TOHFA-2026-4817')}
             onNavigate={(s) => navigate(s)}
           />
         ) : screen === 'Certifications' ? (
@@ -199,23 +215,23 @@ export default function App(): React.JSX.Element {
             }}
           />
         ) : screen === 'FMBSketch' ? (
-          <FMBSketchScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+          <FMBSketchScreen
+            onNavigateBack={() => navigate('MainTabs')}
             onNavigateToFieldContext={() => navigate('FieldContext')}
           />
         ) : screen === 'FieldContext' ? (
-          <FieldContextScreen 
+          <FieldContextScreen
             onNavigateBack={() => navigate('MainTabs')}
             onNavigateToZones={() => navigate('Zones')}
           />
         ) : screen === 'Zones' ? (
-          <ZonesScreen 
+          <ZonesScreen
             onNavigateBack={() => navigate('MainTabs')}
             onNavigateToAddZone={() => navigate('AddZone')}
             onSave={() => navigate('MainTabs')}
           />
         ) : screen === 'AddZone' ? (
-          <AddZoneScreen 
+          <AddZoneScreen
             onNavigateBack={() => navigate('Zones')}
             onSave={() => navigate('Zones')}
           />
@@ -261,9 +277,27 @@ export default function App(): React.JSX.Element {
               )
             }
             onNavigateToAudits={() => navigate('Audits')}
+            onNavigateToDiary={() => navigate('FarmDiary')}
             onNavigateToProduceCalendar={() => navigate('ProduceCalendar')}
             onNavigateToCropManagement={() => navigate('CropManagement')}
             onNavigateToWeather={() => navigate('Weather')}
+          />
+        ) : screen === 'FarmDiary' ? (
+          <FarmDiaryScreen
+            onBack={() => navigate('FarmManagement')}
+            onNavigateToNewEntry={() => navigate('NewDiaryEntry')}
+            onNavigateToCalendar={() => navigate('DiaryCalendar')}
+          />
+        ) : screen === 'NewDiaryEntry' ? (
+          <NewDiaryEntryScreen
+            onBack={() => navigate('FarmDiary')}
+            onCancel={() => navigate('FarmDiary')}
+            onSave={() => navigate('DiaryCalendar', { selectedDay: 16 })}
+          />
+        ) : screen === 'DiaryCalendar' ? (
+          <DiaryCalendarScreen
+            initialDay={typeof params['selectedDay'] === 'number' ? params['selectedDay'] : 16}
+            onBack={() => navigate('FarmDiary')}
           />
         ) : screen === 'CropManagement' ? (
           <CropManagementScreen onBack={() => navigate('FarmManagement')} />
@@ -401,7 +435,7 @@ export default function App(): React.JSX.Element {
                   style={[
                     styles.tabItemText,
                     currentTab === 'Profile' && styles.tabItemTextActive,
-                    currentTab === 'Profile' && { color: '#2E7D32' }
+                    currentTab === 'Profile' && { color: colors.primary }
                   ]}
                 >
                   Profile
@@ -417,32 +451,13 @@ export default function App(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
+  fullBleedContainer: {
+    flex: 1,
+    backgroundColor: authPalette.black,
+  },
   screenSplash: {
     backgroundColor: SPLASH_DARK,
   },
-  header: {
-    backgroundColor: colors.primaryPressed,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerText: {
-    color: colors.white,
-    fontSize: typography.title,
-    fontWeight: weights.bold,
-  },
-  localeRow: { flexDirection: 'row', gap: 6 },
-  localeChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  localeChipActive: { backgroundColor: colors.white },
-  localeText: { color: colors.white, fontSize: 12, fontWeight: '600' },
-  localeTextActive: { color: colors.primaryPressed, fontSize: 12, fontWeight: '700' },
   content: { flex: 1 },
   mainTabsContainer: { flex: 1 },
   tabScreenContainer: { flex: 1 },

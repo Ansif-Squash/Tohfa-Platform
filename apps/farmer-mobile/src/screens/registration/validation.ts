@@ -40,16 +40,13 @@ export function validateStep(step: number, data: unknown): StepValidationResult 
       if (!first?.name || first.name.trim().length === 0) {
         errors['farmName'] = 'Farm name is required.';
       }
-      if (!first?.typeOfFarming) {
-        errors['typeOfFarming'] = 'Type of farming is required.';
-      }
-      if (!first?.experienceYears || first.experienceYears <= 0) {
-        errors['experienceYears'] = 'Experience must be greater than zero.';
-      }
       if (!first?.totalAreaAcres || first.totalAreaAcres <= 0) {
         errors['acreage'] = 'Total acreage must be greater than zero.';
       }
-      if (!first?.numberOfFarms || first.numberOfFarms <= 0) {
+      if (first?.experienceYears !== undefined && first.experienceYears <= 0) {
+        errors['experienceYears'] = 'Experience must be greater than zero.';
+      }
+      if (first?.numberOfFarms !== undefined && first.numberOfFarms <= 0) {
         errors['numberOfFarms'] = 'Number of farms must be at least 1.';
       }
     }

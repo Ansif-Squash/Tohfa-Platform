@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
-import { Image, ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button, Icon } from '@tohfa/mobile-ui';
-import { getLocale, setLocale, t } from '../../i18n';
+import React from 'react';
+import {
+  Image,
+  ImageBackground,
+  Platform,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Button } from '@tohfa/mobile-ui';
+import { useLocale, t } from '../../i18n';
 import { GradientOverlay } from './GradientOverlay';
 import { authPalette as P } from '../../theme';
 import tohfaLogo from '../../assets/tohfa-logo.png';
@@ -11,40 +20,26 @@ interface WelcomeScreenProps {
   onNavigate: (screen: 'Login' | 'Register' | 'RoleSelection') => void;
 }
 
-type LangCode = 'en' | 'ta';
-
 const BRAND_NAME = 'TOHFA';
-
-const LANGUAGE_OPTIONS: ReadonlyArray<{ code: LangCode; label: string }> = [
-  { code: 'en', label: 'English' },
-  { code: 'ta', label: 'தமிழ்' },
-];
 
 /**
  * Approved Welcome design (branding guidelines, Screen 2).
  *
  * Full-bleed farmer-with-produce photo, bottom-weighted gradient, wordmark +
- * language pill up top, and the Login / Create an account CTAs with a legal
+ * language toggle pill up top, and the Login / Create an account CTAs with a legal
  * footer pinned to the bottom.
  */
 const WELCOME_GRADIENT_STOPS: ReadonlyArray<{ position: number; opacity: number }> = [
-  { position: 0, opacity: 0.88 },
-  { position: 0.3, opacity: 0.6 },
-  { position: 0.6, opacity: 0.15 },
-  { position: 1, opacity: 0.1 },
+  { position: 0, opacity: 0.9 },
+  { position: 0.25, opacity: 0.75 },
+  { position: 0.45, opacity: 0.45 },
+  { position: 0.65, opacity: 0.08 },
+  { position: 0.82, opacity: 0 },
+  { position: 1, opacity: 0.15 },
 ];
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate }) => {
-  const [langOpen, setLangOpen] = useState(false);
-  const [locale, setLocaleState] = useState<LangCode>(getLocale());
-
-  const currentLangLabel = LANGUAGE_OPTIONS.find((o) => o.code === locale)?.label ?? 'English';
-
-  function pickLanguage(code: LangCode): void {
-    setLocale(code);
-    setLocaleState(code);
-    setLangOpen(false);
-  }
+  const [locale, setLocale] = useLocale();
 
   return (
     <View style={styles.container}>
@@ -56,40 +51,26 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate }) => {
       >
         <GradientOverlay stops={WELCOME_GRADIENT_STOPS} />
 
-        {/* Top bar: wordmark + language pill */}
+        {/* Top bar: wordmark + visible EN ▾ language pill */}
         <View style={styles.topBar}>
           <View style={styles.wordmarkRow}>
             <View style={styles.logoFrame}>
-              <Image source={tohfaLogo} style={styles.logoImage} />
+              <Image source={tohfaLogo} style={styles.logoImage} resizeMode="contain" />
             </View>
             <Text style={styles.wordmark}>{BRAND_NAME}</Text>
           </View>
 
-          <View style={styles.langWrap}>
-            <Pressable
-              accessibilityRole="button"
-              style={styles.langPill}
-              onPress={() => setLangOpen((open) => !open)}
-            >
-              <Text style={styles.langPillText}>{currentLangLabel}</Text>
-              <Icon name="expand_more" size={12} color={P.white} />
-            </Pressable>
-
-            {langOpen && (
-              <View style={styles.langDropdown}>
-                {LANGUAGE_OPTIONS.map((option, i) => (
-                  <Pressable
-                    key={option.code}
-                    accessibilityRole="button"
-                    style={[styles.langOption, i > 0 && styles.langOptionDivider]}
-                    onPress={() => pickLanguage(option.code)}
-                  >
-                    <Text style={styles.langOptionText}>{option.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Language: ${locale === 'en' ? 'English' : 'Tamil'}. Tap to switch language.`}
+            style={styles.langPill}
+            onPress={() => setLocale(locale === 'en' ? 'ta' : 'en')}
+          >
+            <Text style={styles.langPillText}>
+              {locale === 'en' ? 'EN' : 'தமிழ்'}
+            </Text>
+            <Text style={styles.langPillCaret}>▾</Text>
+          </Pressable>
         </View>
 
         {/* Bottom content */}
@@ -121,19 +102,20 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate }) => {
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: P.deepGreen,
+    backgroundColor: P.black,
   },
   topBar: {
     position: 'absolute',
-    top: 62,
-    left: 24,
-    right: 24,
+    top: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 14 : 50) : 56,
+    left: 20,
+    right: 20,
     zIndex: 30,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   wordmarkRow: {
@@ -142,66 +124,43 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoFrame: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
   },
   logoImage: {
     width: '100%',
     height: '100%',
   },
   wordmark: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     color: P.white,
-  },
-  langWrap: {
-    position: 'relative',
   },
   langPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minHeight: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    minHeight: 36,
   },
   langPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: P.white,
-  },
-  langDropdown: {
-    position: 'absolute',
-    top: 46,
-    right: 0,
-    width: 132,
-    backgroundColor: P.white,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: P.black,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 32,
-    elevation: 8,
-    zIndex: 50,
-  },
-  langOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-  },
-  langOptionDivider: {
-    borderTopWidth: 1,
-    borderTopColor: P.borderLight,
-  },
-  langOptionText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: P.deepGreen,
+    fontWeight: '700',
+    color: P.white,
+    letterSpacing: 0.5,
+  },
+  langPillCaret: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: P.white,
+    marginLeft: 5,
+    marginTop: 1,
   },
   bottom: {
     position: 'absolute',
@@ -209,50 +168,52 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingBottom: Platform.OS === 'ios' ? 44 : 36,
     zIndex: 20,
   },
   title: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '800',
     letterSpacing: -0.5,
+    lineHeight: 40,
     color: P.white,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 21,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 28,
-    maxWidth: 300,
+    fontSize: 16,
+    lineHeight: 23,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.95)',
+    marginBottom: 32,
+    maxWidth: 320,
   },
   loginButton: {
     backgroundColor: P.white,
-    borderRadius: 12,
+    borderRadius: 14,
     height: 56,
   },
   loginButtonText: {
-    color: P.deepGreen,
-    fontSize: 16,
+    color: P.brandGreen,
+    fontSize: 17,
     fontWeight: '700',
   },
   createButton: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 12,
+    borderColor: 'rgba(255, 255, 255, 0.85)',
+    borderRadius: 14,
     height: 56,
-    marginTop: 16,
+    marginTop: 14,
   },
   createButtonText: {
     color: P.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
   legal: {
-    fontSize: 10,
-    lineHeight: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 11,
+    lineHeight: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     marginTop: 20,
   },
