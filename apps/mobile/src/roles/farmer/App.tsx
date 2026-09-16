@@ -13,18 +13,29 @@ import { SplashScreen } from './screens/auth/SplashScreen';
 import { WelcomeScreen } from './screens/auth/WelcomeScreen';
 import { AddCertificationScreen } from './screens/certifications/AddCertificationScreen';
 import { CertificationsScreen } from './screens/certifications/CertificationsScreen';
+import { EditCertificationScreen } from './screens/certifications/EditCertificationScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
+import { WeatherScreen } from './screens/dashboard/WeatherScreen';
+import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
 import { CounterOfferScreen } from './screens/listings/CounterOfferScreen';
 import { CreateListingScreen } from './screens/listings/CreateListingScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
+import { NotificationsScreen } from './screens/notifications/NotificationsScreen';
+import { AuditsScreen } from './screens/audits/AuditsScreen';
+import { AuditResultScreen } from './screens/audits/AuditResultScreen';
 import { ProfileScreen } from './screens/profile/ProfileScreen';
 import { FMBSketchScreen } from './screens/profile/FMBSketchScreen';
 import { FieldContextScreen } from './screens/profile/FieldContextScreen';
 import { ZonesScreen } from './screens/profile/ZonesScreen';
 import { AddZoneScreen } from './screens/profile/AddZoneScreen';
+import { PersonalDetailsScreen } from './screens/profile/PersonalDetailsScreen';
+import { FarmRatingsScreen } from './screens/profile/FarmRatingsScreen';
+import { SoilTestScreen } from './screens/profile/SoilTestScreen';
+import { NewSoilTestScreen } from './screens/profile/NewSoilTestScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
 import { type Listing } from './api/listings';
+import { type Certification } from './api/farmer';
 import { authPalette, colors, spacing, typography, weights } from './theme';
 import { CustomerMainApp } from '../customer/CustomerMainApp';
 
@@ -48,7 +59,17 @@ export type ScreenName =
   | 'FMBSketch'
   | 'FieldContext'
   | 'Zones'
-  | 'AddZone';
+  | 'AddZone'
+  | 'EditCertification'
+  | 'Notifications'
+  | 'PersonalDetails'
+  | 'Audits'
+  | 'AuditResult'
+  | 'FarmManagement'
+  | 'FarmRatings'
+  | 'SoilTest'
+  | 'NewSoilTest'
+  | 'Weather';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -57,12 +78,19 @@ const SPLASH_DARK = authPalette.splashDark;
 
 export default function App(): React.JSX.Element {
   const [screen, setScreen] = useState<ScreenName>('Splash');
+  // Tracks where we navigated *from*, so a handful of deep screens (reached
+  // from more than one place -- e.g. Certifications from both the Profile
+  // card and FarmManagement) can return the caller to where they actually
+  // came from instead of a hardcoded screen.
+  const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
   function navigate(nextScreen: ScreenName, nextParams: Record<string, string | number | undefined> = {}) {
+    setPreviousScreen(screen);
     setParams(nextParams);
     setScreen(nextScreen);
   }
@@ -91,7 +119,7 @@ export default function App(): React.JSX.Element {
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
 
-      {screen !== 'Register' && screen !== 'RoleSelection' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
+      {screen !== 'Register' && screen !== 'RoleSelection' && screen !== 'Notifications' && screen !== 'PersonalDetails' && screen !== 'Certifications' && screen !== 'AddCertification' && screen !== 'EditCertification' && screen !== 'Audits' && screen !== 'AuditResult' && screen !== 'FarmManagement' && screen !== 'FarmRatings' && screen !== 'SoilTest' && screen !== 'NewSoilTest' && screen !== 'Weather' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
         <View style={styles.header}>
             <Text style={styles.headerText}>{t('farmer.app.name')}</Text>
             <View style={styles.localeRow}>
@@ -157,12 +185,30 @@ export default function App(): React.JSX.Element {
           </View>
         ) : screen === 'Certifications' ? (
           <CertificationsScreen
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'AddCertification' && previousScreen !== 'EditCertification'
+                  ? previousScreen
+                  : 'MainTabs',
+              )
+            }
             onNavigateToAddCertification={() => navigate('AddCertification')}
+            onNavigateToEditCertification={(certification) => {
+              setSelectedCertification(certification);
+              navigate('EditCertification');
+            }}
           />
         ) : screen === 'AddCertification' ? (
           <AddCertificationScreen
             onSuccess={() => navigate('Certifications')}
             onCancel={() => navigate('Certifications')}
+          />
+        ) : screen === 'EditCertification' && selectedCertification ? (
+          <EditCertificationScreen
+            certification={selectedCertification}
+            onCancel={() => navigate('Certifications')}
+            onSave={() => navigate('Certifications')}
+            onDelete={() => navigate('Certifications')}
           />
         ) : screen === 'CreateListing' ? (
           <CreateListingScreen
@@ -205,10 +251,60 @@ export default function App(): React.JSX.Element {
             onSave={() => navigate('MainTabs')}
           />
         ) : screen === 'AddZone' ? (
-          <AddZoneScreen 
+          <AddZoneScreen
             onNavigateBack={() => navigate('Zones')}
             onSave={() => navigate('Zones')}
           />
+        ) : screen === 'PersonalDetails' ? (
+          <PersonalDetailsScreen onBack={() => navigate('MainTabs')} />
+        ) : screen === 'Notifications' ? (
+          <NotificationsScreen
+            onBack={() => navigate('MainTabs')}
+            onNavigateToCounterOffer={() => {
+              if (selectedListing) {
+                navigate('CounterOffer');
+              } else {
+                setCurrentTab('Listings');
+                navigate('MainTabs');
+              }
+            }}
+          />
+        ) : screen === 'AuditResult' ? (
+          <AuditResultScreen
+            onBack={() => navigate('Audits')}
+            auditId={typeof params['auditId'] === 'string' ? params['auditId'] : undefined}
+          />
+        ) : screen === 'Audits' ? (
+          <AuditsScreen
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'Audits' && previousScreen !== 'AuditResult'
+                  ? previousScreen
+                  : 'MainTabs',
+              )
+            }
+            onNavigateToResult={(auditId) => navigate('AuditResult', { auditId })}
+          />
+        ) : screen === 'FarmManagement' ? (
+          <FarmManagementScreen
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'FarmManagement' ? previousScreen : 'MainTabs',
+              )
+            }
+            onNavigateToAudits={() => navigate('Audits')}
+          />
+        ) : screen === 'FarmRatings' ? (
+          <FarmRatingsScreen onNavigateBack={() => navigate('MainTabs')} />
+        ) : screen === 'SoilTest' ? (
+          <SoilTestScreen
+            onNavigateBack={() => navigate('MainTabs')}
+            onNavigateToNewSoilTest={() => navigate('NewSoilTest')}
+          />
+        ) : screen === 'NewSoilTest' ? (
+          <NewSoilTestScreen onNavigateBack={() => navigate('SoilTest')} onSave={() => navigate('SoilTest')} />
+        ) : screen === 'Weather' ? (
+          <WeatherScreen onNavigateBack={() => navigate('MainTabs')} />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>
@@ -220,6 +316,9 @@ export default function App(): React.JSX.Element {
                   onNavigateToListings={() => setCurrentTab('Listings')}
                   onNavigateToWallet={() => setCurrentTab('Wallet')}
                   onNavigateToProfile={() => setCurrentTab('Profile')}
+                  onNavigateToNotifications={() => navigate('Notifications')}
+                  onNavigateToFarmManagement={() => navigate('FarmManagement')}
+                  onNavigateToWeather={() => navigate('Weather')}
                 />
               ) : currentTab === 'Listings' ? (
                 <ListingsScreen
@@ -237,6 +336,10 @@ export default function App(): React.JSX.Element {
                   onNavigateToCertifications={() => navigate('Certifications')}
                   onNavigateToMarket={() => setCurrentTab('Listings')}
                   onNavigateToFMBSketch={() => navigate('FMBSketch')}
+                  onNavigateToPersonalDetails={() => navigate('PersonalDetails')}
+                  onNavigateToAudits={() => navigate('Audits')}
+                  onNavigateToFarmRatings={() => navigate('FarmRatings')}
+                  onNavigateToSoilTest={() => navigate('SoilTest')}
                 />
               )}
             </View>
@@ -262,10 +365,10 @@ export default function App(): React.JSX.Element {
 
               <Pressable
                 style={styles.tabItem}
-                onPress={() => {}}
+                onPress={() => navigate('FarmManagement')}
                 accessibilityRole="tab"
               >
-                <Icon name="eco" size={24} color={colors.onSurfaceVariant} style={{ opacity: 0.5 }} />
+                <Icon name="eco" size={24} color={colors.onSurfaceVariant} />
                 <Text style={styles.tabItemText}>Farm</Text>
               </Pressable>
 

@@ -226,6 +226,90 @@ export const authPalette = {
   pendingGrey: '#d8d8d8',
   pendingTextGrey: '#b0b0b0',
   pendingSubGrey: '#c0c0c0',
+
+  // ---------------------------------------------------------------------
+  // Added for the audits / farm-management / weather / ratings / soil-test /
+  // notifications / personal-details screens ported from the `farm-rating`
+  // branch. Those mockups were built against a Tailwind-derived palette, so
+  // the names below carry the `tw` prefix + the Tailwind swatch number they
+  // came from, exactly like the existing `twOrange600` / `twRed500` entries
+  // above. Material-swatch and one-off descriptive names follow the same
+  // conventions already used in this object.
+  // ---------------------------------------------------------------------
+
+  // Tailwind gray
+  twGray50: '#f9fafb',
+  twGray100: '#f3f4f6',
+  twGray200: '#e5e7eb',
+  twGray300: '#d1d5db',
+  twGray400: '#9ca3af',
+  twGray500: '#6b7280',
+  twGray600: '#4b5563',
+  twGray700: '#374151',
+  twGray800: '#1f2937',
+  twGray900: '#111827',
+  // Tailwind green / emerald
+  twGreen50: '#f0fdf4',
+  twGreen100: '#dcfce7',
+  twGreen300: '#86efac',
+  twGreen500: '#22c55e',
+  twGreen600: '#16a34a',
+  twGreen700: '#15803d',
+  twGreen800: '#166534',
+  twEmerald100: '#d1fae5',
+  // Tailwind red
+  twRed50: '#fef2f2',
+  twRed100: '#fee2e2',
+  twRed300: '#fca5a5',
+  twRed600: '#dc2626',
+  // Tailwind orange / amber
+  twOrange100: '#ffedd5',
+  twOrange200: '#fed7aa',
+  twOrange500: '#f97316',
+  twOrange700: '#c2410c',
+  twAmber50: '#fffbeb',
+  twAmber100: '#fef3c7',
+  twAmber200: '#fde68a',
+  twAmber300: '#fcd34d',
+  twAmber600: '#d97706',
+  twAmber800: '#92400e',
+  // Tailwind blue / sky
+  twBlue50: '#eff6ff',
+  twBlue500: '#3b82f6',
+  twBlue600: '#2563eb',
+  twBlue700: '#1d4ed8',
+  twBlue800: '#1e40af',
+  twSky200: '#bae6fd',
+  twSky700: '#0369a1',
+  skyTint: '#bae0fd',
+  // Tailwind purple
+  twPurple100: '#f3e8ff',
+  twPurple600: '#9333ea',
+  // Tailwind slate (extends the slate ramp already above)
+  slate700: '#334155',
+  slate900: '#0f172a',
+  // Material additions
+  blue600: '#1e88e5',
+  blue800: '#1565c0',
+  orange300: '#ffb74d',
+  deepOrange400: '#ff7043',
+  deepOrange900: '#bf360c',
+  grey50: '#fafafa',
+  // Greys used as literal short hex in the ported mockups
+  darkGreyText: '#333333',
+  midGrey: '#666666',
+  mutedGrey: '#999999',
+  inkBlack: '#222222',
+  borderGreyLight: '#eaeaea',
+  // One-offs with no standard-swatch match
+  paleStoneBg: '#f5f5f3',
+  paleStoneBgAlt: '#f7f7f5',
+  mintTintBg: '#eaf6ec',
+  forestGreen: '#236b36',
+  mossGreen: '#4b9b63',
+  coralRed: '#e24b4a',
+  tanBrown: '#d4a373',
+  stoneMuted: '#8a927f',
 } as const;
 
 export const theme = {
