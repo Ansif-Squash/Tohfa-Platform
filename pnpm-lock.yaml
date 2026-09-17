@@ -205,9 +205,6 @@ importers:
       '@react-native-async-storage/async-storage':
         specifier: ^1.23.1
         version: 1.24.0(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0))
-      '@react-native-community/datetimepicker':
-        specifier: ^9.2.1
-        version: 9.2.1(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0))(react@18.2.0)
       '@tanstack/react-query':
         specifier: ^5.28.0
         version: 5.102.8(react@18.2.0)
@@ -2158,19 +2155,6 @@ packages:
     resolution: {integrity: sha512-hFJL4cgLPxncJJd/epQ4dHnMg5Jy/7Q56jFvA3MHViuKpzzfTCJCB+pGY54maZbtym53UJON9WTGpM3S81UfjQ==}
     engines: {node: '>=18'}
     hasBin: true
-
-  '@react-native-community/datetimepicker@9.2.1':
-    resolution: {integrity: sha512-P2dir8EcPYuS6g7N/E4jImugB99h2+e1kzNX6Ihg+2T2v5IZ5dB+4afLisG6rdua4YZ1mADYCZ2iqI34sPjIKA==}
-    peerDependencies:
-      expo: '>=52.0.0'
-      react: '*'
-      react-native: '*'
-      react-native-windows: '*'
-    peerDependenciesMeta:
-      expo:
-        optional: true
-      react-native-windows:
-        optional: true
 
   '@react-native/assets-registry@0.74.87':
     resolution: {integrity: sha512-1XmRhqQchN+pXPKEKYdpJlwESxVomJOxtEnIkbo7GAlaN2sym84fHEGDXAjLilih5GVPpcpSmFzTy8jx3LtaFg==}
@@ -9881,12 +9865,6 @@ snapshots:
       - encoding
       - supports-color
       - utf-8-validate
-
-  '@react-native-community/datetimepicker@9.2.1(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0))(react@18.2.0)':
-    dependencies:
-      invariant: 2.2.4
-      react: 18.2.0
-      react-native: 0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.26.9(@babel/core@7.29.7))(@types/react@18.3.31)(encoding@0.1.13)(react@18.2.0)
 
   '@react-native/assets-registry@0.74.87': {}
 

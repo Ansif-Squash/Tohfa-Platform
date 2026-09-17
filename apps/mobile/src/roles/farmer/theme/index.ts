@@ -87,6 +87,7 @@ export const MIN_TOUCH_TARGET = tokens.size.minTouchTarget;
  */
 export const authPalette = {
   primary: '#2E7D32',
+  brandGreen: '#2E7D32',
   ink: '#1a2e1a',
   muted: '#6b7566',
   lightGreen: '#EAF3DE',
@@ -256,6 +257,7 @@ export const authPalette = {
   twGreen600: '#16a34a',
   twGreen700: '#15803d',
   twGreen800: '#166534',
+  twGreen900: '#14532d',
   twEmerald100: '#d1fae5',
   // Tailwind red
   twRed50: '#fef2f2',

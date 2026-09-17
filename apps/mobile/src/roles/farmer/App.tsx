@@ -21,6 +21,13 @@ import { ActiveCropsScreen } from './screens/dashboard/ActiveCropsScreen';
 import { TohfaCalendarScreen } from './screens/dashboard/TohfaCalendarScreen';
 import { CropPlanningInsightScreen } from './screens/dashboard/CropPlanningInsightScreen';
 import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
+import {
+  ProduceCalendarScreen,
+  addProduceCropLocally,
+  type CropItem,
+} from './screens/farm/ProduceCalendarScreen';
+import { NewCropScreen } from './screens/farm/NewCropScreen';
+import { CropDetailScreen } from './screens/farm/CropDetailScreen';
 import { FarmDiaryScreen } from './screens/farm/FarmDiaryScreen';
 import { DailyAttendanceScreen } from './screens/farm/DailyAttendanceScreen';
 import { FarmInventoryScreen } from './screens/farm/FarmInventoryScreen';
@@ -50,7 +57,11 @@ import { NewSoilTestScreen } from './screens/profile/NewSoilTestScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
 import { type Listing } from './api/listings';
-import { type Certification } from './api/farmer';
+import {
+  type Certification,
+  updateCertificationLocally,
+  deleteCertificationLocally,
+} from './api/farmer';
 import { authPalette, colors, spacing, typography, weights } from './theme';
 import { CustomerMainApp } from '../customer/CustomerMainApp';
 
@@ -84,6 +95,9 @@ export type ScreenName =
   | 'Audits'
   | 'AuditResult'
   | 'FarmManagement'
+  | 'ProduceCalendar'
+  | 'NewCrop'
+  | 'CropDetail'
   | 'FarmRatings'
   | 'SoilTest'
   | 'NewSoilTest'
@@ -116,6 +130,7 @@ export default function App(): React.JSX.Element {
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null);
+  const [selectedCrop, setSelectedCrop] = useState<CropItem | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
@@ -187,10 +202,10 @@ export default function App(): React.JSX.Element {
           <ResetPasswordScreen
             challengeId={String(params['challengeId'] ?? '')}
             code={String(params['code'] ?? '')}
-            onNavigate={(s, p) => navigate(s, p)}
+            onNavigate={(s) => navigate(s)}
           />
         ) : screen === 'PasswordChangedSuccess' ? (
-          <PasswordChangedSuccessScreen onNavigate={(s, p) => navigate(s, p)} />
+          <PasswordChangedSuccessScreen onNavigate={(s) => navigate(s)} />
         ) : screen === 'ApplicationStatus' ? (
           <ApplicationStatusScreen
             applicationId={String(params['applicationId'] ?? 'DEMO-APP-001')}
@@ -226,8 +241,14 @@ export default function App(): React.JSX.Element {
           <EditCertificationScreen
             certification={selectedCertification}
             onCancel={() => navigate('Certifications')}
-            onSave={() => navigate('Certifications')}
-            onDelete={() => navigate('Certifications')}
+            onSave={(updated) => {
+              if (updated) updateCertificationLocally(updated);
+              navigate('Certifications');
+            }}
+            onDelete={(id) => {
+              if (id) deleteCertificationLocally(id);
+              navigate('Certifications');
+            }}
           />
         ) : screen === 'CreateListing' ? (
           <CreateListingScreen
@@ -270,17 +291,17 @@ export default function App(): React.JSX.Element {
         ) : screen === 'ListingDetail' ? (
           <ListingDetailScreen onBack={() => navigate('MyListings')} />
         ) : screen === 'FMBSketch' ? (
-          <FMBSketchScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+          <FMBSketchScreen
+            onNavigateBack={() => navigate('MainTabs')}
             onNavigateToFieldContext={() => navigate('FieldContext')}
           />
         ) : screen === 'FieldContext' ? (
-          <FieldContextScreen 
+          <FieldContextScreen
             onNavigateBack={() => navigate('MainTabs')}
             onNavigateToZones={() => navigate('Zones')}
           />
         ) : screen === 'Zones' ? (
-          <ZonesScreen 
+          <ZonesScreen
             onNavigateBack={() => navigate('MainTabs')}
             onNavigateToAddZone={() => navigate('AddZone')}
             onSave={() => navigate('MainTabs')}
@@ -329,26 +350,53 @@ export default function App(): React.JSX.Element {
             }
             onNavigateToAudits={() => navigate('Audits')}
             onNavigateToDiary={() => navigate('FarmDiary')}
+            onNavigateToCertifications={() => navigate('Certifications')}
+            onNavigateToProduceCalendar={() => navigate('ProduceCalendar')}
+          />
+        ) : screen === 'ProduceCalendar' ? (
+          <ProduceCalendarScreen
+            onBack={() => navigate('FarmManagement')}
+            onNavigateToNewCrop={() => navigate('NewCrop')}
+            onNavigateToCropDetail={(item) => {
+              setSelectedCrop(item);
+              navigate('CropDetail');
+            }}
+          />
+        ) : screen === 'CropDetail' ? (
+          <CropDetailScreen
+            crop={selectedCrop}
+            onBack={() => navigate('ProduceCalendar')}
+            onEdit={() => navigate('NewCrop')}
+            onNavigateToDiary={() => navigate('FarmDiary')}
+          />
+        ) : screen === 'NewCrop' ? (
+          <NewCropScreen
+            onBack={() => navigate('ProduceCalendar')}
+            onCancel={() => navigate('ProduceCalendar')}
+            onSaveCrop={(newCrop) => {
+              addProduceCropLocally(newCrop);
+              navigate('ProduceCalendar');
+            }}
           />
         ) : screen === 'FarmDiary' ? (
-          <FarmDiaryScreen 
-            onBack={() => navigate('FarmManagement')} 
-            onNavigateToNewEntry={() => navigate('NewFarmDiaryEntry')} 
+          <FarmDiaryScreen
+            onBack={() => navigate('FarmManagement')}
+            onNavigateToNewEntry={() => navigate('NewFarmDiaryEntry')}
           />
         ) : screen === 'NewFarmDiaryEntry' ? (
-          <NewFarmDiaryEntryScreen 
-            onBack={() => navigate('FarmDiary')} 
-            onNext={() => navigate('NewFarmDiaryEntryStep2')} 
+          <NewFarmDiaryEntryScreen
+            onBack={() => navigate('FarmDiary')}
+            onNext={() => navigate('NewFarmDiaryEntryStep2')}
           />
         ) : screen === 'NewFarmDiaryEntryStep2' ? (
-          <NewFarmDiaryEntryStep2Screen 
-            onBack={() => navigate('NewFarmDiaryEntry')} 
-            onNext={() => navigate('NewFarmDiaryEntryStep3')} 
+          <NewFarmDiaryEntryStep2Screen
+            onBack={() => navigate('NewFarmDiaryEntry')}
+            onNext={() => navigate('NewFarmDiaryEntryStep3')}
           />
         ) : screen === 'NewFarmDiaryEntryStep3' ? (
-          <NewFarmDiaryEntryStep3Screen 
-            onBack={() => navigate('NewFarmDiaryEntryStep2')} 
-            onSave={() => navigate('FarmDiary')} 
+          <NewFarmDiaryEntryStep3Screen
+            onBack={() => navigate('NewFarmDiaryEntryStep2')}
+            onSave={() => navigate('FarmDiary')}
           />
         ) : screen === 'FarmRatings' ? (
           <FarmRatingsScreen onNavigateBack={() => navigate('MainTabs')} />
@@ -364,27 +412,27 @@ export default function App(): React.JSX.Element {
         ) : screen === 'ActiveCrops' ? (
           <ActiveCropsScreen onNavigateBack={() => navigate('MainTabs')} />
         ) : screen === 'MyListings' ? (
-          <MyListingsScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+          <MyListingsScreen
+            onNavigateBack={() => navigate('MainTabs')}
             onNavigateToListingDetail={() => navigate('ListingDetail')}
           />
         ) : screen === 'TohfaCalendar' ? (
-          <TohfaCalendarScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+          <TohfaCalendarScreen
+            onNavigateBack={() => navigate('MainTabs')}
             onNavigateToCropInsight={() => navigate('CropPlanningInsight')}
           />
         ) : screen === 'CropPlanningInsight' ? (
           <CropPlanningInsightScreen onNavigateBack={() => navigate('TohfaCalendar')} />
         ) : screen === 'FarmInventory' ? (
-          <FarmInventoryScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+          <FarmInventoryScreen
+            onNavigateBack={() => navigate('MainTabs')}
             onNavigateToCategory={(category) => {
               if (category === 'Tools') navigate('ToolsList');
             }}
           />
         ) : screen === 'ToolsList' ? (
-          <ToolsListScreen 
-            onNavigateBack={() => navigate('FarmInventory')} 
+          <ToolsListScreen
+            onNavigateBack={() => navigate('FarmInventory')}
             onNavigateToAddTool={() => navigate('AddTool')}
           />
         ) : screen === 'AddTool' ? (
@@ -436,6 +484,7 @@ export default function App(): React.JSX.Element {
                     } as any);
                     navigate('CounterOffer');
                   }}
+                  onNavigateToProduceCalendar={() => navigate('ProduceCalendar')}
                 />
               ) : currentTab === 'Listings' ? (
                 <ListingsScreen
