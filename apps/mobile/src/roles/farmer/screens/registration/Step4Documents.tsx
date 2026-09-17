@@ -36,7 +36,7 @@ export const Step4Documents: React.FC<Step4Props> = ({ initialData, onSave, onBa
 
     if (certFile) {
       documents.push({
-        docType: 'CERTIFICATION',
+        docType: 'CERTIFICATE',
         fileUrl: certFile.uri, // using local URI for prototype
         fileName: certFile.name || 'certification.pdf'
       });

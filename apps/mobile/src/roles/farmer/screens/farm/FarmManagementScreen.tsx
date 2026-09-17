@@ -165,7 +165,10 @@ interface FarmManagementScreenProps {
   onNavigateToWeather?: () => void;
   onNavigateToCalendar?: () => void;
   onNavigateToActiveCrops?: () => void;
+  onNavigateToCropManagement?: () => void;
   onNavigateToAttendance?: () => void;
+  onNavigateToWorkforce?: () => void;
+  onNavigateToLivestock?: () => void;
   onNavigateToLearningHub?: () => void;
 }
 
@@ -176,7 +179,10 @@ export function FarmManagementScreen({
   onNavigateToWeather,
   onNavigateToCalendar,
   onNavigateToActiveCrops,
+  onNavigateToCropManagement,
   onNavigateToAttendance,
+  onNavigateToWorkforce,
+  onNavigateToLivestock,
   onNavigateToLearningHub,
 }: FarmManagementScreenProps): React.JSX.Element {
   const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false);
@@ -204,7 +210,11 @@ export function FarmManagementScreen({
   };
 
   const handleLivestockReview = () => {
-    Alert.alert(t('farmer.farmManagement.livestock.alertTitle'), t('farmer.farmManagement.livestock.alertBody'));
+    if (onNavigateToLivestock) {
+      onNavigateToLivestock();
+    } else {
+      Alert.alert(t('farmer.farmManagement.livestock.alertTitle'), t('farmer.farmManagement.livestock.alertBody'));
+    }
   };
 
   const handleLearningHub = () => {
@@ -290,12 +300,16 @@ export function FarmManagementScreen({
         {/* ── Grid of Modules (2 Columns) ── */}
         <View style={styles.modulesGrid}>
           {/* 1. Farm Diary */}
-          <View style={styles.moduleCard}>
+          <TouchableOpacity 
+            style={styles.moduleCard}
+            activeOpacity={0.88}
+            onPress={onNavigateToDiary ? onNavigateToDiary : () => setIsDiaryModalOpen(true)}
+            accessibilityRole="button"
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: P.twOrange100 }]}>
                 <PencilEditIcon size={20} color={P.twOrange600} />
               </View>
-              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twRed500 }]} />
             </View>
 
             <View style={styles.moduleTextSection}>
@@ -303,23 +317,23 @@ export function FarmManagementScreen({
               <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.diary.desc')}</Text>
             </View>
 
-            <TouchableOpacity 
-              style={styles.logEntryBtn} 
-              activeOpacity={0.85} 
-              onPress={onNavigateToDiary ? onNavigateToDiary : () => setIsDiaryModalOpen(true)}
-              accessibilityRole="button"
-            >
+            <View style={styles.logEntryBtn}>
               <Text style={styles.logEntryBtnText}>{t('farmer.farmManagement.module.diary.logEntry')}</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
 
           {/* 2. Weather */}
-          <View style={styles.moduleCard}>
+          <TouchableOpacity 
+            style={styles.moduleCard}
+            activeOpacity={0.88}
+            onPress={onNavigateToWeather}
+            accessibilityRole="button"
+            accessibilityLabel="Weather"
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: P.sky100 }]}>
                 <CloudWeatherIcon size={22} color={P.sky600} />
               </View>
-              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twBlue500 }]} />
             </View>
 
             <View style={styles.moduleTextSection}>
@@ -327,24 +341,23 @@ export function FarmManagementScreen({
               <Text style={styles.moduleDesc}>28°C · Rain expected today at 4 PM</Text>
             </View>
 
-            <TouchableOpacity 
-              style={styles.weatherRiskPill} 
-              activeOpacity={0.85} 
-              onPress={onNavigateToWeather}
-              accessibilityRole="button"
-            >
+            <View style={styles.weatherRiskPill}>
               <SnowflakeIcon size={12} color={P.twBlue700} />
               <Text style={styles.weatherRiskText}>{t('farmer.farmManagement.module.weather.frostRisk')}</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
 
           {/* 3. Produce Calendar */}
-          <View style={styles.moduleCard}>
+          <TouchableOpacity 
+            style={styles.moduleCard}
+            activeOpacity={0.88}
+            onPress={onNavigateToCalendar}
+            accessibilityRole="button"
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: P.twEmerald100 }]}>
                 <PlantSproutIcon size={20} color={P.twGreen700} />
               </View>
-              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twGreen500 }]} />
             </View>
 
             <View style={styles.moduleTextSection}>
@@ -352,62 +365,47 @@ export function FarmManagementScreen({
               <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.calendar.desc', { count: 3 })}</Text>
             </View>
 
-            <TouchableOpacity 
-              style={styles.producePill} 
-              activeOpacity={0.85} 
-              onPress={onNavigateToCalendar}
-              accessibilityRole="button"
-            >
+            <View style={styles.producePill}>
               <CalendarMiniIcon size={12} color={P.deepGreen} />
               <Text style={styles.producePillText}>{t('farmer.farmManagement.module.calendar.harvestIn', { days: 12 })}</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
 
-          {/* 4. Input Management */}
-          <View style={styles.moduleCard}>
+          {/* 4. Crop Management */}
+          <TouchableOpacity 
+            style={styles.moduleCard}
+            activeOpacity={0.88}
+            onPress={onNavigateToCropManagement || onNavigateToActiveCrops}
+            accessibilityRole="button"
+            accessibilityLabel="Crop Management"
+          >
             <View style={styles.moduleCardTop}>
-              <View style={[styles.iconBadge, { backgroundColor: P.twOrange100 }]}>
-                <FlaskBeakerIcon size={20} color={P.twOrange600} />
+              <View style={[styles.iconBadge, { backgroundColor: P.twEmerald100 }]}>
+                <PlantSproutIcon size={20} color={P.twGreen700} />
               </View>
-              <View style={[styles.statusIndicatorDot, { backgroundColor: isFertigationLogged ? P.twGreen500 : P.twOrange500 }]} />
             </View>
 
             <View style={styles.moduleTextSection}>
-              <Text style={styles.moduleTitle}>{t('farmer.farmManagement.module.input.title')}</Text>
-              <Text style={styles.moduleDesc}>
-                {isFertigationLogged
-                  ? t('farmer.farmManagement.module.input.completed')
-                  : t('farmer.farmManagement.module.input.due')}
-              </Text>
+              <Text style={styles.moduleTitle}>Crop Management</Text>
+              <Text style={styles.moduleDesc}>3 active crops · Zones & harvest cycles</Text>
             </View>
 
-            <TouchableOpacity
-              style={isFertigationLogged ? styles.statusRowGreen : styles.markLoggedBtn}
-              activeOpacity={0.8}
-              onPress={handleToggleFertigation}
-              accessibilityRole="button"
-            >
-              {isFertigationLogged ? (
-                <>
-                  <CheckmarkCircleIcon size={16} color={P.twGreen700} />
-                  <Text style={styles.statusRowGreenText}>{t('farmer.farmManagement.module.workforce.upToDate')}</Text>
-                </>
-              ) : (
-                <>
-                  <CheckmarkMiniIcon size={14} color={P.twGreen700} />
-                  <Text style={styles.markLoggedBtnText}>{t('farmer.farmManagement.module.input.markLogged')}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+            <View style={styles.statusRowGreen}>
+              <CheckmarkCircleIcon size={16} color={P.twGreen700} />
+              <Text style={styles.statusRowGreenText}>3 Active</Text>
+            </View>
+          </TouchableOpacity>
 
           {/* 5. Workforce */}
-          <View style={styles.moduleCard}>
+          <TouchableOpacity 
+            style={styles.moduleCard}
+            activeOpacity={0.85}
+            onPress={onNavigateToWorkforce || onNavigateToAttendance}
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: P.twEmerald100 }]}>
                 <UsersIcon size={20} color={P.twGreen700} />
               </View>
-              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twGreen500 }]} />
             </View>
 
             <View style={styles.moduleTextSection}>
@@ -415,24 +413,22 @@ export function FarmManagementScreen({
               <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.workforce.desc', { checkedIn: 3, total: 3 })}</Text>
             </View>
 
-            <TouchableOpacity 
-              style={styles.statusRowGreen} 
-              activeOpacity={0.8}
-              onPress={onNavigateToAttendance}
-              accessibilityRole="button"
-            >
+            <View style={styles.statusRowGreen}>
               <CheckmarkCircleIcon size={16} color={P.twGreen700} />
               <Text style={styles.statusRowGreenText}>{t('farmer.farmManagement.module.workforce.upToDate')}</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
 
           {/* 6. Livestock */}
-          <View style={styles.moduleCard}>
+          <TouchableOpacity 
+            style={styles.moduleCard}
+            activeOpacity={0.85}
+            onPress={onNavigateToLivestock || handleLivestockReview}
+          >
             <View style={styles.moduleCardTop}>
               <View style={[styles.iconBadge, { backgroundColor: P.twOrange100 }]}>
                 <PawPrintIcon size={20} color={P.twOrange600} />
               </View>
-              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twOrange500 }]} />
             </View>
 
             <View style={styles.moduleTextSection}>
@@ -440,16 +436,11 @@ export function FarmManagementScreen({
               <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.livestock.desc', { count: 2 })}</Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.reviewNeededRow}
-              activeOpacity={0.8}
-              onPress={handleLivestockReview}
-              accessibilityRole="button"
-            >
+            <View style={styles.reviewNeededRow}>
               <Text style={styles.reviewNeededText}>{t('farmer.farmManagement.module.livestock.reviewNeeded')}</Text>
               <ChevronRightIcon size={14} color={P.twOrange600} />
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* ── Learning Hub Card ── */}
@@ -465,7 +456,6 @@ export function FarmManagementScreen({
           <View style={styles.learningHubTextCol}>
             <View style={styles.learningHubTitleRow}>
               <Text style={styles.learningHubTitle}>{t('farmer.farmManagement.learningHub.title')}</Text>
-              <View style={styles.learningHubDot} />
             </View>
             <Text style={styles.learningHubSubtitle}>{t('farmer.farmManagement.learningHub.subtitle', { count: 3 })}</Text>
           </View>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { BackHandler, SafeAreaView, StatusBar, StyleSheet } from 'react-native';
 import { ThemeProvider, buildThemeForRole } from '@tohfa/mobile-ui';
 import { RoleCode } from '@tohfa/shared-types';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -47,20 +47,68 @@ interface NavigationParams {
   orderId?: string | undefined;
 }
 
+interface CustomerStackEntry {
+  screen: ScreenName;
+  params?: NavigationParams;
+}
+
 const theme = buildThemeForRole(RoleCode.CUSTOMER);
 
 export function CustomerMainApp({ onSignOut }: { onSignOut: () => void }): React.JSX.Element {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('Home');
   const [navParams, setNavParams] = useState<NavigationParams>({});
+  const [history, setHistory] = useState<CustomerStackEntry[]>([]);
 
-  const navigate = (screen: string, params?: NavigationParams) => {
-    if (screen === 'SignOut') {
-      onSignOut();
-      return;
+  const navigate = useCallback(
+    (screen: string, params?: NavigationParams) => {
+      if (screen === 'SignOut') {
+        onSignOut();
+        return;
+      }
+      if (screen === currentScreen) {
+        if (params) setNavParams(params);
+        return;
+      }
+      if (screen === 'Home') {
+        setHistory([]);
+      } else {
+        setHistory((prev) => [...prev, { screen: currentScreen, params: navParams }]);
+      }
+      if (params) setNavParams(params);
+      setCurrentScreen(screen as ScreenName);
+    },
+    [currentScreen, navParams, onSignOut],
+  );
+
+  const goBack = useCallback(() => {
+    if (history.length > 0) {
+      setHistory((prev) => {
+        const nextHistory = [...prev];
+        const previous = nextHistory.pop();
+        if (previous) {
+          setCurrentScreen(previous.screen);
+          setNavParams(previous.params || {});
+        }
+        return nextHistory;
+      });
+    } else if (currentScreen !== 'Home') {
+      setCurrentScreen('Home');
+      setNavParams({});
     }
-    if (params) setNavParams(params);
-    setCurrentScreen(screen as ScreenName);
-  };
+  }, [history, currentScreen]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (currentScreen === 'Home' && history.length === 0) {
+        return false;
+      }
+      goBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [currentScreen, history, goBack]);
 
   return (
     <QueryClientProvider client={queryClient}>
