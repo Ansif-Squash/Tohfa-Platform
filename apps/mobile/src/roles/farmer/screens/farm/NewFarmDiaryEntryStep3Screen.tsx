@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     color: P.twGray600,
   },
   pillTextSelected: {
-    color: P.twGreen900,
+    color: P.twGreen800,
   },
   rowInputs: {
     flexDirection: 'row',

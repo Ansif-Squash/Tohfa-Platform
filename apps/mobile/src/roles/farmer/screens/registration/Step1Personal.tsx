@@ -30,7 +30,7 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
   const initialDobStr = initialData?.dob ?? '12 / 06 / 1985';
   const initialDobParts = initialDobStr.split(' / ');
   const initialDate = initialDobParts.length === 3 
-    ? new Date(parseInt(initialDobParts[2]), parseInt(initialDobParts[1]) - 1, parseInt(initialDobParts[0]))
+    ? new Date(parseInt(initialDobParts[2]!), parseInt(initialDobParts[1]!) - 1, parseInt(initialDobParts[0]!))
     : new Date(1985, 5, 12);
     
   const [dateValue, setDateValue] = useState<Date>(initialDate);

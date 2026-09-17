@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   gridCardLabelSelected: {
-    color: P.twGreen900,
+    color: P.twGreen800,
   },
   gridCardCheck: {
     position: 'absolute',
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     color: P.twGray700,
   },
   radioLabelSelected: {
-    color: P.twGreen900,
+    color: P.twGreen800,
     fontWeight: '700',
   },
   bottomBar: {
