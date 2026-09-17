@@ -24,7 +24,12 @@ import { CropPlanningInsightScreen } from './screens/dashboard/CropPlanningInsig
 import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
 import { CropManagementScreen } from './screens/farm/CropManagementScreen';
 import { LivestockScreen } from './screens/farm/LivestockScreen';
+import { RegisterAnimalScreen } from './screens/farm/RegisterAnimalScreen';
+import { AnimalDetailScreen } from './screens/farm/AnimalDetailScreen';
 import { WorkforceScreen } from './screens/farm/WorkforceScreen';
+import { AddWorkerScreen } from './screens/farm/AddWorkerScreen';
+import { WorkerDetailScreen } from './screens/farm/WorkerDetailScreen';
+import { PayrollScreen } from './screens/farm/PayrollScreen';
 import { FarmDiaryScreen } from './screens/farm/FarmDiaryScreen';
 import { DiaryCalendarScreen } from './screens/farm/DiaryCalendarScreen';
 import { DailyAttendanceScreen } from './screens/farm/DailyAttendanceScreen';
@@ -114,6 +119,11 @@ export type ScreenName =
   | 'FarmInventory'
   | 'ToolsList'
   | 'AddTool'
+  | 'AddWorker'
+  | 'WorkerDetail'
+  | 'Payroll'
+  | 'RegisterAnimal'
+  | 'AnimalDetail'
   | 'LearningHub'
   | 'ContentDetail'
   | 'Groups'
@@ -449,11 +459,75 @@ export default function App(): React.JSX.Element {
         ) : screen === 'Livestock' ? (
           <LivestockScreen
             onBack={goBack}
+            onNavigateToAddAnimal={() => navigate('RegisterAnimal')}
+            onNavigateToAnimalDetail={(animal) =>
+              navigate('AnimalDetail', {
+                animalId: animal.id,
+                animalName: animal.name,
+                animalCode: animal.code,
+                species: animal.type,
+                breed: animal.breed,
+                gender: animal.gender,
+                age: animal.age,
+                statusBadge: animal.statusBadge,
+              })
+            }
+          />
+        ) : screen === 'AnimalDetail' ? (
+          <AnimalDetailScreen
+            animalId={typeof params['animalId'] === 'string' ? params['animalId'] : 'a1'}
+            animalName={typeof params['animalName'] === 'string' ? params['animalName'] : 'Lakshmi'}
+            animalCode={typeof params['animalCode'] === 'string' ? params['animalCode'] : 'C-014'}
+            species={typeof params['species'] === 'string' ? params['species'] : 'Cattle'}
+            breed={typeof params['breed'] === 'string' ? params['breed'] : 'Jersey cross'}
+            gender={typeof params['gender'] === 'string' ? params['gender'] : '♀'}
+            age={typeof params['age'] === 'string' ? params['age'] : '4 yr'}
+            statusBadge={typeof params['statusBadge'] === 'string' ? params['statusBadge'] : 'Fully Organic'}
+            onBack={goBack}
+            onNavigateToEdit={(animalData) => navigate('RegisterAnimal', animalData || {})}
+          />
+        ) : screen === 'RegisterAnimal' ? (
+          <RegisterAnimalScreen
+            initialAnimal={params as any}
+            onBack={goBack}
+            onCancel={goBack}
+            onSave={() => goBack()}
           />
         ) : screen === 'Workforce' ? (
           <WorkforceScreen
             onBack={goBack}
+            onNavigateToAddWorker={() => navigate('AddWorker')}
             onNavigateToTimesheet={() => navigate('DailyAttendance')}
+            onNavigateToPayroll={() => navigate('Payroll')}
+            onNavigateToWorkerDetail={(id, name, role) =>
+              navigate('WorkerDetail', { workerId: id, workerName: name, workerRole: role })
+            }
+          />
+        ) : screen === 'Payroll' ? (
+          <PayrollScreen
+            onBack={goBack}
+            onNavigateToWorkerDetail={(id, name) =>
+              navigate('WorkerDetail', { workerId: id, workerName: name })
+            }
+          />
+        ) : screen === 'WorkerDetail' ? (
+          <WorkerDetailScreen
+            workerId={typeof params['workerId'] === 'string' ? params['workerId'] : 'w1'}
+            workerName={typeof params['workerName'] === 'string' ? params['workerName'] : 'Murugan R.'}
+            workerRole={
+              typeof params['workerRole'] === 'string'
+                ? params['workerRole']
+                : 'Field Worker · Daily wage'
+            }
+            onBack={goBack}
+            onNavigateToEditWorker={(workerData) => navigate('AddWorker', workerData || {})}
+          />
+        ) : screen === 'AddWorker' ? (
+          <AddWorkerScreen
+            initialWorker={params as any}
+            onBack={goBack}
+            onCancel={goBack}
+            onSave={() => goBack()}
           />
         ) : screen === 'FarmDiary' ? (
           <FarmDiaryScreen 

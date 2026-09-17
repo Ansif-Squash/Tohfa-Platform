@@ -179,7 +179,7 @@ const SPECIES_OPTIONS = ['All species', 'Cattle', 'Buffalo', 'Goat', 'Poultry', 
 export interface LivestockScreenProps {
   onBack?: () => void;
   onNavigateToAddAnimal?: () => void;
-  onNavigateToAnimalDetail?: (id: string) => void;
+  onNavigateToAnimalDetail?: (animal: AnimalItem) => void;
 }
 
 export function LivestockScreen({
@@ -196,7 +196,7 @@ export function LivestockScreen({
 
   const handleAnimalPress = (animal: AnimalItem) => {
     if (onNavigateToAnimalDetail) {
-      onNavigateToAnimalDetail(animal.id);
+      onNavigateToAnimalDetail(animal);
     } else {
       Alert.alert(
         `${animal.name} (${animal.code})`,
