@@ -30,6 +30,32 @@ import { WorkforceScreen } from './screens/farm/WorkforceScreen';
 import { AddWorkerScreen } from './screens/farm/AddWorkerScreen';
 import { WorkerDetailScreen } from './screens/farm/WorkerDetailScreen';
 import { PayrollScreen } from './screens/farm/PayrollScreen';
+import {
+  ProduceCalendarScreen,
+  addProduceCropLocally,
+  localProduceCropsCache,
+  type CropItem,
+} from './screens/farm/ProduceCalendarScreen';
+import { NewCropScreen } from './screens/farm/NewCropScreen';
+import { CropDetailScreen } from './screens/farm/CropDetailScreen';
+import { CropDiaryEntriesScreen } from './screens/farm/CropDiaryEntriesScreen';
+import { CropInputsAppliedScreen } from './screens/farm/CropInputsAppliedScreen';
+import { InputManagementScreen } from './screens/farm/InputManagementScreen';
+import { LogFertigationScreen } from './screens/farm/LogFertigationScreen';
+import { LogPestTreatmentScreen } from './screens/farm/LogPestTreatmentScreen';
+import { AddInputAppliedScreen } from './screens/farm/AddInputAppliedScreen';
+import { SoilManagementScreen } from './screens/farm/SoilManagementScreen';
+import { SoilTestRecordsScreen } from './screens/farm/SoilTestRecordsScreen';
+import { SoilHealthTrackerScreen } from './screens/farm/SoilHealthTrackerScreen';
+import { SoilTypeClassificationScreen } from './screens/farm/SoilTypeClassificationScreen';
+import { SoilAmendmentsLogScreen } from './screens/farm/SoilAmendmentsLogScreen';
+import { CropRotationScreen } from './screens/farm/CropRotationScreen';
+import { SoilMoistureTrackingScreen } from './screens/farm/SoilMoistureTrackingScreen';
+import { ErosionConservationScreen } from './screens/farm/ErosionConservationScreen';
+import { ExportSoilReportsScreen } from './screens/farm/ExportSoilReportsScreen';
+import { UploadNewSoilTestScreen } from './screens/farm/UploadNewSoilTestScreen';
+import { CropWorkforceHoursScreen } from './screens/farm/CropWorkforceHoursScreen';
+import { CropNPKContributionScreen } from './screens/farm/CropNPKContributionScreen';
 import { FarmDiaryScreen } from './screens/farm/FarmDiaryScreen';
 import { DiaryCalendarScreen } from './screens/farm/DiaryCalendarScreen';
 import { DailyAttendanceScreen } from './screens/farm/DailyAttendanceScreen';
@@ -65,7 +91,11 @@ import { NewSoilTestScreen } from './screens/profile/NewSoilTestScreen';
 import { RegistrationFlowScreen } from './screens/registration/RegistrationFlowScreen';
 import { WalletScreen } from './screens/wallet/WalletScreen';
 import { type Listing } from './api/listings';
-import { type Certification } from './api/farmer';
+import {
+  type Certification,
+  updateCertificationLocally,
+  deleteCertificationLocally,
+} from './api/farmer';
 import { authPalette, colors, spacing, typography, weights } from './theme';
 import { CustomerMainApp } from '../customer/CustomerMainApp';
 
@@ -102,6 +132,9 @@ export type ScreenName =
   | 'CropManagement'
   | 'Livestock'
   | 'Workforce'
+  | 'ProduceCalendar'
+  | 'NewCrop'
+  | 'CropDetail'
   | 'FarmRatings'
   | 'SoilTest'
   | 'NewSoilTest'
@@ -128,7 +161,25 @@ export type ScreenName =
   | 'ContentDetail'
   | 'Groups'
   | 'GroupDetail'
-  | 'Settings';
+  | 'Settings'
+  | 'InputManagement'
+  | 'LogFertigation'
+  | 'LogPestTreatment'
+  | 'CropDiaryEntries'
+  | 'CropInputsApplied'
+  | 'AddInputApplied'
+  | 'CropWorkforceHours'
+  | 'CropNPKContribution'
+  | 'SoilManagement'
+  | 'SoilTestRecords'
+  | 'SoilHealthTracker'
+  | 'SoilTypeClassification'
+  | 'SoilAmendmentsLog'
+  | 'CropRotation'
+  | 'SoilMoistureTracking'
+  | 'ErosionConservation'
+  | 'ExportSoilReports'
+  | 'UploadNewSoilTest';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -157,12 +208,15 @@ interface StackEntry {
 
 export default function App(): React.JSX.Element {
   const [screen, setScreen] = useState<ScreenName>('Splash');
+  // Navigation history stack: keeps true chronological breadcrumbs so back buttons
+  // always return to the actual prior screen without getting trapped in loops.
   const [history, setHistory] = useState<StackEntry[]>([]);
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null);
   const [selectedContentDetail, setSelectedContentDetail] = useState<ContentDetailItem | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null);
+  const [selectedCrop, setSelectedCrop] = useState<CropItem | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
@@ -187,40 +241,48 @@ export default function App(): React.JSX.Element {
     [screen, params, currentTab],
   );
 
-  const goBack = useCallback(() => {
-    if (history.length > 0) {
-      setHistory((prev) => {
-        const nextHistory = [...prev];
-        const previous = nextHistory.pop();
-        if (previous) {
-          setScreen(previous.screen);
-          setParams(previous.params || {});
-          if (previous.tab && previous.screen === 'MainTabs') {
-            setCurrentTab(previous.tab);
+  const goBack = useCallback(
+    (fallbackScreen?: ScreenName) => {
+      if (history.length > 0) {
+        setHistory((prev) => {
+          const nextHistory = [...prev];
+          const previous = nextHistory.pop();
+          if (previous) {
+            setScreen(previous.screen);
+            setParams(previous.params || {});
+            if (previous.tab && previous.screen === 'MainTabs') {
+              setCurrentTab(previous.tab);
+            }
           }
+          return nextHistory;
+        });
+      } else {
+        if (fallbackScreen) {
+          setScreen(fallbackScreen);
+          setParams({});
+          return;
         }
-        return nextHistory;
-      });
-    } else {
-      const authScreens: ScreenName[] = [
-        'Login',
-        'RoleSelection',
-        'Register',
-        'Otp',
-        'ForgotPassword',
-        'ResetPassword',
-        'PasswordChangedSuccess',
-        'ApplicationStatus',
-      ];
-      if (authScreens.includes(screen)) {
-        setScreen('Welcome');
-        setParams({});
-      } else if (screen !== 'MainTabs' && screen !== 'Splash' && screen !== 'Welcome') {
-        setScreen('MainTabs');
-        setParams({});
+        const authScreens: ScreenName[] = [
+          'Login',
+          'RoleSelection',
+          'Register',
+          'Otp',
+          'ForgotPassword',
+          'ResetPassword',
+          'PasswordChangedSuccess',
+          'ApplicationStatus',
+        ];
+        if (authScreens.includes(screen)) {
+          setScreen('Welcome');
+          setParams({});
+        } else if (screen !== 'MainTabs' && screen !== 'Splash' && screen !== 'Welcome') {
+          setScreen('MainTabs');
+          setParams({});
+        }
       }
-    }
-  }, [history, screen]);
+    },
+    [history, screen],
+  );
 
   useEffect(() => {
     const onBackPress = () => {
@@ -335,9 +397,15 @@ export default function App(): React.JSX.Element {
         ) : screen === 'EditCertification' && selectedCertification ? (
           <EditCertificationScreen
             certification={selectedCertification}
-            onCancel={goBack}
-            onSave={goBack}
-            onDelete={goBack}
+            onCancel={() => navigate('Certifications')}
+            onSave={(updated) => {
+              if (updated) updateCertificationLocally(updated);
+              navigate('Certifications');
+            }}
+            onDelete={(id) => {
+              if (id) deleteCertificationLocally(id);
+              navigate('Certifications');
+            }}
           />
         ) : screen === 'CreateListing' ? (
           <CreateListingScreen
@@ -345,7 +413,10 @@ export default function App(): React.JSX.Element {
               setCurrentTab('Listings');
               navigate('MainTabs');
             }}
-            onCancel={goBack}
+            onCancel={() => {
+              setCurrentTab('Listings');
+              navigate('MainTabs');
+            }}
             onNext={() => navigate('CreateListingStep2')}
           />
         ) : screen === 'CreateListingStep2' ? (
@@ -375,17 +446,17 @@ export default function App(): React.JSX.Element {
         ) : screen === 'ListingDetail' ? (
           <ListingDetailScreen onBack={goBack} />
         ) : screen === 'FMBSketch' ? (
-          <FMBSketchScreen 
-            onNavigateBack={goBack} 
+          <FMBSketchScreen
+            onNavigateBack={goBack}
             onNavigateToFieldContext={() => navigate('FieldContext')}
           />
         ) : screen === 'FieldContext' ? (
-          <FieldContextScreen 
+          <FieldContextScreen
             onNavigateBack={goBack}
             onNavigateToZones={() => navigate('Zones')}
           />
         ) : screen === 'Zones' ? (
-          <ZonesScreen 
+          <ZonesScreen
             onNavigateBack={goBack}
             onNavigateToAddZone={() => navigate('AddZone')}
             onSave={goBack}
@@ -441,12 +512,52 @@ export default function App(): React.JSX.Element {
         ) : screen === 'CropManagement' ? (
           <CropManagementScreen
             onBack={goBack}
+            onNavigateToInputManagement={() => navigate('InputManagement')}
+            onNavigateToSoilManagement={() => navigate('SoilManagement')}
+            onNavigateToPestManagement={() => navigate('LogPestTreatment')}
+          />
+        ) : screen === 'InputManagement' ? (
+          <InputManagementScreen
+            onBack={goBack}
+            onNavigateToLogFertigation={(crop) => {
+              if (crop) setSelectedCrop(crop);
+              navigate('LogFertigation');
+            }}
+            onNavigateToLogPestTreatment={(crop) => {
+              if (crop) setSelectedCrop(crop);
+              navigate('LogPestTreatment');
+            }}
+            onNavigateToLogInput={(crop, inputType) => {
+              if (crop) setSelectedCrop(crop);
+              if (inputType === 'Fertigation') {
+                navigate('LogFertigation');
+              } else if (inputType === 'Pest Treatment') {
+                navigate('LogPestTreatment');
+              } else {
+                navigate('AddInputApplied', { initialInputType: inputType });
+              }
+            }}
+            onNavigateToFullHistory={() => navigate('CropInputsApplied')}
+          />
+        ) : screen === 'LogFertigation' ? (
+          <LogFertigationScreen
+            crop={selectedCrop}
+            onBack={goBack}
+            onSave={() => goBack('InputManagement')}
+          />
+        ) : screen === 'LogPestTreatment' ? (
+          <LogPestTreatmentScreen
+            crop={selectedCrop}
+            onBack={goBack}
+            onSave={() => goBack('InputManagement')}
           />
         ) : screen === 'FarmManagement' ? (
           <FarmManagementScreen
-            onBack={goBack}
+            onBack={() => goBack('MainTabs')}
             onNavigateToAudits={() => navigate('Audits')}
             onNavigateToDiary={() => navigate('FarmDiary')}
+            onNavigateToCertifications={() => navigate('Certifications')}
+            onNavigateToProduceCalendar={() => navigate('ProduceCalendar')}
             onNavigateToWeather={() => navigate('Weather')}
             onNavigateToCalendar={() => navigate('TohfaCalendar')}
             onNavigateToActiveCrops={() => navigate('ActiveCrops')}
@@ -455,6 +566,64 @@ export default function App(): React.JSX.Element {
             onNavigateToWorkforce={() => navigate('Workforce')}
             onNavigateToLivestock={() => navigate('Livestock')}
             onNavigateToLearningHub={() => navigate('LearningHub')}
+            onNavigateToSoilManagement={() => navigate('SoilManagement')}
+          />
+        ) : screen === 'ProduceCalendar' ? (
+          <ProduceCalendarScreen
+            onBack={() => goBack('FarmManagement')}
+            onNavigateToNewCrop={() => navigate('NewCrop')}
+            onNavigateToCropDetail={(item) => {
+              setSelectedCrop(item);
+              navigate('CropDetail');
+            }}
+          />
+        ) : screen === 'CropDetail' ? (
+          <CropDetailScreen
+            crop={selectedCrop}
+            onBack={() => goBack('ProduceCalendar')}
+            onEdit={() => navigate('NewCrop')}
+            onNavigateToDiary={() => navigate('CropDiaryEntries')}
+            onNavigateToInputs={() => navigate('CropInputsApplied')}
+            onNavigateToWorkforce={() => navigate('CropWorkforceHours')}
+            onNavigateToNPK={() => navigate('CropNPKContribution')}
+          />
+        ) : screen === 'CropDiaryEntries' ? (
+          <CropDiaryEntriesScreen
+            crop={selectedCrop}
+            onBack={() => goBack('CropDetail')}
+            onNewEntry={() => navigate('AddInputApplied', { fromDiary: '1', initialInputType: 'Fertigation' })}
+          />
+        ) : screen === 'CropInputsApplied' ? (
+          <CropInputsAppliedScreen
+            crop={selectedCrop}
+            onBack={goBack}
+            onNewInput={() => navigate('AddInputApplied')}
+          />
+        ) : screen === 'AddInputApplied' ? (
+          <AddInputAppliedScreen
+            crop={selectedCrop}
+            initialInputType={params['initialInputType'] as 'Fertigation' | 'Pest Treatment' | undefined}
+            onBack={goBack}
+            onSave={goBack}
+          />
+        ) : screen === 'CropWorkforceHours' ? (
+          <CropWorkforceHoursScreen
+            crop={selectedCrop}
+            onBack={() => goBack('CropDetail')}
+          />
+        ) : screen === 'CropNPKContribution' ? (
+          <CropNPKContributionScreen
+            crop={selectedCrop}
+            onBack={() => goBack('CropDetail')}
+          />
+        ) : screen === 'NewCrop' ? (
+          <NewCropScreen
+            onBack={() => goBack('ProduceCalendar')}
+            onCancel={() => goBack('ProduceCalendar')}
+            onSaveCrop={(newCrop) => {
+              addProduceCropLocally(newCrop);
+              goBack('ProduceCalendar');
+            }}
           />
         ) : screen === 'Livestock' ? (
           <LivestockScreen
@@ -530,39 +699,118 @@ export default function App(): React.JSX.Element {
             onSave={() => goBack()}
           />
         ) : screen === 'FarmDiary' ? (
-          <FarmDiaryScreen 
-            onBack={goBack} 
-            onNavigateToNewEntry={() => navigate('NewFarmDiaryEntry')} 
+          <FarmDiaryScreen
+            onBack={goBack}
+            onNavigateToNewEntry={() => navigate('NewFarmDiaryEntry')}
             onNavigateToCalendar={() => navigate('DiaryCalendar')}
           />
         ) : screen === 'DiaryCalendar' ? (
-          <DiaryCalendarScreen 
-            onBack={goBack} 
+          <DiaryCalendarScreen
+            onBack={goBack}
           />
         ) : screen === 'NewFarmDiaryEntry' ? (
-          <NewFarmDiaryEntryScreen 
-            onBack={goBack} 
-            onNext={() => navigate('NewFarmDiaryEntryStep2')} 
+          <NewFarmDiaryEntryScreen
+            crop={selectedCrop}
+            onBack={goBack}
+            onNext={(cat) => {
+              setParams((prev) => ({ ...prev, diaryCategory: cat }));
+              if (cat.toLowerCase() === 'nutrients') {
+                navigate('AddInputApplied', { initialInputType: 'Fertigation', fromDiary: '1' });
+              } else if (cat.toLowerCase() === 'crop care') {
+                navigate('AddInputApplied', { initialInputType: 'Pest Treatment', fromDiary: '1' });
+              } else {
+                navigate('NewFarmDiaryEntryStep2', { diaryCategory: cat });
+              }
+            }}
           />
         ) : screen === 'NewFarmDiaryEntryStep2' ? (
-          <NewFarmDiaryEntryStep2Screen 
-            onBack={goBack} 
-            onNext={() => navigate('NewFarmDiaryEntryStep3')} 
+          <NewFarmDiaryEntryStep2Screen
+            crop={selectedCrop}
+            category={typeof params['diaryCategory'] === 'string' ? params['diaryCategory'] : 'Crop Care'}
+            onChangeCategory={goBack}
+            onBack={goBack}
+            onNext={() => navigate('NewFarmDiaryEntryStep3')}
           />
         ) : screen === 'NewFarmDiaryEntryStep3' ? (
-          <NewFarmDiaryEntryStep3Screen 
-            onBack={goBack} 
-            onSave={() => navigate('FarmDiary')} 
+          <NewFarmDiaryEntryStep3Screen
+            crop={selectedCrop}
+            onBack={goBack}
+            onDone={() => {
+              if (selectedCrop) {
+                navigate('CropDiaryEntries');
+              } else {
+                navigate('FarmDiary');
+              }
+            }}
+            onSave={() => {
+              if (selectedCrop) {
+                navigate('CropDiaryEntries');
+              } else {
+                navigate('FarmDiary');
+              }
+            }}
           />
         ) : screen === 'FarmRatings' ? (
           <FarmRatingsScreen onNavigateBack={goBack} />
+        ) : screen === 'SoilManagement' ? (
+          <SoilManagementScreen
+            onBack={goBack}
+            onNavigateToSoilTestRecords={() => navigate('SoilTestRecords')}
+            onNavigateToSoilHealthTracker={() => navigate('SoilHealthTracker')}
+            onNavigateToSoilTypeClassification={() => navigate('SoilTypeClassification')}
+            onNavigateToAmendments={() => navigate('SoilAmendmentsLog')}
+            onNavigateToCropRotation={() => navigate('CropRotation')}
+            onNavigateToMoistureTracking={() => navigate('SoilMoistureTracking')}
+            onNavigateToErosionConservation={() => navigate('ErosionConservation')}
+            onNavigateToExportReports={() => navigate('ExportSoilReports')}
+            onNavigateToSoilTest={() => navigate('SoilTest')}
+            onNavigateToNewSoilTest={() => navigate('UploadNewSoilTest')}
+          />
+        ) : screen === 'SoilTestRecords' ? (
+          <SoilTestRecordsScreen
+            onBack={goBack}
+            onNavigateToRecordDetail={() => navigate('SoilTest')}
+            onUploadNewTest={() => navigate('UploadNewSoilTest')}
+          />
+        ) : screen === 'SoilHealthTracker' ? (
+          <SoilHealthTrackerScreen
+            onBack={goBack}
+          />
+        ) : screen === 'SoilTypeClassification' ? (
+          <SoilTypeClassificationScreen
+            onBack={goBack}
+          />
+        ) : screen === 'SoilAmendmentsLog' ? (
+          <SoilAmendmentsLogScreen
+            onBack={goBack}
+            onLogAmendment={() => navigate('UploadNewSoilTest')}
+          />
+        ) : screen === 'CropRotation' ? (
+          <CropRotationScreen
+            onBack={goBack}
+          />
+        ) : screen === 'SoilMoistureTracking' ? (
+          <SoilMoistureTrackingScreen
+            onBack={goBack}
+          />
+        ) : screen === 'ErosionConservation' ? (
+          <ErosionConservationScreen
+            onBack={goBack}
+          />
+        ) : screen === 'ExportSoilReports' ? (
+          <ExportSoilReportsScreen
+            onBack={goBack}
+          />
+        ) : screen === 'UploadNewSoilTest' || screen === 'NewSoilTest' ? (
+          <UploadNewSoilTestScreen
+            onBack={goBack}
+            onSave={goBack}
+          />
         ) : screen === 'SoilTest' ? (
           <SoilTestScreen
             onNavigateBack={goBack}
-            onNavigateToNewSoilTest={() => navigate('NewSoilTest')}
+            onNavigateToNewSoilTest={() => navigate('UploadNewSoilTest')}
           />
-        ) : screen === 'NewSoilTest' ? (
-          <NewSoilTestScreen onNavigateBack={goBack} onSave={goBack} />
         ) : screen === 'Weather' ? (
           <WeatherScreen
             onNavigateBack={goBack}
@@ -572,27 +820,27 @@ export default function App(): React.JSX.Element {
             onNavigateBack={goBack}
           />
         ) : screen === 'MyListings' ? (
-          <MyListingsScreen 
-            onNavigateBack={goBack} 
+          <MyListingsScreen
+            onNavigateBack={goBack}
             onNavigateToListingDetail={() => navigate('ListingDetail')}
           />
         ) : screen === 'TohfaCalendar' ? (
-          <TohfaCalendarScreen 
-            onNavigateBack={goBack} 
+          <TohfaCalendarScreen
+            onNavigateBack={goBack}
             onNavigateToCropInsight={() => navigate('CropPlanningInsight')}
           />
         ) : screen === 'CropPlanningInsight' ? (
           <CropPlanningInsightScreen onNavigateBack={goBack} />
         ) : screen === 'FarmInventory' ? (
-          <FarmInventoryScreen 
-            onNavigateBack={goBack} 
+          <FarmInventoryScreen
+            onNavigateBack={goBack}
             onNavigateToCategory={(category) => {
               if (category === 'Tools') navigate('ToolsList');
             }}
           />
         ) : screen === 'ToolsList' ? (
-          <ToolsListScreen 
-            onNavigateBack={goBack} 
+          <ToolsListScreen
+            onNavigateBack={goBack}
             onNavigateToAddTool={() => navigate('AddTool')}
           />
         ) : screen === 'AddTool' ? (
@@ -600,8 +848,8 @@ export default function App(): React.JSX.Element {
         ) : screen === 'DailyAttendance' ? (
           <DailyAttendanceScreen onNavigateBack={goBack} />
         ) : screen === 'LearningHub' ? (
-          <LearningHubScreen 
-            onBack={goBack} 
+          <LearningHubScreen
+            onBack={goBack}
             onNavigateToContentDetail={(content) => {
               setSelectedContentDetail(content);
               navigate('ContentDetail');
@@ -681,6 +929,14 @@ export default function App(): React.JSX.Element {
                       },
                     } as any);
                     navigate('CounterOffer');
+                  }}
+                  onNavigateToProduceCalendar={() => navigate('ProduceCalendar')}
+                  onNavigateToCropDetail={(cropName: string) => {
+                    const found = localProduceCropsCache.find(
+                      (c: CropItem) => c.name.toLowerCase() === cropName.toLowerCase(),
+                    ) ?? localProduceCropsCache[0];
+                    setSelectedCrop(found ?? null);
+                    navigate('CropDetail');
                   }}
                 />
               ) : currentTab === 'Listings' ? (

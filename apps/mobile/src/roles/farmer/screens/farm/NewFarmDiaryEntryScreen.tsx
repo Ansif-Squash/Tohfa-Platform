@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -8,41 +9,81 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
-import { authPalette as P, colors } from '../../theme';
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import { authPalette as P } from '../../theme';
+import type { CropItem } from './ProduceCalendarScreen';
 
-// --- Icons ---
-function ArrowBackIcon({ size = 20, color = P.twGreen700 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
+// ─────────────────────────────────────────────
+// Inline Vector Icons (strictly no emoji, no raw hex)
+// ─────────────────────────────────────────────
 
-function FieldSquareIcon({ size = 18, color = P.twGreen700 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="4" y="4" width="16" height="16" rx="2" stroke={color} strokeWidth="2.5" />
-    </Svg>
-  );
-}
-
-function PlantPotIcon({ size = 18, color = P.twGreen700 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 15V8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M8 12c0-2 2-4 4-4s4 2 4 4" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M7 15h10l-1.5 6h-7L7 15z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function LeafOutlineIcon({ size = 20, color = P.twGreen700 }: { size?: number; color?: string }) {
+function CloseIcon({ size = 20, color = P.twGray800 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M12 22C12 22 4 16 4 10a6 6 0 0112 0c0 1.5-.5 3-1.5 4M12 22c0 0 8-6 8-12a6 6 0 00-12 0c0 1.5.5 3 1.5 4"
+        d="M18 6L6 18M6 6l12 12"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function LandPrepIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 17l6-6 4 4 8-8"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M14 7h7v7"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M3 21h18"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function SowingIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 21V10M12 10c0-4 3-6 7-6 0 4-2 7-7 6zM12 14c0-3.5-2.5-5-6-5 0 3.5 2 5.5 6 5z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M5 21h14"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function NutrientsIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="2" />
+      <Path
+        d="M12 7c-2 2-3 4-3 5.5a3 3 0 006 0C15 11 14 9 12 7z"
         stroke={color}
         strokeWidth="2"
         strokeLinecap="round"
@@ -52,319 +93,343 @@ function LeafOutlineIcon({ size = 20, color = P.twGreen700 }: { size?: number; c
   );
 }
 
-function CalendarOutlineIcon({ size = 20, color = P.twGray500 }: { size?: number; color?: string }) {
+function CropCareIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="4" width="18" height="18" rx="2" stroke={color} strokeWidth="2" />
-      <Line x1="16" y1="2" x2="16" y2="6" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <Line x1="8" y1="2" x2="8" y2="6" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <Line x1="3" y1="10" x2="21" y2="10" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <Line x1="8" y1="14" x2="16" y2="14" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <Line x1="8" y1="18" x2="12" y2="18" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Path
+        d="M12 22C6 22 4 17 4 12 4 6.5 8.5 2 12 2c3.5 0 8 4.5 8 10 0 5-2 10-8 10z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M12 22V10M12 14c3-1.5 5-1.5 5-1.5"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
-function ChevronDownIcon({ size = 18, color = P.twGray700 }: { size?: number; color?: string }) {
+function MonitoringIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 9l6 6 6-6" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <Line x1="18" y1="20" x2="18" y2="10" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+      <Line x1="12" y1="20" x2="12" y2="4" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+      <Line x1="6" y1="20" x2="6" y2="14" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+      <Path
+        d="M4 11l4-4 4 4 7-7"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
-function ArrowRightIcon({ size = 18, color = P.white }: { size?: number; color?: string }) {
+function HarvestingIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 12h14M12 5l7 7-7 7" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx="7" cy="17" r="3" stroke={color} strokeWidth="2" />
+      <Circle cx="17" cy="17" r="3" stroke={color} strokeWidth="2" />
+      <Path
+        d="M4 17H2V9h5v8M10 17h4M14 9h7v8M9 9h5v8M14 12h7M14 9l2-4h3l2 4"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
-// --- Component ---
-interface NewFarmDiaryEntryScreenProps {
+function MaintenanceIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function OtherIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="4" y="4" width="16" height="16" rx="3" stroke={color} strokeWidth="2" />
+      <Line x1="8" y1="9" x2="16" y2="9" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Line x1="8" y1="13" x2="16" y2="13" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Line x1="8" y1="17" x2="12" y2="17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Categories Data
+// ─────────────────────────────────────────────
+
+interface CategoryItem {
+  id: string;
+  label: string;
+  count: string;
+  IconComponent: React.ComponentType<{ size?: number; color?: string }>;
+}
+
+const CATEGORIES: CategoryItem[] = [
+  { id: 'land_prep', label: 'Land Prep', count: '4 activity types', IconComponent: LandPrepIcon },
+  { id: 'sowing', label: 'Sowing', count: '3 activity types', IconComponent: SowingIcon },
+  { id: 'nutrients', label: 'Nutrients', count: '3 activity types', IconComponent: NutrientsIcon },
+  { id: 'crop_care', label: 'Crop Care', count: '5 activity types', IconComponent: CropCareIcon },
+  { id: 'monitoring', label: 'Monitoring', count: '3 activity types', IconComponent: MonitoringIcon },
+  { id: 'harvesting', label: 'Harvesting', count: '2 activity types', IconComponent: HarvestingIcon },
+  { id: 'maintenance', label: 'Maintenance', count: '2 activity types', IconComponent: MaintenanceIcon },
+  { id: 'other', label: 'Other', count: '1 activity type', IconComponent: OtherIcon },
+];
+
+// ─────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────
+
+export interface NewFarmDiaryEntryScreenProps {
+  crop?: CropItem | null;
+  selectedCategory?: string;
   onBack?: () => void;
-  onNext?: () => void;
+  onNext?: (category: string) => void;
 }
 
-export function NewFarmDiaryEntryScreen({ onBack, onNext }: NewFarmDiaryEntryScreenProps): React.JSX.Element {
+export function NewFarmDiaryEntryScreen({
+  crop: _crop,
+  selectedCategory: initialCategory = 'Crop Care',
+  onBack,
+  onNext,
+}: NewFarmDiaryEntryScreenProps): React.JSX.Element {
+  const [selectedCat, setSelectedCat] = useState<string>(initialCategory);
+
+  const handleSelect = (category: CategoryItem) => {
+    setSelectedCat(category.label);
+    if (onNext) {
+      onNext(category.label);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={P.white} />
 
-      {/* --- Header --- */}
+      {/* ── Top Header ── */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-            <ArrowBackIcon size={20} color={P.twGreen700} />
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onBack}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <CloseIcon size={18} color={P.twGray800} />
           </TouchableOpacity>
-          <View style={styles.headerTitleCol}>
-            <Text style={styles.headerTitle}>New Entry</Text>
-            <Text style={styles.headerSubtitle}>Step 1 of 3 · Field & Crop</Text>
-          </View>
-          <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Progress Bar */}
-        <View style={styles.progressRow}>
-          <View style={[styles.progressSegment, styles.progressSegmentActive]} />
-          <View style={styles.progressSegment} />
-          <View style={styles.progressSegment} />
+          <View style={styles.headerTitleGroup}>
+            <Text style={styles.headerTitle}>New Diary Entry</Text>
+            <Text style={styles.headerSubtitle}>Choose a category</Text>
+          </View>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.instructionText}>
-          Pick the field and crop this entry belongs to. Everything after this is scoped to your choice.
-        </Text>
+      {/* ── 2-Column Categories Grid ── */}
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.grid}>
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCat.toLowerCase() === cat.label.toLowerCase();
+            const Icon = cat.IconComponent;
 
-        {/* --- Form --- */}
-        <View style={styles.formGroup}>
-          <View style={styles.labelRow}>
-            <FieldSquareIcon size={16} color={P.twGreen700} />
-            <Text style={styles.labelText}>Field</Text>
-            <Text style={styles.requiredAsterisk}> *</Text>
-          </View>
-          
-          <TouchableOpacity style={[styles.selectBox, styles.selectBoxActive]} activeOpacity={0.8}>
-            <Text style={styles.selectText}>Zone 2 — Lower Slope</Text>
-            <ChevronDownIcon size={20} color={P.twGreen700} />
-          </TouchableOpacity>
-          <Text style={styles.helperText}>From your registered FMB zones (Screen 19).</Text>
-        </View>
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                style={[
+                  styles.categoryCard,
+                  isSelected ? styles.categoryCardSelected : styles.categoryCardUnselected,
+                ]}
+                activeOpacity={0.85}
+                onPress={() => handleSelect(cat)}
+                accessibilityRole="button"
+                accessibilityLabel={`${cat.label}, ${cat.count}`}
+              >
+                <View
+                  style={[
+                    styles.iconBox,
+                    isSelected ? styles.iconBoxSelected : styles.iconBoxUnselected,
+                  ]}
+                >
+                  <Icon size={22} color={isSelected ? P.deepGreen : P.twGreen700} />
+                </View>
 
-        <View style={styles.formGroup}>
-          <View style={styles.labelRow}>
-            <PlantPotIcon size={16} color={P.twGreen700} />
-            <Text style={styles.labelText}>Crop</Text>
-            <Text style={styles.requiredAsterisk}> *</Text>
-          </View>
-          
-          <TouchableOpacity style={styles.selectBox} activeOpacity={0.8}>
-            <Text style={styles.selectText}>Tomato</Text>
-            <ChevronDownIcon size={20} color={P.twGray500} />
-          </TouchableOpacity>
-          <Text style={styles.helperText}>Enabled once a field is chosen — this zone has one active crop.</Text>
-        </View>
+                <Text
+                  style={[
+                    styles.categoryTitle,
+                    isSelected ? styles.categoryTitleSelected : styles.categoryTitleUnselected,
+                  ]}
+                >
+                  {cat.label}
+                </Text>
 
-        {/* --- Info Cards --- */}
-        <View style={styles.infoCardsContainer}>
-          <View style={styles.infoCard}>
-            <LeafOutlineIcon size={22} color={P.twGreen700} />
-            <View style={styles.infoCardTextCol}>
-              <Text style={styles.infoCardLabel}>CROP DURATION</Text>
-              <Text style={styles.infoCardValue}>62 days old</Text>
-              <Text style={styles.infoCardSub}>Planted 15 May · harvest ~24 Jul 2026</Text>
-            </View>
-          </View>
-
-          <View style={styles.infoCard}>
-            <CalendarOutlineIcon size={22} color={P.twGray500} />
-            <View style={styles.infoCardTextCol}>
-              <Text style={styles.infoCardLabel}>DATE</Text>
-              <Text style={styles.infoCardValue}>Today · 16 Jul 2026</Text>
-            </View>
-            <View style={styles.autoPill}>
-              <Text style={styles.autoPillText}>AUTO</Text>
-            </View>
-          </View>
+                <Text
+                  style={[
+                    styles.categoryCount,
+                    isSelected ? styles.categoryCountSelected : styles.categoryCountUnselected,
+                  ]}
+                >
+                  {cat.count}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
-
-      {/* --- Bottom Action --- */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.nextBtn} onPress={onNext} activeOpacity={0.85}>
-          <Text style={styles.nextBtnText}>Next · Activity Type</Text>
-          <ArrowRightIcon size={18} color={P.white} />
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
 
-// --- Styles ---
+// ─────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  screen: {
+  safeArea: {
     flex: 1,
-    backgroundColor: P.lightSurfaceAlt, // #F8F9F3
+    backgroundColor: P.white,
   },
   header: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 10,
     backgroundColor: P.white,
-    paddingTop: 16,
     borderBottomWidth: 1,
-    borderBottomColor: P.twGray200,
+    borderBottomColor: P.twGray100,
   },
-  headerTopRow: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    gap: 12,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: P.twGray200,
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    backgroundColor: P.twGray50,
+    borderWidth: 1,
+    borderColor: P.twGray200,
   },
-  headerTitleCol: {
+  headerTitleGroup: {
     flex: 1,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: P.twGray900,
+    letterSpacing: -0.2,
   },
   headerSubtitle: {
     fontSize: 12,
+    fontWeight: '500',
     color: P.twGray500,
-    marginTop: 2,
+    marginTop: 1,
   },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: P.twGray500,
-  },
-  progressRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 6,
-    marginBottom: -1, // overlap the border
-  },
-  progressSegment: {
+  scrollContainer: {
     flex: 1,
-    height: 3,
-    backgroundColor: P.twGray200,
-    borderRadius: 1.5,
-  },
-  progressSegmentActive: {
-    backgroundColor: P.twGreen700,
+    backgroundColor: P.white,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  instructionText: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: P.twGray600,
-    marginBottom: 32,
-  },
-  formGroup: {
-    marginBottom: 24,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  labelText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: P.twGray800,
-    marginLeft: 8,
-  },
-  requiredAsterisk: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: P.twRed600,
-  },
-  selectBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: P.white,
-    borderWidth: 1.5,
-    borderColor: P.twGray300,
-    borderRadius: 12,
     paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  categoryCard: {
+    width: '48%',
+    borderRadius: 14,
     paddingVertical: 14,
-  },
-  selectBoxActive: {
-    borderColor: P.twGreen700,
-  },
-  selectText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: P.twGray900,
-  },
-  helperText: {
-    fontSize: 12,
-    color: P.twGray400,
-    marginTop: 8,
-    marginLeft: 4,
-  },
-  infoCardsContainer: {
-    marginTop: 8,
-    gap: 16,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#F5F5EC', // off-white
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
-  },
-  infoCardTextCol: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  infoCardLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: P.twGray500,
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  infoCardValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: P.twGray900,
-  },
-  infoCardSub: {
-    fontSize: 12,
-    color: P.twGray500,
-    marginTop: 4,
-  },
-  autoPill: {
-    backgroundColor: '#EAEAD8',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  autoPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: P.twGray600,
-  },
-  bottomBar: {
-    backgroundColor: P.white,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: P.twGray200,
-  },
-  nextBtn: {
-    flexDirection: 'row',
+    paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: P.twGreen700,
-    borderRadius: 12,
-    paddingVertical: 16,
-    gap: 8,
   },
-  nextBtnText: {
-    fontSize: 16,
+  categoryCardUnselected: {
+    backgroundColor: P.white,
+    borderWidth: 1,
+    borderColor: P.twGray200,
+    shadowColor: P.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  categoryCardSelected: {
+    backgroundColor: P.mintTintBg,
+    borderWidth: 2,
+    borderColor: P.deepGreen,
+    shadowColor: P.deepGreen,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  iconBoxUnselected: {
+    backgroundColor: P.twGreen50,
+  },
+  iconBoxSelected: {
+    backgroundColor: P.twGreen100,
+  },
+  categoryTitle: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  categoryTitleUnselected: {
     fontWeight: '700',
-    color: P.white,
+    color: P.twGray900,
+  },
+  categoryTitleSelected: {
+    fontWeight: '800',
+    color: P.deepGreen,
+  },
+  categoryCount: {
+    fontSize: 11,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  categoryCountUnselected: {
+    fontWeight: '500',
+    color: P.twGray500,
+  },
+  categoryCountSelected: {
+    fontWeight: '600',
+    color: P.twGreen700,
   },
 });

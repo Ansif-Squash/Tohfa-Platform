@@ -759,8 +759,8 @@ export function LearningHubScreen({
                   <CalendarCheckIcon size={14} color="#6B7280" />
                   <Text style={styles.trainingDetailText}>{training.time}</Text>
                 </View>
-                <Text style={styles.trainingLocationText}>📍 {training.location}</Text>
-                <Text style={styles.trainingInstructorText}>👨‍🌾 Instructor: {training.instructor}</Text>
+                <Text style={styles.trainingLocationText}>Location: {training.location}</Text>
+                <Text style={styles.trainingInstructorText}>Instructor: {training.instructor}</Text>
 
                 <TouchableOpacity
                   style={[
@@ -1221,6 +1221,31 @@ const styles = StyleSheet.create({
   },
   groupActionBtnTextJoined: {
     color: '#2E7D32',
+  },
+  joinedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EAF3DE',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  joinedBadgeText: {
+    color: '#1E5E2B',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  joinButton: {
+    backgroundColor: '#2E7D32',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  joinButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   // Trainings Tab

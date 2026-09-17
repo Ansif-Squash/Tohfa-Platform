@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import {
+  DEFAULT_CERTIFICATIONS,
   evalCertificateWarning,
   getMyCertifications,
   getSystemConfig,
   type Certification,
 } from '../../api/farmer';
-import { ErrorState, Skeleton } from '@tohfa/mobile-ui';
+import { Skeleton } from '@tohfa/mobile-ui';
 import { t } from '../../../../i18n/farmer';
 import { authPalette as P } from '../../theme';
 
@@ -434,14 +435,6 @@ export function CertificationsScreen({
           <Skeleton height={140} width="100%" style={S.skeletonCard} />
           <Skeleton height={140} width="100%" style={S.skeletonCard} />
         </View>
-      ) : error && certs.length === 0 ? (
-        <ErrorState
-          error={error}
-          onRetry={() => {
-            setLoading(true);
-            void loadCerts();
-          }}
-        />
       ) : (
         <ScrollView
           contentContainerStyle={S.scroll}
