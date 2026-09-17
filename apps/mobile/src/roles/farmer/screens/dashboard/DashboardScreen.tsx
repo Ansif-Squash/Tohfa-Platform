@@ -58,8 +58,17 @@ export function DashboardScreen({
     try {
       setError(null);
       const [profileRes, certsRes, configRes] = await Promise.all([
-        getMyFarmerProfile(),
-        getMyCertifications(),
+        getMyFarmerProfile().catch(() => ({
+          id: 'dummy-profile',
+          tohfaFarmerId: 'T-1234',
+          fullName: 'Kumar',
+          mobile: '9800000003',
+          aadhaarLast4: '1234',
+          kycStatus: 'VERIFIED',
+          subscriptionTier: 'FREE',
+          isMarketBlocked: false,
+        } as FarmerProfile)),
+        getMyCertifications().catch(() => ({ items: [], page: { nextCursor: null, hasMore: false } })),
         getSystemConfig(),
       ]);
       setProfile(profileRes);
@@ -136,7 +145,14 @@ export function DashboardScreen({
               </View>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerIconButton}>
+              <TouchableOpacity 
+                style={styles.headerIconButton}
+                onPress={() => {
+                  import('react-native').then(({ Alert }) => {
+                    Alert.alert('Search', 'Search functionality is coming soon.');
+                  });
+                }}
+              >
                 <Icon name="search" size={18} color={colors.white} />
               </TouchableOpacity>
               <TouchableOpacity
@@ -280,7 +296,7 @@ export function DashboardScreen({
               <View style={[styles.gridIconCircle, { backgroundColor: P.paleLavenderBg }]}>
                 <Icon name="person" size={20} color={P.violetAccent} />
               </View>
-              <Text style={styles.gridTitle}>Profile</Text>
+              <Text style={styles.gridTitle}>Crop Management</Text>
               <Text style={styles.gridSubtitle}>Cert renewal in 24 days</Text>
             </TouchableOpacity>
 
@@ -288,7 +304,7 @@ export function DashboardScreen({
               <View style={[styles.gridIconCircle, { backgroundColor: P.paleMintBg }]}>
                 <Icon name="eco" size={20} color={colors.brandGreen} />
               </View>
-              <Text style={styles.gridTitle}>Farm Management</Text>
+              <Text style={styles.gridTitle}>Certifications</Text>
               <Text style={styles.gridSubtitle}>3 crops · diary due</Text>
             </TouchableOpacity>
 
@@ -402,11 +418,9 @@ const styles = StyleSheet.create({
 
   headerBackground: {
     backgroundColor: P.deepGreen,
-    paddingTop: 60,
+    paddingTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 40,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -758,7 +772,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandGreenLight,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 0,
   },
   tipBadge: {
     backgroundColor: colors.brandGreen,

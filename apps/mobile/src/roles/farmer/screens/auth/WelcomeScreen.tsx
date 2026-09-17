@@ -8,7 +8,7 @@ import tohfaLogo from '../../assets/tohfa-logo.png';
 import welcomeFarmerVeggies from '../../assets/welcome-bg.jpg';
 
 interface WelcomeScreenProps {
-  onNavigate: (screen: 'Login' | 'Register') => void;
+  onNavigate: (screen: 'Login' | 'Register' | 'RoleSelection') => void;
 }
 
 type LangCode = 'en' | 'ta';
@@ -54,7 +54,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate }) => {
         resizeMode="cover"
         accessibilityLabel={t('farmer.auth.welcome.subtitle')}
       >
-        <GradientOverlay stops={WELCOME_GRADIENT_STOPS} />
+        <GradientOverlay stops={WELCOME_GRADIENT_STOPS} bands={150} />
 
         {/* Top bar: wordmark + language pill */}
         <View style={styles.topBar}>
@@ -105,7 +105,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate }) => {
           />
           <Button
             title={t('farmer.auth.welcome.createAccount')}
-            onPress={() => onNavigate('Register')}
+            onPress={() => onNavigate('RoleSelection')}
             style={styles.createButton}
             textStyle={styles.createButtonText}
           />
@@ -128,10 +128,11 @@ const styles = StyleSheet.create({
   },
   topBar: {
     position: 'absolute',
-    top: 62,
+    top: 22,
     left: 24,
     right: 24,
     zIndex: 30,
+    elevation: 30,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -157,6 +158,8 @@ const styles = StyleSheet.create({
   },
   langWrap: {
     position: 'relative',
+    zIndex: 50,
+    elevation: 50,
   },
   langPill: {
     flexDirection: 'row',
@@ -213,14 +216,14 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   title: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '800',
     letterSpacing: -0.5,
     color: P.white,
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 18,
     lineHeight: 21,
     color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 28,
@@ -250,7 +253,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   legal: {
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 15,
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',

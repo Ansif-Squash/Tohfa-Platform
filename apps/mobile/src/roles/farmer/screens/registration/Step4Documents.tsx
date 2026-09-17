@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import DocumentPicker, { DocumentPickerResponse } from 'react-native-document-picker';
 import { useTheme, authPalette as P } from '../../theme';
 import { ErrorState, Icon } from '@tohfa/mobile-ui';
 import { validateStep } from './validation';
@@ -17,6 +18,8 @@ export const Step4Documents: React.FC<Step4Props> = ({ initialData, onSave, onBa
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [certFile, setCertFile] = useState<DocumentPickerResponse | null>(null);
+
   // FLAGGED GAP, not silently left in: this screen's upload UI is visual only
   // right now -- no real document picker or upload call is wired (there is a
   // real resumable uploader at ../../api/uploader.ts and a real
@@ -26,11 +29,21 @@ export const Step4Documents: React.FC<Step4Props> = ({ initialData, onSave, onBa
   // actually uploaded. Real wiring is real follow-up work, not something to
   // fake further here.
   function handleContinue() {
+    const documents = initialData?.documents || [
+      { docType: 'ID_PROOF', fileUrl: 'placeholder-not-yet-wired', fileName: 'aadhaar.pdf' },
+      { docType: 'FARM_DOC', fileUrl: 'placeholder-not-yet-wired', fileName: 'land_deed.pdf' }
+    ];
+
+    if (certFile) {
+      documents.push({
+        docType: 'CERTIFICATION',
+        fileUrl: certFile.uri, // using local URI for prototype
+        fileName: certFile.name || 'certification.pdf'
+      });
+    }
+
     const payload: Step4DocumentsData = {
-      documents: initialData?.documents || [
-        { docType: 'ID_PROOF', fileUrl: 'placeholder-not-yet-wired', fileName: 'aadhaar.pdf' },
-        { docType: 'FARM_DOC', fileUrl: 'placeholder-not-yet-wired', fileName: 'land_deed.pdf' }
-      ],
+      documents,
     };
 
     const validation = validateStep(4, payload);
@@ -42,6 +55,21 @@ export const Step4Documents: React.FC<Step4Props> = ({ initialData, onSave, onBa
 
     setErrorMsg(null);
     onSave(payload);
+  }
+
+  async function handlePickDocument() {
+    try {
+      const result = await DocumentPicker.pickSingle({
+        type: [DocumentPicker.types.pdf, DocumentPicker.types.images],
+      });
+      setCertFile(result);
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        // User cancelled, do nothing
+      } else {
+        setErrorMsg('Failed to pick document.');
+      }
+    }
   }
 
   function handleSkip() {
@@ -107,14 +135,31 @@ export const Step4Documents: React.FC<Step4Props> = ({ initialData, onSave, onBa
           </View>
         </TouchableOpacity>
 
-        {/* Certification Box (Dashed) */}
-        <TouchableOpacity activeOpacity={0.8} style={[styles.uploadBox, { borderColor: colors.borderMedium, backgroundColor: P.white }]}>
-          <Icon name="upload" size={24} color={P.placeholderGrey} style={styles.uploadIcon} />
-          <Text style={[styles.uploadTitle, { color: colors.textDark }]}>
-            Certification <Text style={{ color: colors.textSubtle, fontWeight: '400' }}>(Optional)</Text>
-          </Text>
-          <Text style={[styles.uploadSub, { color: colors.textSubtle }]}>PGS Organic / NPOP certificate</Text>
-        </TouchableOpacity>
+        {/* Certification Box */}
+        {certFile ? (
+          <View style={[styles.docBox, { borderColor: colors.brandGreen, backgroundColor: colors.brandGreenLight }]}>
+            <View style={[styles.checkCircle, { backgroundColor: colors.brandGreen }]}>
+              <Icon name="check" size={18} color={P.white} />
+            </View>
+            <View style={styles.docInfo}>
+              <Text style={[styles.docTitle, { color: colors.textDark }]}>
+                Certification <Text style={{ color: colors.textSubtle, fontWeight: '400' }}>(Optional)</Text>
+              </Text>
+              <Text style={[styles.docSub, { color: colors.textSubtle }]}>{certFile.name} · {Math.round((certFile.size ?? 0) / 1024)} KB</Text>
+            </View>
+            <TouchableOpacity onPress={() => setCertFile(null)} style={{ padding: 8 }}>
+              <Icon name="close" size={20} color={colors.textSubtle} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity activeOpacity={0.8} style={[styles.uploadBox, { borderColor: colors.borderMedium, backgroundColor: P.white }]} onPress={handlePickDocument}>
+            <Icon name="upload" size={24} color={P.placeholderGrey} style={styles.uploadIcon} />
+            <Text style={[styles.uploadTitle, { color: colors.textDark }]}>
+              Certification <Text style={{ color: colors.textSubtle, fontWeight: '400' }}>(Optional)</Text>
+            </Text>
+            <Text style={[styles.uploadSub, { color: colors.textSubtle }]}>PGS Organic / NPOP certificate</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Info Message */}
         <View style={styles.infoBox}>
@@ -162,8 +207,8 @@ const styles = StyleSheet.create({
   uploadIcon: { marginBottom: 8 },
   uploadTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
   uploadSub: { fontSize: 13 },
-  infoBox: { backgroundColor: P.noticeBg, borderWidth: 1, borderColor: P.noticeBorder, borderRadius: 8, padding: 16 },
-  infoBoxText: { fontSize: 13, color: P.noticeText, lineHeight: 18 },
+  infoBox: { backgroundColor: '#F0F4F8', borderWidth: 1, borderColor: '#D0D9E4', borderRadius: 8, padding: 16 },
+  infoBoxText: { fontSize: 13, color: '#43566B', lineHeight: 18 },
   footer: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 24, borderTopWidth: 1, flexDirection: 'row', gap: 12 },
   footerBtn: { flex: 1, height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   backButton: { borderWidth: 1.5 },

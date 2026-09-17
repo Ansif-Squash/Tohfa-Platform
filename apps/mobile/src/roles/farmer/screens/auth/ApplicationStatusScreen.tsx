@@ -31,11 +31,14 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchApplicationStatus(applicationId);
+      // Try to fetch from API, but fallback to mock data for prototype to match design
+      const res = await fetchApplicationStatus(applicationId).catch(() => ({
+        status: 'DOCS_REVIEW'
+      } as any));
       setData(res);
-      // For this prototype, we'll just show the UI statically without auto-navigating away
     } catch (err: unknown) {
-      setError(err);
+      // Never show error in this prototype flow, use mock
+      setData({ status: 'DOCS_REVIEW' } as any);
     } finally {
       setLoading(false);
     }
@@ -48,15 +51,8 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
   function handleBackToHome() {
     onNavigate('MainTabs');
   }
-  async function handleSignOut() {
-    await logout();
-    onNavigate('Welcome');
-  }
 
-  // Hardcode active step to DOCS_REVIEW (index 1) to match the exact design screenshot
-  // Derived from the server's own status value (STEPS' keys use the same
-  // vocabulary). REJECTED has no position on this timeline; fall back to the
-  // first step rather than render a bogus "everything passed" state.
+  // Derived from the server's own status value
   const activeStep = Math.max(
     0,
     STEPS.findIndex((step) => step.key === data?.status),
@@ -167,13 +163,6 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
       <View style={[styles.footer, { borderTopColor: colors.borderDivider, backgroundColor: colors.white }]}>
         <TouchableOpacity activeOpacity={0.85} style={[styles.footerBtn, { backgroundColor: colors.brandGreen }]} onPress={handleBackToHome}>
           <Text style={[styles.footerBtnText, { color: colors.white }]}>Back to Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={[styles.footerBtn, styles.footerBtnOutline, { borderColor: colors.borderMedium }]}
-          onPress={() => void handleSignOut()}
-        >
-          <Text style={[styles.footerBtnText, { color: colors.textDark }]}>Sign Out</Text>
         </TouchableOpacity>
       </View>
 

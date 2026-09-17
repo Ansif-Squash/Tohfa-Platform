@@ -8,6 +8,7 @@ import { ForgotPasswordScreen } from './screens/auth/ForgotPasswordScreen';
 import { LoginScreen } from './screens/auth/LoginScreen';
 import { OtpScreen } from './screens/auth/OtpScreen';
 import { ResetPasswordScreen } from './screens/auth/ResetPasswordScreen';
+import { PasswordChangedSuccessScreen } from './screens/auth/PasswordChangedSuccessScreen';
 import { RoleSelectionScreen } from './screens/auth/RoleSelectionScreen';
 import { SplashScreen } from './screens/auth/SplashScreen';
 import { WelcomeScreen } from './screens/auth/WelcomeScreen';
@@ -17,6 +18,10 @@ import { EditCertificationScreen } from './screens/certifications/EditCertificat
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { WeatherScreen } from './screens/dashboard/WeatherScreen';
 import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
+import { FarmDiaryScreen } from './screens/farm/FarmDiaryScreen';
+import { NewFarmDiaryEntryScreen } from './screens/farm/NewFarmDiaryEntryScreen';
+import { NewFarmDiaryEntryStep2Screen } from './screens/farm/NewFarmDiaryEntryStep2Screen';
+import { NewFarmDiaryEntryStep3Screen } from './screens/farm/NewFarmDiaryEntryStep3Screen';
 import { CounterOfferScreen } from './screens/listings/CounterOfferScreen';
 import { CreateListingScreen } from './screens/listings/CreateListingScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
@@ -48,6 +53,7 @@ export type ScreenName =
   | 'Otp'
   | 'ForgotPassword'
   | 'ResetPassword'
+  | 'PasswordChangedSuccess'
   | 'ApplicationStatus'
   | 'MainTabs'
   | 'CustomerMain'
@@ -69,7 +75,11 @@ export type ScreenName =
   | 'FarmRatings'
   | 'SoilTest'
   | 'NewSoilTest'
-  | 'Weather';
+  | 'Weather'
+  | 'FarmDiary'
+  | 'NewFarmDiaryEntry'
+  | 'NewFarmDiaryEntryStep2'
+  | 'NewFarmDiaryEntryStep3';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -119,25 +129,7 @@ export default function App(): React.JSX.Element {
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
 
-      {screen !== 'Register' && screen !== 'RoleSelection' && screen !== 'Notifications' && screen !== 'PersonalDetails' && screen !== 'Certifications' && screen !== 'AddCertification' && screen !== 'EditCertification' && screen !== 'Audits' && screen !== 'AuditResult' && screen !== 'FarmManagement' && screen !== 'FarmRatings' && screen !== 'SoilTest' && screen !== 'NewSoilTest' && screen !== 'Weather' && !isAuthLanding && (screen !== 'MainTabs' || currentTab !== 'Profile') && (
-        <View style={styles.header}>
-            <Text style={styles.headerText}>{t('farmer.app.name')}</Text>
-            <View style={styles.localeRow}>
-              {LOCALES.map((code) => (
-                <Pressable
-                  key={code}
-                  accessibilityRole="button"
-                  style={[styles.localeChip, locale === code && styles.localeChipActive]}
-                  onPress={() => switchLocale(code)}
-                >
-                  <Text style={locale === code ? styles.localeTextActive : styles.localeText}>
-                    {code.toUpperCase()}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-      )}
+
 
       <View style={styles.content}>
         {screen === 'Splash' ? (
@@ -153,6 +145,7 @@ export default function App(): React.JSX.Element {
         ) : screen === 'Otp' ? (
           <OtpScreen
             mobile={String(params['mobile'] ?? '')}
+            challengeId={typeof params['challengeId'] === 'string' ? params['challengeId'] : undefined}
             resendAvailableAt={
               typeof params['resendAvailableAt'] === 'string'
                 ? params['resendAvailableAt']
@@ -163,15 +156,21 @@ export default function App(): React.JSX.Element {
                 ? params['attemptsRemaining']
                 : undefined
             }
+            purpose={
+              (params['purpose'] as 'LOGIN' | 'PASSWORD_RESET') ?? 'LOGIN'
+            }
             onNavigate={(s, p) => navigate(s, p)}
           />
         ) : screen === 'ForgotPassword' ? (
           <ForgotPasswordScreen onNavigate={(s) => navigate(s)} />
         ) : screen === 'ResetPassword' ? (
           <ResetPasswordScreen
-            token={String(params['token'] ?? '')}
-            onNavigate={(s) => navigate(s)}
+            challengeId={String(params['challengeId'] ?? '')}
+            code={String(params['code'] ?? '')}
+            onNavigate={(s, p) => navigate(s, p)}
           />
+        ) : screen === 'PasswordChangedSuccess' ? (
+          <PasswordChangedSuccessScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'ApplicationStatus' ? (
           <ApplicationStatusScreen
             applicationId={String(params['applicationId'] ?? 'DEMO-APP-001')}
@@ -293,6 +292,27 @@ export default function App(): React.JSX.Element {
               )
             }
             onNavigateToAudits={() => navigate('Audits')}
+            onNavigateToDiary={() => navigate('FarmDiary')}
+          />
+        ) : screen === 'FarmDiary' ? (
+          <FarmDiaryScreen 
+            onBack={() => navigate('FarmManagement')} 
+            onNavigateToNewEntry={() => navigate('NewFarmDiaryEntry')} 
+          />
+        ) : screen === 'NewFarmDiaryEntry' ? (
+          <NewFarmDiaryEntryScreen 
+            onBack={() => navigate('FarmDiary')} 
+            onNext={() => navigate('NewFarmDiaryEntryStep2')} 
+          />
+        ) : screen === 'NewFarmDiaryEntryStep2' ? (
+          <NewFarmDiaryEntryStep2Screen 
+            onBack={() => navigate('NewFarmDiaryEntry')} 
+            onNext={() => navigate('NewFarmDiaryEntryStep3')} 
+          />
+        ) : screen === 'NewFarmDiaryEntryStep3' ? (
+          <NewFarmDiaryEntryStep3Screen 
+            onBack={() => navigate('NewFarmDiaryEntryStep2')} 
+            onSave={() => navigate('FarmDiary')} 
           />
         ) : screen === 'FarmRatings' ? (
           <FarmRatingsScreen onNavigateBack={() => navigate('MainTabs')} />

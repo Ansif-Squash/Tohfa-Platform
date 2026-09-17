@@ -21,6 +21,8 @@ const monorepoRoot = path.resolve(__dirname, '../..');
 const defaultConfig = getDefaultConfig(__dirname);
 const { assetExts, sourceExts } = defaultConfig.resolver;
 
+const exclusionList = require('metro-config/src/defaults/exclusionList');
+
 const config = {
   watchFolders: [monorepoRoot],
   // .svg files are compiled to React components by react-native-svg-transformer
@@ -30,6 +32,12 @@ const config = {
     babelTransformerPath: require.resolve('react-native-svg-transformer'),
   },
   resolver: {
+    blockList: exclusionList([
+      /.*\/android\/.gradle\/.*/,
+      /.*\/android\/build\/.*/,
+      /.*\/android\/app\/build\/.*/,
+      /.*\/ios\/build\/.*/,
+    ]),
     assetExts: assetExts.filter((ext) => ext !== 'svg'),
     sourceExts: [...sourceExts, 'svg'],
     nodeModulesPaths: [

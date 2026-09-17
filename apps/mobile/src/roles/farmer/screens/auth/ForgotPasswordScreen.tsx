@@ -8,12 +8,13 @@ import {
   View,
 } from 'react-native';
 import { t } from '../../../../i18n/farmer';
-import { Icon } from '@tohfa/mobile-ui';
-import { forgotPassword } from '../../api/auth';
+import { Icon, ErrorState } from '@tohfa/mobile-ui';
+import { requestOtp } from '../../api/auth';
+import { ApiError } from '../../api/client';
 import { authPalette as P } from '../../theme';
 
 interface ForgotPasswordScreenProps {
-  onNavigate: (screen: 'Login') => void;
+  onNavigate: (screen: 'Login' | 'Otp', params?: Record<string, string | number | undefined>) => void;
 }
 
 /**
@@ -28,7 +29,7 @@ interface ForgotPasswordScreenProps {
 export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onNavigate }) => {
   const [mobile, setMobile] = useState('');
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   async function handleSubmit() {
     if (!mobile.trim()) return;
@@ -36,34 +37,26 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onNa
 
     try {
       const cleanMobile = mobile.startsWith('+') ? mobile.trim() : `+91${mobile.trim()}`;
-      await forgotPassword({ mobile: cleanMobile });
-    } catch {
-      // Account enumeration defense: ignore API errors and display generic 202 screen
+      const res = await requestOtp({ mobile: cleanMobile, purpose: 'PASSWORD_RESET' });
+      if (res._mockCode) {
+        console.log(`[Dev] Mock OTP for ${cleanMobile}: ${res._mockCode}`);
+      }
+      onNavigate('Otp', {
+        mobile: cleanMobile,
+        challengeId: res.challengeId,
+        resendAvailableAt: res.resendAvailableAt,
+        attemptsRemaining: res.attemptsRemaining,
+        purpose: 'PASSWORD_RESET'
+      });
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setErrorMsg(t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) || err.problem.detail || t('error.generic'));
+      } else {
+        setErrorMsg(t('error.generic'));
+      }
     } finally {
       setLoading(false);
-      setSubmitted(true);
     }
-  }
-
-  if (submitted) {
-    return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.successView}>
-          <View style={styles.iconCircle}>
-            <Icon name="mark_email_read" size={30} color={P.primary} />
-          </View>
-          <Text style={styles.title}>{t('farmer.auth.forgot.successTitle')}</Text>
-          <Text style={styles.subtitle}>{t('farmer.auth.forgot.successSubtitle')}</Text>
-          <TouchableOpacity
-            accessibilityRole="button"
-            style={styles.ctaButton}
-            onPress={() => onNavigate('Login')}
-          >
-            <Text style={styles.ctaText}>{t('farmer.auth.forgot.backToLogin')}</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    );
   }
 
   return (
@@ -71,11 +64,11 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onNa
       <View style={styles.backRow}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          activeOpacity={0.7}
           style={styles.backButton}
           onPress={() => onNavigate('Login')}
         >
-          <Text style={styles.backButtonText}>{'<'}</Text>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: P.primary, marginTop: -2 }}>{'‹'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -85,6 +78,12 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onNa
 
       <Text style={styles.title}>Forgot Password</Text>
       <Text style={styles.subtitle}>Enter your registered mobile number to receive an OTP</Text>
+
+      {errorMsg ? (
+        <View style={{ marginTop: 24, paddingHorizontal: 0 }}>
+          <ErrorState message={errorMsg} onRetry={() => setErrorMsg(null)} />
+        </View>
+      ) : null}
 
       <Text style={styles.fieldLabel}>{t('farmer.auth.login.mobile')}</Text>
       <View style={styles.fieldRow}>
@@ -163,21 +162,21 @@ const styles = StyleSheet.create({
     marginTop: 36,
   },
   title: {
-    fontSize: 24,
+    fontSize: 23,
     fontWeight: '800',
     color: P.ink,
     textAlign: 'center',
     marginTop: 24,
   },
   subtitle: {
-    fontSize: 13.5,
+    fontSize: 12.8,
+    lineHeight: 19,
     color: P.muted,
     textAlign: 'center',
-    lineHeight: 20,
     marginTop: 8,
   },
   fieldLabel: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: '700',
     color: P.ink,
     marginTop: 32,
@@ -192,7 +191,7 @@ const styles = StyleSheet.create({
     borderColor: P.border,
     borderRadius: 12,
     paddingHorizontal: 14,
-    height: 52,
+    height: 48,
   },
   prefix: {
     fontSize: 15,
@@ -217,12 +216,12 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   ctaText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: P.white,
   },
   footerText: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: P.muted,
     textAlign: 'center',
     marginTop: 20,
@@ -230,11 +229,5 @@ const styles = StyleSheet.create({
   footerLink: {
     color: P.primary,
     fontWeight: '700',
-  },
-  successView: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
   },
 });

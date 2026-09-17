@@ -8,7 +8,7 @@ import {
   View,
   Image,
 } from 'react-native';
-import { t } from '../../../../i18n/farmer';
+import { t, getLocale, setLocale } from '../../../../i18n/farmer';
 import { Button, ErrorState, Icon } from '@tohfa/mobile-ui';
 import { loginWithPassword, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
@@ -16,6 +16,7 @@ import { authPalette as P } from '../../theme';
 import googleIcon from '../../assets/icons/googleee.png';
 import appleIcon from '../../assets/icons/apple.png';
 import facebookIcon from '../../assets/icons/facebook.png';
+import tohfaLogo from '../../assets/tohfa-logo.png';
 
 interface LoginScreenProps {
   onNavigate: (
@@ -51,6 +52,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [locale, setLocaleState] = useState(getLocale());
+
+  const switchLocale = (lang: 'en' | 'ta') => {
+    setLocale(lang);
+    setLocaleState(lang);
+  };
 
   const cleanMobile = () => (mobile.startsWith('+') ? mobile.trim() : `+91${mobile.trim()}`);
 
@@ -75,10 +82,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       // has no role-picker UI for an existing login (RoleSelectionScreen is
       // a *sign-up* "how do you want to join" screen, a different concept),
       // so resolve deterministically to the first role rather than block --
-      // real-world accounts holding both FARMER and CUSTOMER are an open
-      // product question, not something to invent a screen for here.
-      if ('requiresRoleSelection' in outcome) {
-        const firstRole = outcome.availableRoles[0]?.code;
+      if ('requiresRoleSelection' in outcome && outcome.requiresRoleSelection === true) {
+        // We know availableRoles exists when requiresRoleSelection is true
+        const rolesObj = outcome as { availableRoles?: { code: string }[] };
+        const firstRole = rolesObj.availableRoles?.[0]?.code;
         if (!firstRole) {
           setErrorMsg(t('error.generic'));
           return;
@@ -86,7 +93,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
         outcome = await loginWithPassword({ mobile: cleanMobile(), password, roleCode: firstRole });
       }
 
-      if ('requiresRoleSelection' in outcome) {
+      if ('requiresRoleSelection' in outcome && outcome.requiresRoleSelection === true) {
         setErrorMsg(t('error.generic'));
         return;
       }
@@ -95,9 +102,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       const route = resolveRouteAfterAuth(me);
       onNavigate(route.name, route.params);
     } catch (err: unknown) {
+      console.error('[LoginScreen] Catch block hit:', err);
       if (err instanceof ApiError) {
         setErrorMsg(t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) || t('error.generic'));
       } else {
+        console.error('[LoginScreen] Unknown error:', err);
         setErrorMsg(t('error.generic'));
       }
     } finally {
@@ -110,15 +119,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       <View style={styles.backRow}>
         <TouchableOpacity
           accessibilityRole="button"
+          activeOpacity={0.7}
           style={styles.backButton}
           onPress={() => onNavigate('Welcome')}
         >
-          <Text style={{ fontSize: 20, fontWeight: 'bold', color: P.ink }}>{'<'}</Text>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: P.primary, marginTop: -2 }}>{'‹'}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.iconCircle}>
-        <Icon name="home" size={32} color={P.primary} />
+        <Image source={tohfaLogo} style={{ width: 48, height: 48 }} resizeMode="contain" />
       </View>
 
       <Text style={styles.title}>{t('farmer.auth.login.title')}</Text>
@@ -239,18 +249,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       </TouchableOpacity>
 
       <View style={styles.langRow}>
-        <View style={styles.langPillActive}>
-          <Text style={styles.langPillActiveText}>EN</Text>
-        </View>
-        <View style={styles.langPill}>
-          <Text style={styles.langPillText}>{'\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD'}</Text>
-        </View>
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={locale === 'en' ? styles.langPillActive : styles.langPill}
+          onPress={() => switchLocale('en')}
+        >
+          <Text style={locale === 'en' ? styles.langPillActiveText : styles.langPillText}>EN</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={locale === 'ta' ? styles.langPillActive : styles.langPill}
+          onPress={() => switchLocale('ta')}
+        >
+          <Text style={locale === 'ta' ? styles.langPillActiveText : styles.langPillText}>{'\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD'}</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.legalRow}>
         <Text style={styles.legalText}>
           <Text style={styles.legalLink}>{t('farmer.auth.welcome.terms')}</Text>
-          {'  -  '}
+          {' · '}
           <Text style={styles.legalLink}>{t('farmer.auth.welcome.privacy')}</Text>
         </Text>
       </View>
@@ -309,10 +327,10 @@ const styles = StyleSheet.create({
   },
   socialButton: {
     flex: 1,
-    height: 56,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: P.progressInactive,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: P.border,
     backgroundColor: P.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -421,24 +439,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginVertical: 20,
+    marginTop: 32,
+    marginBottom: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: P.divider,
+    backgroundColor: P.border,
   },
   dividerText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: P.muted,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#43566B',
   },
   registerWrap: {
     alignItems: 'center',
+    marginTop: 32,
   },
   registerText: {
-    fontSize: 12.5,
-    color: P.muted,
+    fontSize: 14,
+    color: '#43566B',
   },
   registerLink: {
     color: P.primary,
@@ -447,37 +467,37 @@ const styles = StyleSheet.create({
   langRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 6,
-    marginTop: 28,
+    gap: 12,
+    marginTop: 64,
   },
   langPillActive: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: P.lightGreen,
   },
   langPillActiveText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: P.primary,
   },
   langPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
     borderRadius: 999,
   },
   langPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: P.muted,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#43566B',
   },
   legalRow: {
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 16,
   },
   legalText: {
-    fontSize: 10,
-    color: P.legal,
+    fontSize: 12,
+    color: '#8A9BAE',
   },
   legalLink: {
     textDecorationLine: 'underline',

@@ -7,6 +7,54 @@ import {
   ImageBackground,
 } from 'react-native';
 import { Icon } from '@tohfa/mobile-ui';
+import Svg, { Path, Circle as SvgCircle, Line } from 'react-native-svg';
+
+const ChevronLeft = ({ size = 24, color = "currentColor" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <Path d="m15 18-6-6 6-6"/>
+  </Svg>
+);
+
+const Crosshair = ({ size = 24, color = "currentColor" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <SvgCircle cx="12" cy="12" r="10"/>
+    <Line x1="12" y1="2" x2="12" y2="6"/>
+    <Line x1="12" y1="18" x2="12" y2="22"/>
+    <Line x1="4" y1="12" x2="2" y2="12"/>
+    <Line x1="22" y1="12" x2="20" y2="12"/>
+  </Svg>
+);
+
+const PenIcon = ({ size = 24, color = "currentColor" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M12 20h9"/>
+    <Path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+  </Svg>
+);
+
+const PlusIcon = ({ size = 24, color = "currentColor" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M5 12h14"/><Path d="M12 5v14"/>
+  </Svg>
+);
+
+const LeafIcon = ({ size = 24, color = "currentColor" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2v1c0 5.6-4.5 11.2-11 11.2V20Z"/>
+  </Svg>
+);
+
+const CheckIcon = ({ size = 24, color = "currentColor" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M20 6 9 17l-5-5"/>
+  </Svg>
+);
+
+const SolidDot = ({ size = 10, color = "currentColor" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <SvgCircle cx="12" cy="12" r="10"/>
+  </Svg>
+);
 import { colors, useTheme } from '../../theme';
 import { authPalette as P } from '../../theme';
 import type { Step3LocationData } from '../../storage/registrationDraft';
@@ -69,7 +117,7 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
             ]}
             onPress={onBack}
           >
-            <Icon name="arrow_back" size={22} color={colors.brandGreen} />
+            <ChevronLeft size={22} color={colors.brandGreen} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={[styles.headerTitle, { color: colors.textDark }]}>
@@ -115,7 +163,7 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
           <View style={styles.topMapControls}>
             <View style={styles.coordsBadge}>
               <Text style={styles.coordsText}>
-                <Icon name="gps_fixed" size={12} color={colors.white} /> {lat}, {lng}
+                <Crosshair size={12} color={colors.white} />  {lat}, {lng}
               </Text>
             </View>
 
@@ -123,14 +171,14 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
               {isEditing && (
                 <View style={styles.editingBadge}>
                   <Text style={styles.editingText}>
-                    <Icon name="edit" size={13} color={P.black} /> Editing boundary
+                    <PenIcon size={13} color={P.black} /> Editing boundary
                   </Text>
                 </View>
               )}
 
               <TouchableOpacity activeOpacity={0.8} style={styles.actionPill}>
                 <Text style={styles.actionPillText}>
-                  <Icon name="gps_fixed" size={13} color={P.nearBlack} /> Locate Me
+                  <Crosshair size={14} color={P.nearBlack} />  Locate Me
                 </Text>
               </TouchableOpacity>
 
@@ -147,12 +195,14 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
                     isEditing && { color: colors.white },
                   ]}
                 >
-                  <Icon name="edit" size={13} color={isEditing ? colors.white : P.nearBlack} /> Draw Boundary
+                  <PenIcon size={14} color={isEditing ? colors.white : P.nearBlack} />  Draw Boundary
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity activeOpacity={0.8} style={styles.actionPill}>
-                <Text style={styles.actionPillText}>+ Add Zone</Text>
+                <Text style={styles.actionPillText}>
+                  <PlusIcon size={14} color={P.nearBlack} />  Add Zone
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -171,17 +221,50 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
                 },
               ]}
             >
-              {isEditing && (
-                <>
-                  <View style={[styles.dragPoint, { top: -6, left: -6 }]} />
-                  <View style={[styles.dragPoint, { top: -6, right: -6 }]} />
-                  <View style={[styles.dragPoint, { bottom: -6, left: -6 }]} />
-                  <View style={[styles.dragPoint, { bottom: -6, right: -6 }]} />
-                  <View style={[styles.dragPoint, { top: '50%', left: -6 }]} />
-                  <View style={[styles.dragPoint, { top: '50%', right: -6 }]} />
-                </>
-              )}
+              <View style={[styles.dragPoint, { top: -6, left: -6 }]} />
+              <View style={[styles.dragPoint, { top: 120, left: -6 }]} />
+              <View style={[styles.dragPoint, { bottom: -6, left: 10 }]} />
+              <View style={[styles.dragPoint, { bottom: -6, right: 30 }]} />
+              <View style={[styles.dragPoint, { top: -6, right: -6 }]} />
+              <View style={[styles.dragPoint, { top: 120, right: 10 }]} />
+
+              {/* Zone Markers */}
+              <View style={[styles.zoneBadge, { top: 20, left: 20 }]}>
+                <SolidDot size={10} color="#F44336" />
+                <View style={{ marginLeft: 6 }}>
+                  <Text style={styles.zoneBadgeTitle}>Zone A</Text>
+                  <Text style={styles.zoneBadgeSub}>Tomato</Text>
+                </View>
+              </View>
+
+              <View style={[styles.zoneBadge, { top: 130, left: 15 }]}>
+                <SolidDot size={10} color="#FF9800" />
+                <View style={{ marginLeft: 6 }}>
+                  <Text style={styles.zoneBadgeTitle}>Zone B</Text>
+                  <Text style={styles.zoneBadgeSub}>Carrot</Text>
+                </View>
+              </View>
+
+              <View style={[styles.zoneBadge, { bottom: 10, left: 25 }]}>
+                <SolidDot size={10} color="#4CAF50" />
+                <View style={{ marginLeft: 6 }}>
+                  <Text style={styles.zoneBadgeTitle}>Zone C</Text>
+                  <Text style={styles.zoneBadgeSub}>Cabbage</Text>
+                </View>
+              </View>
+
+              {/* Area Badge in center */}
+              <View style={styles.areaBadge}>
+                <Text style={styles.areaBadgeTitle}>2.45 Acres</Text>
+                <Text style={styles.areaBadgeSub}>1.02 Hectares</Text>
+              </View>
             </View>
+          </View>
+
+          {/* Scale Bar */}
+          <View style={styles.scaleBarContainer}>
+            <Text style={styles.scaleBarText}>50 m</Text>
+            <View style={styles.scaleBarLine} />
           </View>
 
           {/* Bottom Card */}
@@ -189,23 +272,25 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
             <View style={styles.farmCard}>
               <View style={styles.farmCardHeader}>
                 <View style={styles.farmTitleRow}>
-                  {isEditing ? (
-                    <Icon name="edit" size={18} color={P.nearBlack} />
-                  ) : (
-                    <Icon name="eco" size={18} color={P.nearBlack} />
-                  )}
+                  <View style={styles.farmIconWrapper}>
+                    {isEditing ? (
+                      <PenIcon size={18} color={colors.brandGreen} />
+                    ) : (
+                      <LeafIcon size={18} color={colors.brandGreen} />
+                    )}
+                  </View>
                   <Text style={styles.farmName}>Great Earth Organic Farm</Text>
                 </View>
                 {isEditing ? (
                   <View style={styles.badgeEditing}>
                     <Text style={styles.badgeEditingText}>
-                      <Icon name="circle" size={9} color={P.orange900} /> Editing
+                      <SolidDot size={9} color={P.orange900} />  Editing
                     </Text>
                   </View>
                 ) : (
                   <View style={styles.badgeLive}>
                     <Text style={styles.badgeLiveText}>
-                      <Icon name="circle" size={9} color={colors.brandGreen} /> Live GPS
+                      <SolidDot size={9} color={colors.brandGreen} />  Live GPS
                     </Text>
                   </View>
                 )}
@@ -236,7 +321,7 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
                   onPress={() => setIsEditing(false)}
                 >
                   <Text style={styles.doneBtnText}>
-                    <Icon name="check" size={15} color={colors.white} /> Done Editing
+                    <CheckIcon size={15} color={colors.white} />  Done Editing
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -246,7 +331,7 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
                   onPress={() => setIsEditing(true)}
                 >
                   <Text style={styles.editBtnText}>
-                    <Icon name="edit" size={15} color={colors.brandGreen} /> Edit Boundary
+                    <PenIcon size={15} color={colors.brandGreen} />  Edit Boundary
                   </Text>
                 </TouchableOpacity>
               )}
@@ -481,6 +566,77 @@ const styles = StyleSheet.create({
     color: P.orange900,
     fontSize: 11,
     fontWeight: '700',
+  },
+  zoneBadge: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    shadowColor: P.black,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  zoneBadgeTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: P.nearBlack,
+  },
+  zoneBadgeSub: {
+    fontSize: 9,
+    color: P.grey600,
+  },
+  areaBadge: {
+    position: 'absolute',
+    top: '55%',
+    left: '35%',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  areaBadgeTitle: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  areaBadgeSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  scaleBarContainer: {
+    position: 'absolute',
+    bottom: 230,
+    right: 20,
+    alignItems: 'flex-end',
+  },
+  scaleBarText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 2,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  scaleBarLine: {
+    width: 40,
+    height: 4,
+    borderBottomWidth: 1.5,
+    borderLeftWidth: 1.5,
+    borderRightWidth: 1.5,
+    borderColor: colors.white,
+  },
+  farmIconWrapper: {
+    backgroundColor: colors.brandGreenLight,
+    padding: 8,
+    borderRadius: 10,
   },
   statsRow: {
     flexDirection: 'row',
