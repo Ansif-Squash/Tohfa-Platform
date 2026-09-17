@@ -77,7 +77,12 @@ export function ListingsScreen({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={onNavigateBack}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
             <ChevronLeft />
           </TouchableOpacity>
           <View style={styles.headerTextCol}>

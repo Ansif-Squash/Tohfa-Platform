@@ -78,14 +78,23 @@ export function CreateListingScreen({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={onCancel}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={onCancel}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
             <ChevronLeft />
           </TouchableOpacity>
           <View style={styles.headerTextCol}>
             <Text style={styles.headerTitle}>Create Listing</Text>
             <Text style={styles.headerSub}>Step 1 of 2 · Pick crop</Text>
           </View>
-          <TouchableOpacity onPress={onCancel}>
+          <TouchableOpacity 
+            onPress={onCancel}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+          >
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -184,7 +193,12 @@ export function CreateListingScreen({
 
       {/* Footer / Next Button */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.nextBtn} onPress={onNext}>
+        <TouchableOpacity 
+          style={styles.nextBtn} 
+          onPress={onNext}
+          accessibilityRole="button"
+          accessibilityLabel="Next"
+        >
           <Text style={styles.nextBtnText}>Next</Text>
           <ArrowRight />
         </TouchableOpacity>

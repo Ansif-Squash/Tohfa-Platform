@@ -10,32 +10,43 @@ import {
 import { type CounterOffer, type Listing } from '../../api/listings';
 import { Icon } from '@tohfa/mobile-ui';
 
-interface CounterOfferScreenProps {
-  listing: Listing;
-  offer?: CounterOffer | null;
-  onSuccess?: () => void;
-  onCancel?: () => void;
-  onRefreshListing?: () => Promise<void>;
+export interface CounterOfferScreenProps {
+  listing?: Listing | null | undefined;
+  listingId?: string | undefined;
+  cropName?: string | undefined;
+  offer?: CounterOffer | null | undefined;
+  onAccept?: (() => void) | undefined;
+  onReject?: (() => void) | undefined;
+  onCounter?: (() => void) | undefined;
+  onSuccess?: (() => void) | undefined;
+  onCancel?: (() => void) | undefined;
+  onRefreshListing?: (() => Promise<void>) | undefined;
 }
 
 export function CounterOfferScreen({
   listing,
+  listingId,
+  cropName,
   offer: initialOffer,
+  onAccept,
+  onReject,
+  onCounter,
+  onSuccess,
   onCancel,
 }: CounterOfferScreenProps): React.JSX.Element {
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // For the exact UI match, we will use hardcoded or derived values based on the screenshot,
-  // but taking them from `listing` and `offer` when possible.
-  const cropSubtitle = listing.cropName || 'Carrot - Ooty - Grade 1';
-  const qty = listing.quantityKg || '150';
-  const askPrice = listing.askingPricePerKg || '40';
+  // Derive values safely from props or listing or default demo data
+  const cropSubtitle = cropName || listing?.cropName || 'Carrot - Ooty - Grade 1';
+  const qty = listing?.quantityKg || '150';
+  const askPrice = listing?.askingPricePerKg || '40';
   const askTotal = (Number(qty) * Number(askPrice)).toLocaleString('en-IN');
   
-  const offerPrice = initialOffer?.pricePerKg || '34';
+  const activeOffer = initialOffer || listing?.activeCounterOffer;
+  const offerPrice = activeOffer?.pricePerKg || '34';
   const offerTotal = (Number(qty) * Number(offerPrice)).toLocaleString('en-IN');
   
-  const adminReason = initialOffer?.message || 'On inspection the batch grades as Grade 2 (minor forking & size variance), not the claimed Grade 1. Counter reflects the Grade 2 ceiling.';
+  const adminReason = activeOffer?.message || 'On inspection the batch grades as Grade 2 (minor forking & size variance), not the claimed Grade 1. Counter reflects the Grade 2 ceiling.';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -141,17 +152,36 @@ export function CounterOfferScreen({
 
         {/* Bottom Bar */}
         <View style={styles.bottomBar}>
-          <Pressable style={[styles.actionBtn, styles.btnAccept]}>
+          <Pressable
+            style={[styles.actionBtn, styles.btnAccept]}
+            onPress={() => {
+              if (onAccept) onAccept();
+              else if (onSuccess) onSuccess();
+              else if (onCancel) onCancel();
+            }}
+          >
             <View style={styles.btnAcceptIconContainer}>
               <Icon name="check" size={14} color="#2e7d32" />
             </View>
             <Text style={styles.btnAcceptText}>Accept</Text>
           </Pressable>
-          <Pressable style={[styles.actionBtn, styles.btnCounter]}>
+          <Pressable
+            style={[styles.actionBtn, styles.btnCounter]}
+            onPress={() => {
+              if (onCounter) onCounter();
+              else if (onCancel) onCancel();
+            }}
+          >
             <Icon name="swap_horiz" size={18} color="#673ab7" />
             <Text style={styles.btnCounterText}>Counter back</Text>
           </Pressable>
-          <Pressable style={[styles.actionBtn, styles.btnWithdraw]}>
+          <Pressable
+            style={[styles.actionBtn, styles.btnWithdraw]}
+            onPress={() => {
+              if (onReject) onReject();
+              else if (onCancel) onCancel();
+            }}
+          >
             <Icon name="close" size={18} color="#616161" />
             <Text style={styles.btnWithdrawText}>Withdraw</Text>
           </Pressable>

@@ -8,36 +8,43 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
+import { authPalette as P, colors } from '../../theme';
 
 // ── SVG Icons ────────────────────────────────────────────────────────────────
 
 const ChevronLeft = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path d="M15 18L9 12L15 6" stroke="#2e7d32" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M15 18L9 12L15 6" stroke={P.primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
 const ToolsHeaderIcon = () => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke="#92400E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <Path
+      d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"
+      stroke={P.primary}
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </Svg>
 );
 
 const ChevronDown = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-    <Path d="M6 9L12 15L18 9" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M6 9L12 15L18 9" stroke={P.twGray600} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
 const FilterIcon = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-    <Line x1="4" y1="6" x2="20" y2="6" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" />
-    <Line x1="7" y1="12" x2="17" y2="12" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" />
-    <Line x1="10" y1="18" x2="14" y2="18" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" />
+    <Line x1="4" y1="6" x2="20" y2="6" stroke={P.twGray600} strokeWidth="2" strokeLinecap="round" />
+    <Line x1="7" y1="12" x2="17" y2="12" stroke={P.twGray600} strokeWidth="2" strokeLinecap="round" />
+    <Line x1="10" y1="18" x2="14" y2="18" stroke={P.twGray600} strokeWidth="2" strokeLinecap="round" />
   </Svg>
 );
 
-const CalendarIcon = ({ color = '#DC2626' }: { color?: string }) => (
+const CalendarIcon = ({ color = P.twRed600 }: { color?: string }) => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
     <Rect x="3" y="4" width="18" height="18" rx="2" stroke={color} strokeWidth="2" />
     <Line x1="3" y1="10" x2="21" y2="10" stroke={color} strokeWidth="2" />
@@ -46,7 +53,7 @@ const CalendarIcon = ({ color = '#DC2626' }: { color?: string }) => (
   </Svg>
 );
 
-const ClockIcon = ({ color = '#EA580C' }: { color?: string }) => (
+const ClockIcon = ({ color = P.twOrange700 }: { color?: string }) => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
     <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="2" />
     <Path d="M12 7V12L15 15" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -55,8 +62,8 @@ const ClockIcon = ({ color = '#EA580C' }: { color?: string }) => (
 
 const PlusIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-    <Line x1="12" y1="5" x2="12" y2="19" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
-    <Line x1="5" y1="12" x2="19" y2="12" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+    <Line x1="12" y1="5" x2="12" y2="19" stroke={P.white} strokeWidth="2.5" strokeLinecap="round" />
+    <Line x1="5" y1="12" x2="19" y2="12" stroke={P.white} strokeWidth="2.5" strokeLinecap="round" />
   </Svg>
 );
 
@@ -100,27 +107,27 @@ function statusStyle(status: ItemStatus) {
   switch (status) {
     case 'Overdue':
       return {
-        badgeBg: '#FEE2E2',
-        badgeText: '#DC2626',
-        borderColor: '#EF4444',
-        dueColor: '#DC2626',
-        icon: <CalendarIcon color="#DC2626" />,
+        badgeBg: P.twRed100,
+        badgeText: P.twRed600,
+        borderColor: P.twRed500,
+        dueColor: P.twRed600,
+        icon: <CalendarIcon color={P.twRed600} />,
       };
     case 'Due soon':
       return {
-        badgeBg: '#FFEDD5',
-        badgeText: '#C2410C',
-        borderColor: '#F97316',
-        dueColor: '#EA580C',
-        icon: <ClockIcon color="#EA580C" />,
+        badgeBg: P.twOrange100,
+        badgeText: P.twOrange700,
+        borderColor: P.twOrange500,
+        dueColor: P.twOrange700,
+        icon: <ClockIcon color={P.twOrange700} />,
       };
     case 'OK':
       return {
-        badgeBg: '#DCFCE7',
-        badgeText: '#15803D',
-        borderColor: '#22C55E',
-        dueColor: '#15803D',
-        icon: <CalendarIcon color="#15803D" />,
+        badgeBg: P.twGreen100,
+        badgeText: P.twGreen700,
+        borderColor: P.twGreen500,
+        dueColor: P.twGreen700,
+        icon: <CalendarIcon color={P.twGreen700} />,
       };
   }
 }
@@ -206,7 +213,7 @@ export function ToolsListScreen({ onNavigateBack, onNavigateToAddTool }: ToolsLi
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#FAFAF7',
+    backgroundColor: P.bg,
   },
 
   // Header
@@ -215,15 +222,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: P.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0EEE6',
+    borderBottomColor: P.border,
   },
   backButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0FFF0',
+    backgroundColor: P.paleMintBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -232,7 +239,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: P.twGreen100,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -243,13 +250,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A2E1A',
+    color: P.ink,
     letterSpacing: 0.3,
   },
   headerSubtitle: {
     fontSize: 13,
     fontWeight: '400',
-    color: '#6B7566',
+    color: P.muted,
     marginTop: 1,
   },
 
@@ -267,29 +274,29 @@ const styles = StyleSheet.create({
   filterDropdown: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: P.white,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#E8E6DD',
+    borderColor: P.border,
     marginBottom: 16,
     gap: 8,
   },
   filterText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
+    color: P.twGray700,
   },
 
   // Card
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: P.white,
     borderRadius: 14,
     padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#F0EEE6',
+    borderColor: P.border,
     borderLeftWidth: 4,
   },
   cardHeader: {
@@ -301,7 +308,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A2E1A',
+    color: P.ink,
     flex: 1,
   },
   statusBadge: {
@@ -317,7 +324,7 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     fontSize: 13,
     fontWeight: '400',
-    color: '#6B7566',
+    color: P.muted,
     marginBottom: 10,
   },
   dueRow: {
@@ -344,12 +351,12 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2E7D32',
+    backgroundColor: P.primary,
     borderRadius: 24,
     paddingHorizontal: 24,
     paddingVertical: 14,
     gap: 8,
-    shadowColor: '#2E7D32',
+    shadowColor: P.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -358,6 +365,6 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: P.white,
   },
 });

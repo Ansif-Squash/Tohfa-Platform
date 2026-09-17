@@ -26,6 +26,10 @@ import { DailyAttendanceScreen } from './screens/farm/DailyAttendanceScreen';
 import { FarmInventoryScreen } from './screens/farm/FarmInventoryScreen';
 import { ToolsListScreen } from './screens/farm/ToolsListScreen';
 import { AddToolScreen } from './screens/farm/AddToolScreen';
+import { LearningHubScreen } from './screens/learning/LearningHubScreen';
+import { ContentDetailScreen, type ContentDetailItem } from './screens/learning/ContentDetailScreen';
+import { GroupsScreen, type GroupItem } from './screens/learning/GroupsScreen';
+import { GroupDetailScreen } from './screens/learning/GroupDetailScreen';
 import { NewFarmDiaryEntryScreen } from './screens/farm/NewFarmDiaryEntryScreen';
 import { NewFarmDiaryEntryStep2Screen } from './screens/farm/NewFarmDiaryEntryStep2Screen';
 import { NewFarmDiaryEntryStep3Screen } from './screens/farm/NewFarmDiaryEntryStep3Screen';
@@ -99,7 +103,11 @@ export type ScreenName =
   | 'CropPlanningInsight'
   | 'FarmInventory'
   | 'ToolsList'
-  | 'AddTool';
+  | 'AddTool'
+  | 'LearningHub'
+  | 'ContentDetail'
+  | 'Groups'
+  | 'GroupDetail';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -116,6 +124,8 @@ export default function App(): React.JSX.Element {
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null);
+  const [selectedContentDetail, setSelectedContentDetail] = useState<ContentDetailItem | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
@@ -253,10 +263,12 @@ export default function App(): React.JSX.Element {
               navigate('MyListings');
             }}
           />
-        ) : screen === 'CounterOffer' && selectedListing ? (
+        ) : screen === 'CounterOffer' ? (
           <CounterOfferScreen
-            listingId={selectedListing.id}
-            cropName={selectedListing.cropName}
+            listing={selectedListing}
+            listingId={selectedListing?.id}
+            cropName={selectedListing?.cropName}
+            offer={selectedListing?.activeCounterOffer}
             onAccept={() => {
               setCurrentTab('Listings');
               navigate('MainTabs');
@@ -265,7 +277,14 @@ export default function App(): React.JSX.Element {
               setCurrentTab('Listings');
               navigate('MainTabs');
             }}
-            onCancel={() => navigate('MyListings')}
+            onCancel={() => {
+              if (previousScreen && previousScreen !== 'CounterOffer') {
+                navigate(previousScreen);
+              } else {
+                setCurrentTab('Listings');
+                navigate('MainTabs');
+              }
+            }}
           />
         ) : screen === 'ListingDetail' ? (
           <ListingDetailScreen onBack={() => navigate('MyListings')} />
@@ -296,12 +315,31 @@ export default function App(): React.JSX.Element {
           <NotificationsScreen
             onBack={() => navigate('MainTabs')}
             onNavigateToCounterOffer={() => {
-              if (selectedListing) {
-                navigate('CounterOffer');
-              } else {
-                setCurrentTab('Listings');
-                navigate('MainTabs');
+              if (!selectedListing) {
+                setSelectedListing({
+                  id: 'dummy-listing',
+                  listingNumber: 'L-9821',
+                  cropName: 'Carrot - Ooty - Grade 1',
+                  quantityKg: '150',
+                  askingPricePerKg: '40',
+                  ceilingPricePerKg: '45',
+                  status: 'COUNTER_OFFER',
+                  grade: 'Grade 1',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  activeCounterOffer: {
+                    id: 'dummy-offer',
+                    pricePerKg: '34',
+                    quantityKg: '150',
+                    message: 'On inspection the batch grades as Grade 2 (minor forking & size variance), not the claimed Grade 1. Counter reflects the Grade 2 ceiling.',
+                    round: 1,
+                    expiresAt: new Date(Date.now() + (22 * 60 * 60 + 30 * 60) * 1000).toISOString(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  },
+                } as any);
               }
+              navigate('CounterOffer');
             }}
           />
         ) : screen === 'AuditResult' ? (
@@ -329,6 +367,11 @@ export default function App(): React.JSX.Element {
             }
             onNavigateToAudits={() => navigate('Audits')}
             onNavigateToDiary={() => navigate('FarmDiary')}
+            onNavigateToWeather={() => navigate('Weather')}
+            onNavigateToCalendar={() => navigate('TohfaCalendar')}
+            onNavigateToActiveCrops={() => navigate('ActiveCrops')}
+            onNavigateToAttendance={() => navigate('DailyAttendance')}
+            onNavigateToLearningHub={() => navigate('LearningHub')}
           />
         ) : screen === 'FarmDiary' ? (
           <FarmDiaryScreen 
@@ -391,6 +434,53 @@ export default function App(): React.JSX.Element {
           <AddToolScreen onNavigateBack={() => navigate('ToolsList')} />
         ) : screen === 'DailyAttendance' ? (
           <DailyAttendanceScreen onNavigateBack={() => navigate('MainTabs')} />
+        ) : screen === 'LearningHub' ? (
+          <LearningHubScreen 
+            onBack={() => 
+              navigate(
+                previousScreen && previousScreen !== 'LearningHub' ? previousScreen : 'MainTabs',
+              )
+            } 
+            onNavigateToContentDetail={(content) => {
+              setSelectedContentDetail(content);
+              navigate('ContentDetail');
+            }}
+            onNavigateToGroups={() => navigate('Groups')}
+            onNavigateToGroupDetail={(group) => {
+              setSelectedGroup(group);
+              navigate('GroupDetail');
+            }}
+          />
+        ) : screen === 'ContentDetail' ? (
+          <ContentDetailScreen
+            content={selectedContentDetail ?? undefined}
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'ContentDetail' ? previousScreen : 'LearningHub',
+              )
+            }
+          />
+        ) : screen === 'Groups' ? (
+          <GroupsScreen
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'Groups' ? previousScreen : 'LearningHub',
+              )
+            }
+            onNavigateToGroupDetail={(group) => {
+              setSelectedGroup(group);
+              navigate('GroupDetail');
+            }}
+          />
+        ) : screen === 'GroupDetail' ? (
+          <GroupDetailScreen
+            group={selectedGroup ?? undefined}
+            onBack={() =>
+              navigate(
+                previousScreen && previousScreen !== 'GroupDetail' ? previousScreen : 'Groups',
+              )
+            }
+          />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>
@@ -411,6 +501,7 @@ export default function App(): React.JSX.Element {
                   onNavigateToAttendance={() => navigate('DailyAttendance')}
                   onNavigateToTohfaCalendar={() => navigate('TohfaCalendar')}
                   onNavigateToInventory={() => navigate('FarmInventory')}
+                  onNavigateToLearningHub={() => navigate('LearningHub')}
                   onNavigateToReviewOffer={() => {
                     setSelectedListing({
                       id: 'dummy-listing',
@@ -441,7 +532,32 @@ export default function App(): React.JSX.Element {
                 <ListingsScreen
                   onNavigateToCreateListing={() => navigate('CreateListing')}
                   onNavigateToCounterOffer={(item) => {
-                    setSelectedListing(item);
+                    if (item && item.id) {
+                      setSelectedListing(item);
+                    } else {
+                      setSelectedListing({
+                        id: 'dummy-listing',
+                        listingNumber: 'L-9821',
+                        cropName: 'Carrot - Ooty - Grade 1',
+                        quantityKg: '150',
+                        askingPricePerKg: '40',
+                        ceilingPricePerKg: '45',
+                        status: 'COUNTER_OFFER',
+                        grade: 'Grade 1',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        activeCounterOffer: {
+                          id: 'dummy-offer',
+                          pricePerKg: '34',
+                          quantityKg: '150',
+                          message: 'On inspection the batch grades as Grade 2 (minor forking & size variance), not the claimed Grade 1. Counter reflects the Grade 2 ceiling.',
+                          round: 1,
+                          expiresAt: new Date(Date.now() + (22 * 60 * 60 + 30 * 60) * 1000).toISOString(),
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString(),
+                        },
+                      } as any);
+                    }
                     navigate('CounterOffer');
                   }}
                 />

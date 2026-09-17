@@ -39,6 +39,7 @@ interface DashboardScreenProps {
   onNavigateToReviewOffer?: () => void;
   onNavigateToTohfaCalendar?: () => void;
   onNavigateToInventory?: () => void;
+  onNavigateToLearningHub?: () => void;
 }
 
 export function DashboardScreen({
@@ -61,6 +62,7 @@ export function DashboardScreen({
   onNavigateToReviewOffer,
   onNavigateToTohfaCalendar,
   onNavigateToInventory,
+  onNavigateToLearningHub,
 }: DashboardScreenProps): React.JSX.Element {
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -311,7 +313,7 @@ export function DashboardScreen({
               <View style={[styles.gridIconCircle, { backgroundColor: P.paleMintBg }]}>
                 <Icon name="eco" size={20} color={colors.brandGreen} />
               </View>
-              <Text style={styles.gridTitle}>Crop Management</Text>
+              <Text style={styles.gridTitle}>Farm Management</Text>
               <Text style={styles.gridSubtitle}>3 crops · diary due</Text>
             </TouchableOpacity>
 
@@ -350,7 +352,13 @@ export function DashboardScreen({
               <Text style={styles.gridSubtitle}>Market day tomorrow</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.gridCard}>
+            <TouchableOpacity 
+              style={styles.gridCard}
+              onPress={onNavigateToLearningHub}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Learning Hub"
+            >
               <View style={[styles.gridIconCircle, { backgroundColor: P.palePinkBg }]}>
                 <Icon name="menu_book" size={20} color={P.red600} />
               </View>

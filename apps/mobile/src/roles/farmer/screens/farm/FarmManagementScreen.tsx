@@ -1,254 +1,909 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Pressable,
+  Alert,
+  Modal,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
-import { Icon } from '@tohfa/mobile-ui';
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import { t } from '../../../../i18n/farmer';
+import { authPalette as P, colors } from '../../theme';
+
+// ─────────────────────────────────────────────
+// Inline SVG Icons
+// ─────────────────────────────────────────────
+
+function ArrowBackIcon({ size = 20, color = P.white }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function ChevronRightIcon({ size = 18, color = P.twGray400 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 18l6-6-6-6" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function ExclamationCircleIcon({ size = 24 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" fill={P.twOrange600} />
+      <Line x1="12" y1="7" x2="12" y2="13" stroke={P.white} strokeWidth="2" strokeLinecap="round" />
+      <Circle cx="12" cy="17" r="1.2" fill={P.white} />
+    </Svg>
+  );
+}
+
+function PencilEditIcon({ size = 20, color = P.twOrange600 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function CloudWeatherIcon({ size = 22, color = P.sky600 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function SnowflakeIcon({ size = 12, color = P.sky600 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Line x1="12" y1="2" x2="12" y2="22" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Line x1="2" y1="12" x2="22" y2="12" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Line x1="19.07" y1="4.93" x2="4.93" y2="19.07" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function PlantSproutIcon({ size = 20, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M7 20h10M12 20v-8M12 12a5 5 0 0 1 5-5h2v2a5 5 0 0 1-5 5h-2zM12 14a5 5 0 0 0-5-5H5v2a5 5 0 0 0 5 5h2z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CalendarMiniIcon({ size = 12, color = P.deepGreen }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="3" y="4" width="18" height="18" rx="2" stroke={color} strokeWidth="2" />
+      <Line x1="16" y1="2" x2="16" y2="6" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Line x1="8" y1="2" x2="8" y2="6" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Line x1="3" y1="10" x2="21" y2="10" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function FlaskBeakerIcon({ size = 20, color = P.twOrange600 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function UsersIcon({ size = 20, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx="9" cy="7" r="4" stroke={color} strokeWidth="2" />
+      <Path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <Path d="M16 3.13a4 4 0 0 1 0 7.75" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function CheckmarkCircleIcon({ size = 16, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" />
+      <Path d="M8 12l2.5 2.5L16 9" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function PawPrintIcon({ size = 20, color = P.twOrange600 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="15" r="4.5" fill={color} />
+      <Circle cx="6.5" cy="10" r="2.2" fill={color} />
+      <Circle cx="10" cy="5.5" r="2.2" fill={color} />
+      <Circle cx="14" cy="5.5" r="2.2" fill={color} />
+      <Circle cx="17.5" cy="10" r="2.2" fill={color} />
+    </Svg>
+  );
+}
+
+function GraduationCapIcon({ size = 22, color = P.sky600 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M22 10v6M2 10l10-5 10 5-10 5z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M6 12v5c0 2 3 4 6 4s6-2 6-4v-5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function CheckmarkMiniIcon({ size = 14, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M20 6L9 17l-5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Component Implementation
+// ─────────────────────────────────────────────
 
 interface FarmManagementScreenProps {
   onBack?: () => void;
   onNavigateToAudits?: () => void;
   onNavigateToDiary?: () => void;
-}
-
-function TractorIcon({ color = '#fff' }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Circle cx={7} cy={16} r={3} />
-      <Circle cx={17} cy={16} r={2} />
-      <Path d="M10 16h5" />
-      <Path d="M7 13V9h4v4" />
-      <Path d="M11 9l4-1v6h3l1 2v2" />
-    </Svg>
-  );
-}
-
-function TerrainIcon({ color = '#fff' }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M22 18L14 6l-4 6-3-4-5 10h20z" />
-    </Svg>
-  );
-}
-
-function BugIcon({ color = '#fff' }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M12 18V6" />
-      <Path d="M8 10a4 4 0 0 1 8 0v4a4 4 0 0 1-8 0z" />
-      <Path d="M10 6h4" />
-      <Path d="M18 10h2" />
-      <Path d="M4 10h2" />
-      <Path d="M18 14h2" />
-      <Path d="M4 14h2" />
-      <Path d="M16 18l2 2" />
-      <Path d="M8 18l-2 2" />
-      <Path d="M16 6l2-2" />
-      <Path d="M8 6L6 4" />
-    </Svg>
-  );
+  onNavigateToWeather?: () => void;
+  onNavigateToCalendar?: () => void;
+  onNavigateToActiveCrops?: () => void;
+  onNavigateToAttendance?: () => void;
+  onNavigateToLearningHub?: () => void;
 }
 
 export function FarmManagementScreen({
   onBack,
+  onNavigateToAudits,
+  onNavigateToDiary,
+  onNavigateToWeather,
+  onNavigateToCalendar,
+  onNavigateToActiveCrops,
+  onNavigateToAttendance,
+  onNavigateToLearningHub,
 }: FarmManagementScreenProps): React.JSX.Element {
+  const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false);
+  const [diaryNote, setDiaryNote] = useState('');
+  const [isFertigationLogged, setIsFertigationLogged] = useState(false);
+
+  const handleSaveDiary = () => {
+    if (!diaryNote.trim()) {
+      Alert.alert(t('farmer.farmManagement.diary.requiredTitle'), t('farmer.farmManagement.diary.requiredBody'));
+      return;
+    }
+    Alert.alert(t('farmer.farmManagement.diary.successTitle'), t('farmer.farmManagement.diary.successBody'));
+    setIsDiaryModalOpen(false);
+    setDiaryNote('');
+  };
+
+  const handleToggleFertigation = () => {
+    setIsFertigationLogged(!isFertigationLogged);
+    Alert.alert(
+      !isFertigationLogged ? t('farmer.farmManagement.fertigation.loggedTitle') : t('farmer.farmManagement.fertigation.pendingTitle'),
+      !isFertigationLogged
+        ? t('farmer.farmManagement.fertigation.loggedBody')
+        : t('farmer.farmManagement.fertigation.pendingBody'),
+    );
+  };
+
+  const handleLivestockReview = () => {
+    Alert.alert(t('farmer.farmManagement.livestock.alertTitle'), t('farmer.farmManagement.livestock.alertBody'));
+  };
+
+  const handleLearningHub = () => {
+    if (onNavigateToLearningHub) {
+      onNavigateToLearningHub();
+    } else {
+      Alert.alert(t('farmer.farmManagement.learningHub.alertTitle'), t('farmer.farmManagement.learningHub.alertBody'));
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={onBack}>
-            <Icon name="arrow_back" size={20} color="#2e7d32" />
-          </Pressable>
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="light-content" backgroundColor={P.deepGreen} />
+
+      {/* ── Dark Green Header with Summary Stats ── */}
+      <View style={styles.topHeader}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={onBack}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('farmer.common.back')}
+          >
+            <ArrowBackIcon size={20} color={P.white} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleCol}>
+            <Text style={styles.headerTitle}>{t('farmer.farmManagement.title')}</Text>
+            <Text style={styles.headerSubtitle}>{t('farmer.farmManagement.headerSubtitle', { date: 'Wed, 16 Jul 2026' })}</Text>
+          </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
-          <View style={styles.heroSection}>
-            <View style={styles.logoCircle}>
-              <Icon name="eco" size={32} color="#2e7d32" />
+        {/* 3 Summary Stats Cards */}
+        <View style={styles.summaryStatsRow}>
+          <TouchableOpacity 
+            style={styles.summaryStatCard} 
+            activeOpacity={0.8}
+            onPress={onNavigateToActiveCrops}
+            accessibilityRole="button"
+          >
+            <Text style={styles.summaryStatNumber}>3</Text>
+            <Text style={styles.summaryStatLabel}>{t('farmer.farmManagement.stat.activeCrops')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.summaryStatCard} 
+            activeOpacity={0.8}
+            onPress={onNavigateToAttendance}
+            accessibilityRole="button"
+          >
+            <Text style={styles.summaryStatNumber}>3</Text>
+            <Text style={styles.summaryStatLabel}>{t('farmer.farmManagement.stat.workersToday')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.summaryStatCard} 
+            activeOpacity={0.8} 
+            onPress={onNavigateToAudits}
+            accessibilityRole="button"
+          >
+            <Text style={styles.summaryStatNumber}>2</Text>
+            <Text style={styles.summaryStatLabel}>{t('farmer.farmManagement.stat.certsValid')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* ── Attention Banner ── */}
+        <TouchableOpacity 
+          style={styles.attentionBanner} 
+          activeOpacity={0.85} 
+          onPress={() => (onNavigateToDiary ? onNavigateToDiary() : setIsDiaryModalOpen(true))}
+          accessibilityRole="button"
+        >
+          <ExclamationCircleIcon size={24} />
+          <View style={styles.attentionContent}>
+            <Text style={styles.attentionTitle}>{t('farmer.farmManagement.attention.title', { count: 3 })}</Text>
+            <Text style={styles.attentionSubtitle}>{t('farmer.farmManagement.attention.subtitle')}</Text>
+          </View>
+          <ChevronRightIcon size={18} color={P.twAmber800} />
+        </TouchableOpacity>
+
+        {/* ── Grid of Modules (2 Columns) ── */}
+        <View style={styles.modulesGrid}>
+          {/* 1. Farm Diary */}
+          <View style={styles.moduleCard}>
+            <View style={styles.moduleCardTop}>
+              <View style={[styles.iconBadge, { backgroundColor: P.twOrange100 }]}>
+                <PencilEditIcon size={20} color={P.twOrange600} />
+              </View>
+              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twRed500 }]} />
             </View>
-            <Text style={styles.title}>Crop Management</Text>
-            <Text style={styles.subtitle}>
-              Everything about what goes into your soil and onto your crops — in one place.
-            </Text>
+
+            <View style={styles.moduleTextSection}>
+              <Text style={styles.moduleTitle}>{t('farmer.farmManagement.module.diary.title')}</Text>
+              <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.diary.desc')}</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.logEntryBtn} 
+              activeOpacity={0.85} 
+              onPress={onNavigateToDiary ? onNavigateToDiary : () => setIsDiaryModalOpen(true)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.logEntryBtnText}>{t('farmer.farmManagement.module.diary.logEntry')}</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.cardsContainer}>
-            
-            {/* Card 1 */}
-            <Pressable style={styles.card}>
-              <View style={[styles.cardIconBox, { backgroundColor: '#388e3c' }]}>
-                <TractorIcon />
+          {/* 2. Weather */}
+          <View style={styles.moduleCard}>
+            <View style={styles.moduleCardTop}>
+              <View style={[styles.iconBadge, { backgroundColor: P.sky100 }]}>
+                <CloudWeatherIcon size={22} color={P.sky600} />
               </View>
-              <View style={styles.cardTextCol}>
-                <Text style={styles.cardCode}>FR-F05</Text>
-                <Text style={styles.cardTitle}>Input Management</Text>
-                <Text style={styles.cardSubtitle}>Fertilizers, fertigation schedule, approved inputs</Text>
-              </View>
-              <Icon name="chevron_right" size={24} color="#bdbdbd" />
-            </Pressable>
+              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twBlue500 }]} />
+            </View>
 
-            {/* Card 2 */}
-            <Pressable style={styles.card}>
-              <View style={[styles.cardIconBox, { backgroundColor: '#8a5a21' }]}>
-                <TerrainIcon />
-              </View>
-              <View style={styles.cardTextCol}>
-                <Text style={styles.cardCode}>FR-F06</Text>
-                <Text style={styles.cardTitle}>Soil Management</Text>
-                <Text style={styles.cardSubtitle}>Soil tests, health tracker, amendments, rotation</Text>
-              </View>
-              <Icon name="chevron_right" size={24} color="#bdbdbd" />
-            </Pressable>
+            <View style={styles.moduleTextSection}>
+              <Text style={styles.moduleTitle}>{t('farmer.weather.title')}</Text>
+              <Text style={styles.moduleDesc}>28°C · Rain expected today at 4 PM</Text>
+            </View>
 
-            {/* Card 3 */}
-            <Pressable style={styles.card}>
-              <View style={[styles.cardIconBox, { backgroundColor: '#e53935' }]}>
-                <BugIcon />
-              </View>
-              <View style={styles.cardTextCol}>
-                <Text style={styles.cardCode}>FR-F07</Text>
-                <Text style={styles.cardTitle}>Pest Management</Text>
-                <Text style={styles.cardSubtitle}>Detection log, pest library, treatment schedule</Text>
-              </View>
-              <Icon name="chevron_right" size={24} color="#bdbdbd" />
-            </Pressable>
+            <TouchableOpacity 
+              style={styles.weatherRiskPill} 
+              activeOpacity={0.85} 
+              onPress={onNavigateToWeather}
+              accessibilityRole="button"
+            >
+              <SnowflakeIcon size={12} color={P.twBlue700} />
+              <Text style={styles.weatherRiskText}>{t('farmer.farmManagement.module.weather.frostRisk')}</Text>
+            </TouchableOpacity>
+          </View>
 
-            {/* Banner */}
-            <View style={styles.infoBanner}>
-              <Icon name="info" size={20} color="#1976d2" />
-              <Text style={styles.infoBannerText}>
-                Each section below opens independently — your data in one doesn't require touching the others.
+          {/* 3. Produce Calendar */}
+          <View style={styles.moduleCard}>
+            <View style={styles.moduleCardTop}>
+              <View style={[styles.iconBadge, { backgroundColor: P.twEmerald100 }]}>
+                <PlantSproutIcon size={20} color={P.twGreen700} />
+              </View>
+              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twGreen500 }]} />
+            </View>
+
+            <View style={styles.moduleTextSection}>
+              <Text style={styles.moduleTitle}>{t('farmer.farmManagement.module.calendar.title')}</Text>
+              <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.calendar.desc', { count: 3 })}</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.producePill} 
+              activeOpacity={0.85} 
+              onPress={onNavigateToCalendar}
+              accessibilityRole="button"
+            >
+              <CalendarMiniIcon size={12} color={P.deepGreen} />
+              <Text style={styles.producePillText}>{t('farmer.farmManagement.module.calendar.harvestIn', { days: 12 })}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 4. Input Management */}
+          <View style={styles.moduleCard}>
+            <View style={styles.moduleCardTop}>
+              <View style={[styles.iconBadge, { backgroundColor: P.twOrange100 }]}>
+                <FlaskBeakerIcon size={20} color={P.twOrange600} />
+              </View>
+              <View style={[styles.statusIndicatorDot, { backgroundColor: isFertigationLogged ? P.twGreen500 : P.twOrange500 }]} />
+            </View>
+
+            <View style={styles.moduleTextSection}>
+              <Text style={styles.moduleTitle}>{t('farmer.farmManagement.module.input.title')}</Text>
+              <Text style={styles.moduleDesc}>
+                {isFertigationLogged
+                  ? t('farmer.farmManagement.module.input.completed')
+                  : t('farmer.farmManagement.module.input.due')}
               </Text>
             </View>
 
+            <TouchableOpacity
+              style={isFertigationLogged ? styles.statusRowGreen : styles.markLoggedBtn}
+              activeOpacity={0.8}
+              onPress={handleToggleFertigation}
+              accessibilityRole="button"
+            >
+              {isFertigationLogged ? (
+                <>
+                  <CheckmarkCircleIcon size={16} color={P.twGreen700} />
+                  <Text style={styles.statusRowGreenText}>{t('farmer.farmManagement.module.workforce.upToDate')}</Text>
+                </>
+              ) : (
+                <>
+                  <CheckmarkMiniIcon size={14} color={P.twGreen700} />
+                  <Text style={styles.markLoggedBtnText}>{t('farmer.farmManagement.module.input.markLogged')}</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-      </View>
+
+          {/* 5. Workforce */}
+          <View style={styles.moduleCard}>
+            <View style={styles.moduleCardTop}>
+              <View style={[styles.iconBadge, { backgroundColor: P.twEmerald100 }]}>
+                <UsersIcon size={20} color={P.twGreen700} />
+              </View>
+              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twGreen500 }]} />
+            </View>
+
+            <View style={styles.moduleTextSection}>
+              <Text style={styles.moduleTitle}>{t('farmer.farmManagement.module.workforce.title')}</Text>
+              <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.workforce.desc', { checkedIn: 3, total: 3 })}</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.statusRowGreen} 
+              activeOpacity={0.8}
+              onPress={onNavigateToAttendance}
+              accessibilityRole="button"
+            >
+              <CheckmarkCircleIcon size={16} color={P.twGreen700} />
+              <Text style={styles.statusRowGreenText}>{t('farmer.farmManagement.module.workforce.upToDate')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 6. Livestock */}
+          <View style={styles.moduleCard}>
+            <View style={styles.moduleCardTop}>
+              <View style={[styles.iconBadge, { backgroundColor: P.twOrange100 }]}>
+                <PawPrintIcon size={20} color={P.twOrange600} />
+              </View>
+              <View style={[styles.statusIndicatorDot, { backgroundColor: P.twOrange500 }]} />
+            </View>
+
+            <View style={styles.moduleTextSection}>
+              <Text style={styles.moduleTitle}>{t('farmer.farmManagement.module.livestock.title')}</Text>
+              <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.livestock.desc', { count: 2 })}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.reviewNeededRow}
+              activeOpacity={0.8}
+              onPress={handleLivestockReview}
+              accessibilityRole="button"
+            >
+              <Text style={styles.reviewNeededText}>{t('farmer.farmManagement.module.livestock.reviewNeeded')}</Text>
+              <ChevronRightIcon size={14} color={P.twOrange600} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ── Learning Hub Card ── */}
+        <TouchableOpacity
+          style={styles.learningHubCard}
+          activeOpacity={0.85}
+          onPress={handleLearningHub}
+          accessibilityRole="button"
+        >
+          <View style={styles.learningHubIconBox}>
+            <GraduationCapIcon size={22} color={P.sky600} />
+          </View>
+          <View style={styles.learningHubTextCol}>
+            <View style={styles.learningHubTitleRow}>
+              <Text style={styles.learningHubTitle}>{t('farmer.farmManagement.learningHub.title')}</Text>
+              <View style={styles.learningHubDot} />
+            </View>
+            <Text style={styles.learningHubSubtitle}>{t('farmer.farmManagement.learningHub.subtitle', { count: 3 })}</Text>
+          </View>
+          <ChevronRightIcon size={18} color={P.twGray400} />
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* ── Modal for Farm Diary Entry ── */}
+      <Modal visible={isDiaryModalOpen} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>{t('farmer.farmManagement.diary.modalTitle')}</Text>
+                <Text style={styles.modalSub}>{t('farmer.farmManagement.diary.modalSub', { date: 'Today' })}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setIsDiaryModalOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel={t('farmer.common.close')}
+              >
+                <Text style={styles.modalCloseBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.fieldLabel}>{t('farmer.farmManagement.diary.fieldLabel')}</Text>
+            <TextInput
+              style={styles.diaryTextInput}
+              multiline
+              numberOfLines={4}
+              placeholder={t('farmer.farmManagement.diary.placeholder')}
+              placeholderTextColor={P.twGray400}
+              value={diaryNote}
+              onChangeText={setDiaryNote}
+              accessibilityLabel={t('farmer.farmManagement.diary.fieldLabel')}
+            />
+
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity 
+                style={styles.cancelBtn} 
+                onPress={() => setIsDiaryModalOpen(false)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.cancelBtnText}>{t('farmer.common.cancel')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.saveBtn} 
+                onPress={handleSaveDiary}
+                accessibilityRole="button"
+              >
+                <Text style={styles.saveBtnText}>{t('farmer.farmManagement.diary.saveEntry')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
+// ─────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
-    backgroundColor: '#faf8f5',
+    backgroundColor: P.lightSurfaceAlt,
   },
-  container: {
-    flex: 1,
+  topHeader: {
+    backgroundColor: P.deepGreen,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
   },
-  backButton: {
+  backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleCol: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: P.white,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: P.green100,
+    marginTop: 2,
+  },
+  summaryStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  summaryStatCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#d5ebd5',
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  heroSection: {
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#e8f5e9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
+  summaryStatNumber: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#212121',
-    marginBottom: 8,
-    textAlign: 'center',
+    color: P.white,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#757575',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  cardsContainer: {
-    paddingHorizontal: 20,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  cardIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardTextCol: {
-    flex: 1,
-    marginLeft: 16,
-    marginRight: 8,
-  },
-  cardCode: {
+  summaryStatLabel: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#9e9e9e',
-    marginBottom: 2,
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    color: colors.brandGreenLight,
+    marginTop: 2,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#212121',
-    marginBottom: 4,
+
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 40,
   },
-  cardSubtitle: {
-    fontSize: 13,
-    color: '#9e9e9e',
-    lineHeight: 18,
-  },
-  infoBanner: {
+
+  /* Attention Banner */
+  attentionBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e3f2fd',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
+    backgroundColor: P.twAmber50,
+    borderWidth: 1,
+    borderColor: P.twAmber200,
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
+    marginBottom: 16,
   },
-  infoBannerText: {
+  attentionContent: {
     flex: 1,
-    marginLeft: 12,
+  },
+  attentionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: P.twAmber900,
+  },
+  attentionSubtitle: {
+    fontSize: 12,
+    color: P.twAmber800,
+    marginTop: 2,
+  },
+
+  /* 2-Column Modules Grid */
+  modulesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  moduleCard: {
+    width: '48%',
+    backgroundColor: P.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: P.twGray200,
+    padding: 14,
+    minHeight: 180,
+    justifyContent: 'space-between',
+    shadowColor: P.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  moduleCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  iconBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  moduleTextSection: {
+    marginVertical: 10,
+  },
+  moduleTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: P.twGray900,
+  },
+  moduleDesc: {
+    fontSize: 12,
+    color: P.twGray500,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+
+  /* Card Bottom Actions */
+  logEntryBtn: {
+    backgroundColor: P.twGreen700,
+    borderRadius: 10,
+    paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logEntryBtnText: {
     fontSize: 13,
-    color: '#1565c0',
-    lineHeight: 18,
-    fontWeight: '500',
+    fontWeight: '700',
+    color: P.white,
+  },
+  weatherRiskPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: P.twBlue50,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  weatherRiskText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.twBlue700,
+  },
+  producePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.brandGreenLight,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  producePillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.deepGreen,
+  },
+  markLoggedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: P.twGreen700,
+    borderRadius: 10,
+    paddingVertical: 8,
+  },
+  markLoggedBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: P.twGreen700,
+  },
+  statusRowGreen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  statusRowGreenText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: P.twGreen700,
+  },
+  reviewNeededRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+  },
+  reviewNeededText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: P.twOrange600,
+  },
+
+  /* Learning Hub Card */
+  learningHubCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: P.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: P.twGray200,
+    padding: 16,
+    gap: 12,
+    marginTop: 14,
+    shadowColor: P.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  learningHubIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: P.sky100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  learningHubTextCol: {
+    flex: 1,
+  },
+  learningHubTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  learningHubTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: P.twGray900,
+  },
+  learningHubDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: P.twBlue500,
+  },
+  learningHubSubtitle: {
+    fontSize: 12,
+    color: P.twGray500,
+    marginTop: 2,
+  },
+
+  /* Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: P.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: P.surfaceMuted,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: P.twGray900,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: P.twGray500,
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: P.twGray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: P.twGray500,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: P.twGray700,
+    marginBottom: 8,
+  },
+  diaryTextInput: {
+    borderWidth: 1,
+    borderColor: P.twGray300,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: P.twGray900,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: P.twGray300,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: P.twGray700,
+  },
+  saveBtn: {
+    flex: 1.4,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: P.twGreen700,
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: P.white,
   },
 });
