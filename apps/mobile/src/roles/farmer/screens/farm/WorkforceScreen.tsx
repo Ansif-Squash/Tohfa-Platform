@@ -117,18 +117,22 @@ export interface WorkforceScreenProps {
   onBack?: () => void;
   onNavigateToAddWorker?: () => void;
   onNavigateToTimesheet?: () => void;
-  onNavigateToWorkerDetail?: (id: string) => void;
+  onNavigateToPayroll?: () => void;
+  onNavigateToWorkerDetail?: (id: string, name?: string, role?: string) => void;
 }
 
 export function WorkforceScreen({
   onBack,
   onNavigateToAddWorker,
   onNavigateToTimesheet,
+  onNavigateToPayroll,
   onNavigateToWorkerDetail,
 }: WorkforceScreenProps): React.JSX.Element {
   const handleWorkerPress = (worker: WorkerItem) => {
     if (onNavigateToWorkerDetail) {
-      onNavigateToWorkerDetail(worker.id);
+      onNavigateToWorkerDetail(worker.id, worker.name, `${worker.role} · ${worker.rateType === 'monthly' ? 'Monthly salary' : 'Daily wage'}`);
+    } else if (onNavigateToAddWorker) {
+      onNavigateToAddWorker();
     } else {
       Alert.alert(
         worker.name,
@@ -146,7 +150,9 @@ export function WorkforceScreen({
   };
 
   const handleTimesheetPress = () => {
-    if (onNavigateToTimesheet) {
+    if (onNavigateToPayroll) {
+      onNavigateToPayroll();
+    } else if (onNavigateToTimesheet) {
       onNavigateToTimesheet();
     } else {
       Alert.alert('Timesheet & Payroll', 'July payroll report: 259 total hours logged across 3 workers.');
@@ -184,7 +190,7 @@ export function WorkforceScreen({
               onPress={handleTimesheetPress}
               activeOpacity={0.75}
               accessibilityRole="button"
-              accessibilityLabel="Timesheet"
+              accessibilityLabel="Timesheet & Payroll"
             >
               <TimesheetIcon size={20} color={P.blue700} />
             </TouchableOpacity>
@@ -192,10 +198,20 @@ export function WorkforceScreen({
 
           {/* 3 Summary Stats Cards */}
           <View style={styles.statsRow}>
-            <View style={styles.statCard}>
+            <TouchableOpacity
+              style={styles.statCard}
+              activeOpacity={0.8}
+              onPress={() => {
+                if (onNavigateToWorkerDetail) {
+                  onNavigateToWorkerDetail('w1', 'Murugan R.', 'Field Worker · Daily wage');
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Workers details"
+            >
               <Text style={styles.statNumber}>3</Text>
               <Text style={styles.statLabel}>Workers</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.statCard}>
               <View style={styles.hoursRow}>
                 <Text style={styles.statNumber}>259</Text>
@@ -203,10 +219,16 @@ export function WorkforceScreen({
               </View>
               <Text style={styles.statLabel}>Hours · Jul</Text>
             </View>
-            <View style={styles.statCard}>
+            <TouchableOpacity
+              style={styles.statCard}
+              activeOpacity={0.8}
+              onPress={handleTimesheetPress}
+              accessibilityRole="button"
+              accessibilityLabel="Payroll due"
+            >
               <Text style={[styles.statNumber, { color: colors.brandGreen }]}>₹20.8k</Text>
               <Text style={styles.statLabel}>Payroll due</Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Section Header */}
