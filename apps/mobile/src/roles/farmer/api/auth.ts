@@ -35,10 +35,12 @@ export function resolveAppRole(roles: UserRole[]): ResolvedAppRole {
 }
 
 export interface OtpResponse {
+  challengeId: string;
   status: string;
   resendAvailableAt: string;
   otpExpiresAt: string;
   attemptsRemaining: number;
+  _mockCode?: string;
 }
 
 export interface TokenResponse {
@@ -168,17 +170,12 @@ export async function requestOtp(body: {
 }
 
 export async function verifyOtp(body: {
-  mobile: string;
+  challengeId: string;
   code: string;
-  purpose?: string;
-  roleCode?: string;
 }): Promise<LoginOutcome> {
   const res = await request<LoginOutcome>('/auth/otp/verify', {
     method: 'POST',
-    body: {
-      ...body,
-      purpose: body.purpose ?? 'LOGIN',
-    },
+    body,
   });
   if (!isRoleSelectionRequired(res) && res.accessToken && res.refreshToken) {
     setAccessToken(res.accessToken);
@@ -195,8 +192,9 @@ export async function forgotPassword(body: { mobile: string }): Promise<{ messag
 }
 
 export async function resetPassword(body: {
-  token: string;
-  password: string;
+  challengeId: string;
+  code: string;
+  newPassword: string;
 }): Promise<{ message: string }> {
   return await request<{ message: string }>('/auth/reset-password', {
     method: 'POST',

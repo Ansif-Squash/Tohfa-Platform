@@ -136,7 +136,14 @@ export function DashboardScreen({
               </View>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerIconButton}>
+              <TouchableOpacity 
+                style={styles.headerIconButton}
+                onPress={() => {
+                  import('react-native').then(({ Alert }) => {
+                    Alert.alert('Search', 'Search functionality is coming soon.');
+                  });
+                }}
+              >
                 <Icon name="search" size={18} color={colors.white} />
               </TouchableOpacity>
               <TouchableOpacity

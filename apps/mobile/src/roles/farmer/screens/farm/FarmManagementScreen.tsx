@@ -174,11 +174,13 @@ function CheckmarkMiniIcon({ size = 14, color = P.twGreen700 }: { size?: number;
 interface FarmManagementScreenProps {
   onBack?: () => void;
   onNavigateToAudits?: () => void;
+  onNavigateToDiary?: () => void;
 }
 
 export function FarmManagementScreen({
   onBack,
   onNavigateToAudits,
+  onNavigateToDiary,
 }: FarmManagementScreenProps): React.JSX.Element {
   const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false);
   const [diaryNote, setDiaryNote] = useState('');
@@ -280,8 +282,8 @@ export function FarmManagementScreen({
               <Text style={styles.moduleDesc}>{t('farmer.farmManagement.module.diary.desc')}</Text>
             </View>
 
-            <TouchableOpacity style={styles.logEntryBtn} activeOpacity={0.85} onPress={() => setIsDiaryModalOpen(true)}>
-              <Text style={styles.logEntryBtnText}>+ {t('farmer.farmManagement.module.diary.logEntry')}</Text>
+            <TouchableOpacity style={styles.logEntryBtn} activeOpacity={0.85} onPress={onNavigateToDiary}>
+              <Text style={styles.logEntryBtnText}>{t('farmer.farmManagement.module.diary.title')}</Text>
             </TouchableOpacity>
           </View>
 

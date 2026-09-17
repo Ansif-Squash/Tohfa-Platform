@@ -49,7 +49,7 @@ export const Step5Review: React.FC<Step5Props> = ({ draft, onSubmitSuccess, onBa
   }
 
   const Section = ({ title, data }: { title: string, data: { label: string, value: string, highlight?: boolean }[] }) => (
-    <View style={[styles.section, { backgroundColor: colors.white, borderColor: colors.borderMedium }]}>
+    <View style={[styles.section, { backgroundColor: '#F6F7F0', borderColor: '#E8EBD8' }]}>
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.brandGreen }]}>{title}</Text>
         <TouchableOpacity><Text style={[styles.editLink, { color: colors.brandGreen }]}>Edit</Text></TouchableOpacity>
@@ -140,7 +140,7 @@ export const Step5Review: React.FC<Step5Props> = ({ draft, onSubmitSuccess, onBa
           <Text style={[styles.footerBtnText, { color: colors.brandGreen }]}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity activeOpacity={0.85} style={[styles.footerBtn, styles.nextButton, { backgroundColor: colors.brandGreen, opacity: submitting ? 0.7 : 1 }]} onPress={handleSubmit} disabled={submitting}>
-          <Text style={[styles.footerBtnText, { color: colors.white }]}>{submitting ? 'Submitting...' : 'Submit Application'}</Text>
+          <Text style={[styles.footerBtnText, { color: colors.white }]}>{submitting ? 'Submitting...' : 'Submit'}</Text>
         </TouchableOpacity>
       </View>
 

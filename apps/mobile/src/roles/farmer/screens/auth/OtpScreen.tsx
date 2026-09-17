@@ -35,17 +35,25 @@ const authPalette = {
 
 interface OtpScreenProps {
   mobile: string;
+  challengeId?: string | undefined;
   resendAvailableAt?: string | undefined;
   attemptsRemaining?: number | undefined;
-  onNavigate: (screen: 'ApplicationStatus' | 'MainTabs' | 'CustomerMain' | 'Unsupported' | 'Login', params?: Record<string, string | number | undefined> | undefined) => void;
+  purpose?: 'LOGIN' | 'PASSWORD_RESET';
+  onNavigate: (
+    screen: 'ApplicationStatus' | 'MainTabs' | 'CustomerMain' | 'Unsupported' | 'Login' | 'ResetPassword',
+    params?: Record<string, string | number | undefined>
+  ) => void;
 }
 
 export const OtpScreen: React.FC<OtpScreenProps> = ({
   mobile,
+  challengeId: initialChallengeId,
   resendAvailableAt: initialResendAvailableAt,
   attemptsRemaining: initialAttemptsRemaining = 3,
+  purpose = 'LOGIN',
   onNavigate,
 }) => {
+  const [activeChallengeId, setActiveChallengeId] = useState(initialChallengeId || '');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -70,11 +78,17 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
 
   async function handleVerify() {
     if (code.length < 6 || otpState.isLocked) return;
+    if (purpose === 'PASSWORD_RESET') {
+      onNavigate('ResetPassword', { challengeId: activeChallengeId, code });
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      await verifyOtp({ mobile, code, purpose: 'LOGIN' });
+      const res = await verifyOtp({ challengeId: activeChallengeId, code });
+      
       const me = await fetchMe();
       const route = resolveRouteAfterAuth(me);
       onNavigate(route.name, route.params);
@@ -104,7 +118,13 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await requestOtp({ mobile, purpose: 'LOGIN' });
+      const res = await requestOtp({ mobile, purpose });
+      if (res.challengeId) {
+        setActiveChallengeId(res.challengeId);
+      }
+      if (res._mockCode) {
+        console.log(`[Dev] Mock OTP for ${mobile}: ${res._mockCode}`);
+      }
       setResendAvailableAt(res.resendAvailableAt);
       setAttemptsRemaining(res.attemptsRemaining);
       setCode('');
@@ -166,7 +186,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
         >
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('Login')}>
-              <Text style={styles.backButtonText}>{'<'}</Text>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: themeAuthPalette.primary, marginTop: -2 }}>{'‹'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -283,11 +303,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: themeAuthPalette.coolBorder,
-    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: themeAuthPalette.progressInactive,
+    backgroundColor: themeAuthPalette.white,
     alignItems: 'center',
-    backgroundColor: authPalette.inputBg,
+    justifyContent: 'center',
   },
   backButtonText: {
     fontSize: 18,

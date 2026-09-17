@@ -6,11 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useTheme } from '../../theme';
-import { ErrorState } from '@tohfa/mobile-ui';
+import { ErrorState, Icon } from '@tohfa/mobile-ui';
 import { validateStep } from './validation';
 import type { Step1PersonalData } from '../../storage/registrationDraft';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface Step1Props {
   initialData?: Step1PersonalData | undefined;
@@ -24,7 +26,19 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
 
   // Extract or default values from initial data
   const [fullName, setFullName] = useState(initialData?.fullName ?? 'Kumar');
-  const [dob, setDob] = useState(initialData?.dob ?? '12 / 06 / 1985');
+  
+  const initialDobStr = initialData?.dob ?? '12 / 06 / 1985';
+  const initialDobParts = initialDobStr.split(' / ');
+  const initialDate = initialDobParts.length === 3 
+    ? new Date(parseInt(initialDobParts[2]), parseInt(initialDobParts[1]) - 1, parseInt(initialDobParts[0]))
+    : new Date(1985, 5, 12);
+    
+  const [dateValue, setDateValue] = useState<Date>(initialDate);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [otp, setOtp] = useState('');
+
+  const dob = `${dateValue.getDate().toString().padStart(2, '0')} / ${(dateValue.getMonth() + 1).toString().padStart(2, '0')} / ${dateValue.getFullYear()}`;
+
   const [gender, setGender] = useState(initialData?.gender ?? 'Male');
   const [showGenderMenu, setShowGenderMenu] = useState(false);
 
@@ -115,20 +129,37 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
             <Text style={[styles.label, { color: colors.textBody }]}>
               Date of Birth <Text style={{ color: colors.requiredRed }}>*</Text>
             </Text>
-            <TextInput
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setShowDatePicker(true)}
               style={[
                 styles.input,
                 {
                   borderColor: colors.borderLight,
-                  color: colors.textDark,
                   backgroundColor: colors.white,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                 },
               ]}
-              value={dob}
-              onChangeText={setDob}
-              placeholder="DD / MM / YYYY"
-              placeholderTextColor={colors.textPlaceholder}
-            />
+            >
+              <Text style={{ color: colors.textDark, fontSize: 15 }}>{dob}</Text>
+              <Icon name="calendar_today" size={20} color={colors.textSubtle} />
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={dateValue}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (event.type === 'set' && selectedDate) {
+                    setDateValue(selectedDate);
+                  }
+                }}
+              />
+            )}
           </View>
 
           <View style={styles.gridCol}>
@@ -224,6 +255,26 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
           <Text style={[styles.helperText, { color: colors.textSubtle }]}>
             We'll send an OTP to verify
           </Text>
+          <View style={{ marginTop: 12 }}>
+            <Text style={[styles.label, { color: colors.textBody }]}>
+              OTP <Text style={{ color: colors.requiredRed }}>*</Text>
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  borderColor: colors.borderLight,
+                  color: colors.textDark,
+                  backgroundColor: colors.white,
+                },
+              ]}
+              value={otp}
+              onChangeText={setOtp}
+              keyboardType="number-pad"
+              placeholder="Enter OTP"
+              placeholderTextColor={colors.textPlaceholder}
+            />
+          </View>
         </View>
 
         {/* Aadhaar / ID Number */}
@@ -426,5 +477,31 @@ const styles = StyleSheet.create({
   continueButtonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  calendarContainer: {
+    width: '100%',
+    borderRadius: 12,
+    padding: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  closeCalendarBtn: {
+    padding: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  closeCalendarText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

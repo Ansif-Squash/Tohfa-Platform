@@ -58,7 +58,7 @@ export const RoleSelectionScreen: React.FC<RoleSelectionProps> = ({ onNavigate }
           }}
         >
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1595825833444-93b584d42898?auto=format&fit=crop&q=80&w=200&h=200' }}
+            source={require('../../assets/customer.jpg')}
             style={styles.cardImage}
           />
           <View style={styles.cardTextContainer}>
@@ -72,11 +72,15 @@ export const RoleSelectionScreen: React.FC<RoleSelectionProps> = ({ onNavigate }
         {/* Farmer Card */}
         <TouchableOpacity
           activeOpacity={0.8}
-          style={[styles.card, { borderColor: colors.brandGreen, backgroundColor: colors.white }]}
+          style={[
+            styles.card,
+            { borderColor: colors.brandGreen, backgroundColor: colors.white },
+            styles.activeCardShadow
+          ]}
           onPress={() => onNavigate('Register')}
         >
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1592419044706-39796d40f98c?auto=format&fit=crop&q=80&w=200&h=200' }}
+            source={require('../../assets/farmer.jpg')}
             style={styles.cardImage}
           />
           <View style={styles.cardTextContainer}>
@@ -88,8 +92,8 @@ export const RoleSelectionScreen: React.FC<RoleSelectionProps> = ({ onNavigate }
         </TouchableOpacity>
 
         {/* Info Box */}
-        <View style={[styles.infoBox, { backgroundColor: P.noticeBg, borderColor: P.noticeBorderAlt }]}>
-          <Text style={[styles.infoText, { color: P.noticeTextAlt }]}>
+        <View style={[styles.infoBox, { backgroundColor: '#edf2f7', borderColor: '#475569' }]}>
+          <Text style={[styles.infoText, { color: '#334155' }]}>
             Admin roles are assigned internally by TOHFA. They are never a self-registration option.
           </Text>
         </View>
@@ -175,6 +179,13 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 12,
     marginRight: 16,
+  },
+  activeCardShadow: {
+    shadowColor: P.brandGreen,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
   },
   cardTextContainer: {
     flex: 1,
