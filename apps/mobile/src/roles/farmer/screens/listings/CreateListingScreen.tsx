@@ -1,578 +1,369 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import {
-  createListing,
-  evalListingCeiling,
-  getFairPriceCeilings,
-  type CreateListingInput,
-  type FairPriceCeiling,
-  type Grade,
-} from '../../api/listings';
-import { NetworkError } from '../../api/client';
-import { Button, Card, Icon, Input } from '@tohfa/mobile-ui';
-import { t } from '../../../../i18n/farmer';
-import { MIN_TOUCH_TARGET, colors, radius, spacing, typography, weights } from '../../theme';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Image } from 'react-native';
+import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
+
+// Custom Icons
+const ChevronLeft = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M15 18L9 12L15 6" stroke="#2e7d32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const ArrowRight = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const InfoCircle = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke="#1976d2" strokeWidth="1.5" />
+    <Path d="M12 16V12M12 8H12.01" stroke="#1976d2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const CheckCircle = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="11" fill="#2e7d32" />
+    <Path d="M7 12L10 15L17 8" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const EmptyCircle = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="11" stroke="#e0e0e0" strokeWidth="1" fill="#ffffff" />
+  </Svg>
+);
+
+// Crop Icons
+const CropCarrot = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Path d="M17.414 4.586A2 2 0 0 0 16 4H8a2 2 0 0 0-1.414.586l-2 2a2 2 0 0 0 0 2.828l6 6a2 2 0 0 0 2.828 0l6-6a2 2 0 0 0 0-2.828l-2-2z" stroke="#f57c00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M12 2V4M9 2V4M15 2V4" stroke="#f57c00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+const CropCabbage = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M12 12C12 12 8 16 6 12C4 8 12 6 12 6" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M12 12C12 12 16 16 18 12C20 8 12 6 12 6" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M12 12V22" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+const CropBeetroot = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="14" r="6" stroke="#ad1457" strokeWidth="2" />
+    <Circle cx="12" cy="14" r="2" fill="#ad1457" />
+    <Path d="M12 8V2M9 4L12 8M15 4L12 8" stroke="#ad1457" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 interface CreateListingScreenProps {
   onSuccess?: () => void;
   onCancel?: () => void;
-  onNavigateToCertifications?: () => void;
-}
-
-interface CropOption {
-  id: string;
-  name: string;
-}
-
-const DEFAULT_CROPS: CropOption[] = [
-  { id: 'c1111111-1111-4111-a111-111111111111', name: 'Carrot (Ooty)' },
-  { id: 'c2222222-2222-4222-a222-222222222222', name: 'Potato (Nilgiris)' },
-  { id: 'c3333333-3333-4333-a333-333333333333', name: 'Beetroot' },
-  { id: 'c4444444-4444-4444-a444-444444444444', name: 'Garlic' },
-];
-
-const GRADES: { grade: Grade; label: string; desc: string }[] = [
-  { grade: 'GRADE_1', label: 'Grade 1', desc: 'Superior A-Grade' },
-  { grade: 'GRADE_2', label: 'Grade 2', desc: 'Standard Market' },
-  { grade: 'GRADE_3', label: 'Grade 3', desc: 'Processing / Juice' },
-];
-
-export function generateIdempotencyKey(): string {
-  return `lst-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-export function getTodayDateString(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  onNext?: () => void;
 }
 
 export function CreateListingScreen({
   onSuccess,
   onCancel,
-  onNavigateToCertifications,
+  onNext,
 }: CreateListingScreenProps): React.JSX.Element {
-  const [fairPrices, setFairPrices] = useState<FairPriceCeiling[]>([]);
-  const [availableCrops, setAvailableCrops] = useState<CropOption[]>(DEFAULT_CROPS);
-  const [loadingCeilings, setLoadingCeilings] = useState<boolean>(true);
-
-  // Form State
-  const [selectedCropId, setSelectedCropId] = useState<string>(DEFAULT_CROPS[0]?.id ?? '');
-  const [selectedGrade, setSelectedGrade] = useState<Grade>('GRADE_1');
-  const [quantityKg, setQuantityKg] = useState<string>('');
-  const [askingPrice, setAskingPrice] = useState<string>('');
-  const [availableFrom, setAvailableFrom] = useState<string>(getTodayDateString());
-
-  // Status & Error states
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [certBlockedError, setCertBlockedError] = useState<string | null>(null);
-
-  // Single idempotency key preserved across retries for this form session
-  const idempotencyKeyRef = useRef<string>(generateIdempotencyKey());
-
-  const fetchCeilings = useCallback(async () => {
-    setLoadingCeilings(true);
-    try {
-      const res = await getFairPriceCeilings();
-      if (res.items && res.items.length > 0) {
-        setFairPrices(res.items);
-        const map = new Map<string, string>();
-        res.items.forEach((item) => {
-          if (item.cropId) {
-            map.set(item.cropId, item.cropName || 'Produce');
-          }
-        });
-        const cropList: CropOption[] = Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-        if (cropList.length > 0) {
-          setAvailableCrops(cropList);
-          setSelectedCropId(cropList[0]?.id ?? '');
-        }
-      }
-    } catch {
-      // Offline or mock fallback already set to DEFAULT_CROPS
-    } finally {
-      setLoadingCeilings(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchCeilings();
-  }, [fetchCeilings]);
-
-  // Find effective ceiling for currently selected crop & grade
-  const activeCeiling = useMemo<FairPriceCeiling | undefined>(() => {
-    return fairPrices.find(
-      (p) => p.cropId === selectedCropId && p.grade === selectedGrade,
-    );
-  }, [fairPrices, selectedCropId, selectedGrade]);
-
-  const ceilingPriceValue = activeCeiling?.ceilingPrice ?? '85.00';
-
-  // Live BR-07 price ceiling evaluation
-  const priceEvaluation = useMemo(() => {
-    if (!askingPrice.trim()) {
-      return { isValid: false, error: null, message: null };
-    }
-    return evalListingCeiling(askingPrice, ceilingPriceValue);
-  }, [askingPrice, ceilingPriceValue]);
-
-  // Quantity validation (positive decimal up to 3 places)
-  const quantityValid = useMemo(() => {
-    if (!quantityKg.trim()) return false;
-    const num = Number(quantityKg);
-    return !isNaN(num) && num > 0 && /^\d+(\.\d{1,3})?$/.test(quantityKg.trim());
-  }, [quantityKg]);
-
-  const canSubmit =
-    Boolean(selectedCropId) &&
-    quantityValid &&
-    priceEvaluation.isValid &&
-    !submitting;
-
-  const handleSubmit = async () => {
-    if (!canSubmit) return;
-    setSubmitting(true);
-    setErrorMessage(null);
-    setCertBlockedError(null);
-
-    const input: CreateListingInput = {
-      cropId: selectedCropId,
-      grade: selectedGrade,
-      quantityKg: quantityKg.trim(),
-      askingPricePerKg: askingPrice.trim(),
-      availableFrom: availableFrom.trim() || getTodayDateString(),
-    };
-
-    try {
-      await createListing(input, idempotencyKeyRef.current);
-      onSuccess?.();
-    } catch (err: unknown) {
-      if (
-        err instanceof NetworkError ||
-        (typeof err === 'object' && err !== null && (err as { name?: string }).name === 'NetworkError')
-      ) {
-        setErrorMessage(
-          'You are offline. Your listing details are preserved on this device. Nothing has been submitted yet.',
-        );
-        return;
-      }
-
-      const anyErr = err as { code?: string; detail?: string; message?: string };
-      const errCode = anyErr.code || '';
-      const detail = anyErr.detail || anyErr.message || '';
-
-      if (
-        errCode === 'CERT_EXPIRED' ||
-        errCode === 'CERT_UNVERIFIED' ||
-        detail.toLowerCase().includes('certificate') ||
-        detail.toLowerCase().includes('npop')
-      ) {
-        setCertBlockedError(
-          detail ||
-            t('farmer.listings.create.certBlockedDesc') ||
-            'Market access is blocked due to unverified or expired organic certification.',
-        );
-      } else if (errCode === 'PRICE_ABOVE_CEILING') {
-        setErrorMessage(
-          detail ||
-            `Asking price exceeds the fair price ceiling of ₹${ceilingPriceValue}/kg (BR-07).`,
-        );
-      } else {
-        setErrorMessage(detail || t('error.generic') || 'Failed to create produce listing.');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const [selectedId, setSelectedId] = useState<string>('carrot');
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {/* Screen Header */}
-        <View style={styles.header}>
-          <Pressable
-            style={styles.backButton}
-            onPress={onCancel}
-            accessibilityRole="button"
-            accessibilityLabel="Back to listings"
-          >
-            <Icon name="arrow_back" size={24} color={colors.onSurface} />
-          </Pressable>
-          <Text style={styles.headerTitle}>
-            {t('farmer.listings.create.title') || 'Create Produce Listing'}
-          </Text>
-          <View style={styles.headerSpacer} />
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={onCancel}>
+            <ChevronLeft />
+          </TouchableOpacity>
+          <View style={styles.headerTextCol}>
+            <Text style={styles.headerTitle}>Create Listing</Text>
+            <Text style={styles.headerSub}>Step 1 of 2 · Pick crop</Text>
+          </View>
+          <TouchableOpacity onPress={onCancel}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Certificate Block Warning Alert (BR-01 / BR-02) */}
-          {certBlockedError ? (
-            <Card style={styles.certBlockedCard} accessibilityRole="alert">
-              <View style={styles.certBlockedHeader}>
-                <Icon name="warning" size={24} color={colors.danger} />
-                <Text style={styles.certBlockedTitle}>
-                  {t('farmer.listings.create.certBlockedTitle') || 'Market Access Blocked'}
-                </Text>
-              </View>
-              <Text style={styles.certBlockedText}>{certBlockedError}</Text>
-              <Button
-                title={t('farmer.listings.create.certBlockedAction') || 'Manage Certificates'}
-                variant="primary"
-                onPress={() => onNavigateToCertifications?.()}
-              />
-            </Card>
-          ) : null}
+        {/* Progress Bar */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressActive} />
+          <View style={styles.progressInactive} />
+        </View>
+      </View>
 
-          {/* General Error Banner */}
-          {errorMessage ? (
-            <View style={styles.errorBanner} accessibilityRole="alert">
-              <Icon name="error" size={20} color={colors.danger} />
-              <Text style={styles.errorBannerText}>{errorMessage}</Text>
-            </View>
-          ) : null}
-
-          {/* Step 1: Crop Selection */}
-          <Text style={styles.sectionLabel}>
-            {t('farmer.listings.create.selectCrop') || 'Select Crop'}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Info Banner */}
+        <View style={styles.infoBanner}>
+          <View style={styles.infoIconBox}>
+            <InfoCircle />
+          </View>
+          <Text style={styles.infoText}>
+            Only crops you marked <Text style={{fontWeight: '700'}}>harvest-ready</Text> in Produce Calendar can be listed. One listing sells one harvest batch.
           </Text>
-          <View style={styles.chipRow}>
-            {availableCrops.map((crop) => {
-              const isSelected = crop.id === selectedCropId;
-              return (
-                <Pressable
-                  key={crop.id}
-                  style={[styles.chip, isSelected && styles.chipActive]}
-                  onPress={() => setSelectedCropId(crop.id)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isSelected }}
-                >
-                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                    {crop.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
+        </View>
+
+        {/* List Header */}
+        <Text style={styles.sectionTitle}>HARVEST-READY CROPS</Text>
+
+        {/* Crop Selection Cards */}
+        <TouchableOpacity 
+          style={[styles.cropCard, selectedId === 'carrot' ? styles.cropCardSelected : null]}
+          onPress={() => setSelectedId('carrot')}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.cropIconBox, { backgroundColor: '#fff3e0' }]}>
+            <Image source={require('../../../../assets/images/real_carrot.jpg')} style={styles.realCropImg} />
           </View>
-
-          {/* Step 2: Grade Selection */}
-          <Text style={styles.sectionLabel}>
-            {t('farmer.listings.create.selectGrade') || 'Select Grade'}
-          </Text>
-          <View style={styles.gradeGrid}>
-            {GRADES.map((g) => {
-              const isSelected = g.grade === selectedGrade;
-              return (
-                <Pressable
-                  key={g.grade}
-                  style={[styles.gradeCard, isSelected && styles.gradeCardActive]}
-                  onPress={() => setSelectedGrade(g.grade)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isSelected }}
-                >
-                  <Text style={[styles.gradeTitle, isSelected && styles.gradeTitleActive]}>
-                    {g.label}
-                  </Text>
-                  <Text style={styles.gradeDesc}>{g.desc}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {/* Step 3: BR-07 Fair Price Ceiling Display - Shown BEFORE entering price */}
-          <Card style={styles.ceilingCard}>
-            <View style={styles.ceilingHeader}>
-              <Icon name="verified" size={20} color={colors.primary} />
-              <Text style={styles.ceilingBadgeTitle}>
-                {t('farmer.listings.create.ceilingNotice', { price: ceilingPriceValue }) ||
-                  `Fair Price Ceiling: ₹${ceilingPriceValue}/kg (BR-07)`}
-              </Text>
-            </View>
-            <Text style={styles.ceilingDescription}>
-              {t('farmer.listings.create.ceilingNoticeHint') ||
-                'Asking price cannot exceed the official fair-price ceiling set by TOHFA.'}
-            </Text>
-            {loadingCeilings ? (
-              <ActivityIndicator size="small" color={colors.primary} style={styles.ceilingLoader} />
-            ) : null}
-          </Card>
-
-          {/* Step 4: Quantity Input */}
-          <View style={styles.inputContainer}>
-            <Input
-              label={t('farmer.listings.create.quantity') || 'Quantity (kg)'}
-              value={quantityKg}
-              onChangeText={setQuantityKg}
-              placeholder="e.g. 150.00"
-              keyboardType="decimal-pad"
-              error={
-                quantityKg.trim() !== '' && !quantityValid
-                  ? 'Enter a valid positive quantity in kg (up to 3 decimal places)'
-                  : undefined
-              }
-            />
-          </View>
-
-          {/* Step 5: Asking Price with live BR-07 inline feedback */}
-          <View style={styles.inputContainer}>
-            <Input
-              label={t('farmer.listings.create.price') || 'Asking Price (₹/kg)'}
-              value={askingPrice}
-              onChangeText={setAskingPrice}
-              placeholder={`Max ₹${ceilingPriceValue}`}
-              keyboardType="decimal-pad"
-              error={
-                priceEvaluation.error ? priceEvaluation.message ?? 'Invalid price' : undefined
-              }
-            />
-            {priceEvaluation.isValid && askingPrice.trim() !== '' ? (
-              <View style={styles.validPriceRow}>
-                <Icon name="check_circle" size={16} color={colors.success} />
-                <Text style={styles.validPriceText}>
-                  Within fair price ceiling (₹{ceilingPriceValue}/kg)
-                </Text>
+          <View style={styles.cropTextCol}>
+            <View style={styles.cropTitleRow}>
+              <Text style={styles.cropTitle}>Carrot · Ooty</Text>
+              <View style={styles.gradeBadge}>
+                <Text style={styles.gradeBadgeText}>Grade 1</Text>
               </View>
-            ) : null}
+            </View>
+            <Text style={styles.cropSub}>Zone A · 180 kg available</Text>
           </View>
+          <View style={styles.radioBox}>
+            {selectedId === 'carrot' ? <CheckCircle /> : <EmptyCircle />}
+          </View>
+        </TouchableOpacity>
 
-          {/* Step 6: Available From Date */}
-          <View style={styles.inputContainer}>
-            <Input
-              label={t('farmer.listings.create.availableFrom') || 'Available From (YYYY-MM-DD)'}
-              value={availableFrom}
-              onChangeText={setAvailableFrom}
-              placeholder="YYYY-MM-DD"
-            />
+        <TouchableOpacity 
+          style={[styles.cropCard, selectedId === 'cabbage' ? styles.cropCardSelected : null]}
+          onPress={() => setSelectedId('cabbage')}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.cropIconBox, { backgroundColor: '#e8f5e9' }]}>
+            <Image source={require('../../../../assets/images/real_cabbage.jpg')} style={styles.realCropImg} />
           </View>
+          <View style={styles.cropTextCol}>
+            <View style={styles.cropTitleRow}>
+              <Text style={styles.cropTitle}>Cabbage</Text>
+              <View style={styles.gradeBadge}>
+                <Text style={styles.gradeBadgeText}>Grade 2</Text>
+              </View>
+            </View>
+            <Text style={styles.cropSub}>Zone B · 260 kg available</Text>
+          </View>
+          <View style={styles.radioBox}>
+            {selectedId === 'cabbage' ? <CheckCircle /> : <EmptyCircle />}
+          </View>
+        </TouchableOpacity>
 
-          {/* Submit Action */}
-          <View style={styles.actionSection}>
-            <Button
-              title={
-                submitting
-                  ? 'Submitting Listing...'
-                  : t('farmer.listings.create.submit') || 'Submit Produce Listing'
-              }
-              variant="primary"
-              disabled={!canSubmit}
-              loading={submitting}
-              onPress={() => void handleSubmit()}
-            />
-            <Button
-              title={t('farmer.common.cancel') || 'Cancel'}
-              variant="outline"
-              onPress={() => onCancel?.()}
-              style={styles.cancelButton}
-            />
+        <TouchableOpacity 
+          style={[styles.cropCard, selectedId === 'beetroot' ? styles.cropCardSelected : null]}
+          onPress={() => setSelectedId('beetroot')}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.cropIconBox, { backgroundColor: '#fce4ec' }]}>
+            <Image source={require('../../../../assets/images/real_beetroot.jpg')} style={styles.realCropImg} />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <View style={styles.cropTextCol}>
+            <View style={styles.cropTitleRow}>
+              <Text style={styles.cropTitle}>Beetroot</Text>
+              <View style={styles.gradeBadge}>
+                <Text style={styles.gradeBadgeText}>Grade 1</Text>
+              </View>
+            </View>
+            <Text style={styles.cropSub}>Zone A · 90 kg available</Text>
+          </View>
+          <View style={styles.radioBox}>
+            {selectedId === 'beetroot' ? <CheckCircle /> : <EmptyCircle />}
+          </View>
+        </TouchableOpacity>
+
+        <View style={{height: 100}} />
+      </ScrollView>
+
+      {/* Footer / Next Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.nextBtn} onPress={onNext}>
+          <Text style={styles.nextBtnText}>Next</Text>
+          <ArrowRight />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
   container: {
     flex: 1,
+    backgroundColor: '#fafafa',
   },
   header: {
+    backgroundColor: '#ffffff',
+    paddingTop: 16,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfacePressed,
-    backgroundColor: colors.white,
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
-  backButton: {
-    minWidth: MIN_TOUCH_TARGET,
-    minHeight: MIN_TOUCH_TARGET,
-    justifyContent: 'center',
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  headerTextCol: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: typography.title,
-    fontWeight: weights.bold,
-    color: colors.onSurface,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#004d40',
   },
-  headerSpacer: {
-    width: MIN_TOUCH_TARGET,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
-  },
-  certBlockedCard: {
-    backgroundColor: colors.white,
-    borderColor: colors.danger,
-    borderWidth: 1.5,
-    marginBottom: spacing.lg,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  certBlockedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  certBlockedTitle: {
-    fontSize: typography.bodyLarge,
-    fontWeight: weights.bold,
-    color: colors.danger,
-  },
-  certBlockedText: {
-    fontSize: typography.body,
-    color: colors.onSurface,
-    lineHeight: 20,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surfacePressed,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    marginBottom: spacing.lg,
-  },
-  errorBannerText: {
-    flex: 1,
-    fontSize: typography.bodySmall,
-    color: colors.danger,
-    fontWeight: weights.medium,
-  },
-  sectionLabel: {
-    fontSize: typography.bodyLarge,
-    fontWeight: weights.bold,
-    color: colors.onSurface,
-    marginBottom: spacing.sm,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.surfacePressed,
-    backgroundColor: colors.white,
-    minHeight: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontSize: typography.bodySmall,
-    fontWeight: weights.medium,
-    color: colors.onSurface,
-  },
-  chipTextActive: {
-    color: colors.white,
-    fontWeight: weights.bold,
-  },
-  gradeGrid: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  gradeCard: {
-    flex: 1,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.surfacePressed,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-  },
-  gradeCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.surfaceVariant,
-  },
-  gradeTitle: {
-    fontSize: typography.body,
-    fontWeight: weights.bold,
-    color: colors.onSurface,
-  },
-  gradeTitleActive: {
-    color: colors.primary,
-  },
-  gradeDesc: {
-    fontSize: typography.caption,
-    color: colors.onSurfaceVariant,
-    textAlign: 'center',
+  headerSub: {
+    fontSize: 14,
+    color: '#78909c',
     marginTop: 2,
   },
-  ceilingCard: {
-    backgroundColor: colors.surfaceVariant,
-    borderColor: colors.primary,
+  cancelText: {
+    fontSize: 15,
+    color: '#607d8b',
+    fontWeight: '600',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    height: 3,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  progressActive: {
+    flex: 1,
+    backgroundColor: '#2e7d32',
+    borderRadius: 1.5,
+  },
+  progressInactive: {
+    flex: 1,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 1.5,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    backgroundColor: '#e3f2fd', // light blue
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
     borderWidth: 1,
-    marginBottom: spacing.lg,
-    padding: spacing.md,
+    borderColor: '#bbdefb',
   },
-  ceilingHeader: {
+  infoIconBox: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#455a64',
+    lineHeight: 20,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#9e9e9e',
+    letterSpacing: 0.5,
+    marginBottom: 16,
+  },
+  cropCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#f5f5f5',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  cropCardSelected: {
+    borderColor: '#2e7d32',
+  },
+  cropIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    overflow: 'hidden',
+  },
+  realCropImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  cropTextCol: {
+    flex: 1,
+  },
+  cropTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  ceilingBadgeTitle: {
-    fontSize: typography.body,
-    fontWeight: weights.bold,
-    color: colors.primary,
+  cropTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#212121',
   },
-  ceilingDescription: {
-    fontSize: typography.caption,
-    color: colors.textMuted,
+  gradeBadge: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
-  ceilingLoader: {
-    marginTop: 4,
+  gradeBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#2e7d32',
   },
-  inputContainer: {
-    marginBottom: spacing.md,
+  cropSub: {
+    fontSize: 13,
+    color: '#757575',
   },
-  validPriceRow: {
+  radioBox: {
+    marginLeft: 12,
+  },
+  footer: {
+    padding: 20,
+    backgroundColor: '#fafafa',
+    borderTopWidth: 1,
+    borderTopColor: '#f5f5f5',
+  },
+  nextBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-    paddingHorizontal: 2,
+    justifyContent: 'center',
+    backgroundColor: '#2e7d32',
+    borderRadius: 16,
+    paddingVertical: 16,
   },
-  validPriceText: {
-    fontSize: typography.caption,
-    color: colors.success,
-    fontWeight: weights.medium,
-  },
-  actionSection: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  cancelButton: {
-    marginTop: spacing.xs,
+  nextBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
+    marginRight: 8,
   },
 });

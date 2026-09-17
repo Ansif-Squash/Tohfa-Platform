@@ -17,14 +17,24 @@ import { CertificationsScreen } from './screens/certifications/CertificationsScr
 import { EditCertificationScreen } from './screens/certifications/EditCertificationScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { WeatherScreen } from './screens/dashboard/WeatherScreen';
+import { ActiveCropsScreen } from './screens/dashboard/ActiveCropsScreen';
+import { TohfaCalendarScreen } from './screens/dashboard/TohfaCalendarScreen';
+import { CropPlanningInsightScreen } from './screens/dashboard/CropPlanningInsightScreen';
 import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
 import { FarmDiaryScreen } from './screens/farm/FarmDiaryScreen';
+import { DailyAttendanceScreen } from './screens/farm/DailyAttendanceScreen';
+import { FarmInventoryScreen } from './screens/farm/FarmInventoryScreen';
+import { ToolsListScreen } from './screens/farm/ToolsListScreen';
+import { AddToolScreen } from './screens/farm/AddToolScreen';
 import { NewFarmDiaryEntryScreen } from './screens/farm/NewFarmDiaryEntryScreen';
 import { NewFarmDiaryEntryStep2Screen } from './screens/farm/NewFarmDiaryEntryStep2Screen';
 import { NewFarmDiaryEntryStep3Screen } from './screens/farm/NewFarmDiaryEntryStep3Screen';
 import { CounterOfferScreen } from './screens/listings/CounterOfferScreen';
 import { CreateListingScreen } from './screens/listings/CreateListingScreen';
+import { CreateListingStep2Screen } from './screens/listings/CreateListingStep2Screen';
+import { ListingDetailScreen } from './screens/listings/ListingDetailScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
+import { MyListingsScreen } from './screens/listings/MyListingsScreen';
 import { NotificationsScreen } from './screens/notifications/NotificationsScreen';
 import { AuditsScreen } from './screens/audits/AuditsScreen';
 import { AuditResultScreen } from './screens/audits/AuditResultScreen';
@@ -61,6 +71,8 @@ export type ScreenName =
   | 'Certifications'
   | 'AddCertification'
   | 'CreateListing'
+  | 'CreateListingStep2'
+  | 'ListingDetail'
   | 'CounterOffer'
   | 'FMBSketch'
   | 'FieldContext'
@@ -79,7 +91,15 @@ export type ScreenName =
   | 'FarmDiary'
   | 'NewFarmDiaryEntry'
   | 'NewFarmDiaryEntryStep2'
-  | 'NewFarmDiaryEntryStep3';
+  | 'NewFarmDiaryEntryStep3'
+  | 'ActiveCrops'
+  | 'MyListings'
+  | 'DailyAttendance'
+  | 'TohfaCalendar'
+  | 'CropPlanningInsight'
+  | 'FarmInventory'
+  | 'ToolsList'
+  | 'AddTool';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
@@ -220,19 +240,35 @@ export default function App(): React.JSX.Element {
               navigate('MainTabs');
             }}
             onNavigateToCertifications={() => navigate('Certifications')}
+            onNext={() => navigate('CreateListingStep2')}
           />
-        ) : screen === 'CounterOffer' && selectedListing ? (
-          <CounterOfferScreen
-            listing={selectedListing}
-            onSuccess={() => {
-              setCurrentTab('Listings');
-              navigate('MainTabs');
-            }}
+        ) : screen === 'CreateListingStep2' ? (
+          <CreateListingStep2Screen
             onCancel={() => {
               setCurrentTab('Listings');
               navigate('MainTabs');
             }}
+            onBack={() => navigate('CreateListing')}
+            onSuccess={() => {
+              navigate('MyListings');
+            }}
           />
+        ) : screen === 'CounterOffer' && selectedListing ? (
+          <CounterOfferScreen
+            listingId={selectedListing.id}
+            cropName={selectedListing.cropName}
+            onAccept={() => {
+              setCurrentTab('Listings');
+              navigate('MainTabs');
+            }}
+            onReject={() => {
+              setCurrentTab('Listings');
+              navigate('MainTabs');
+            }}
+            onCancel={() => navigate('MyListings')}
+          />
+        ) : screen === 'ListingDetail' ? (
+          <ListingDetailScreen onBack={() => navigate('MyListings')} />
         ) : screen === 'FMBSketch' ? (
           <FMBSketchScreen 
             onNavigateBack={() => navigate('MainTabs')} 
@@ -325,6 +361,36 @@ export default function App(): React.JSX.Element {
           <NewSoilTestScreen onNavigateBack={() => navigate('SoilTest')} onSave={() => navigate('SoilTest')} />
         ) : screen === 'Weather' ? (
           <WeatherScreen onNavigateBack={() => navigate('MainTabs')} />
+        ) : screen === 'ActiveCrops' ? (
+          <ActiveCropsScreen onNavigateBack={() => navigate('MainTabs')} />
+        ) : screen === 'MyListings' ? (
+          <MyListingsScreen 
+            onNavigateBack={() => navigate('MainTabs')} 
+            onNavigateToListingDetail={() => navigate('ListingDetail')}
+          />
+        ) : screen === 'TohfaCalendar' ? (
+          <TohfaCalendarScreen 
+            onNavigateBack={() => navigate('MainTabs')} 
+            onNavigateToCropInsight={() => navigate('CropPlanningInsight')}
+          />
+        ) : screen === 'CropPlanningInsight' ? (
+          <CropPlanningInsightScreen onNavigateBack={() => navigate('TohfaCalendar')} />
+        ) : screen === 'FarmInventory' ? (
+          <FarmInventoryScreen 
+            onNavigateBack={() => navigate('MainTabs')} 
+            onNavigateToCategory={(category) => {
+              if (category === 'Tools') navigate('ToolsList');
+            }}
+          />
+        ) : screen === 'ToolsList' ? (
+          <ToolsListScreen 
+            onNavigateBack={() => navigate('FarmInventory')} 
+            onNavigateToAddTool={() => navigate('AddTool')}
+          />
+        ) : screen === 'AddTool' ? (
+          <AddToolScreen onNavigateBack={() => navigate('ToolsList')} />
+        ) : screen === 'DailyAttendance' ? (
+          <DailyAttendanceScreen onNavigateBack={() => navigate('MainTabs')} />
         ) : (
           /* MainTabs layout */
           <View style={styles.mainTabsContainer}>
@@ -339,6 +405,37 @@ export default function App(): React.JSX.Element {
                   onNavigateToNotifications={() => navigate('Notifications')}
                   onNavigateToFarmManagement={() => navigate('FarmManagement')}
                   onNavigateToWeather={() => navigate('Weather')}
+                  onNavigateToActiveCrops={() => navigate('ActiveCrops')}
+                  onNavigateToFarmDiary={() => navigate('FarmDiary')}
+                  onNavigateToMyListings={() => navigate('MyListings')}
+                  onNavigateToAttendance={() => navigate('DailyAttendance')}
+                  onNavigateToTohfaCalendar={() => navigate('TohfaCalendar')}
+                  onNavigateToInventory={() => navigate('FarmInventory')}
+                  onNavigateToReviewOffer={() => {
+                    setSelectedListing({
+                      id: 'dummy-listing',
+                      listingNumber: 'L-9821',
+                      cropName: 'Carrot - Ooty - Grade 1', // combining subtitle for display
+                      quantityKg: '150',
+                      askingPricePerKg: '40',
+                      ceilingPricePerKg: '45',
+                      status: 'COUNTER_OFFER',
+                      grade: 'Grade 1',
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      activeCounterOffer: {
+                        id: 'dummy-offer',
+                        pricePerKg: '34',
+                        quantityKg: '150',
+                        message: 'On inspection the batch grades as Grade 2 (minor forking & size variance), not the claimed Grade 1. Counter reflects the Grade 2 ceiling.',
+                        round: 1,
+                        expiresAt: new Date(Date.now() + (22 * 60 * 60 + 30 * 60) * 1000).toISOString(),
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      },
+                    } as any);
+                    navigate('CounterOffer');
+                  }}
                 />
               ) : currentTab === 'Listings' ? (
                 <ListingsScreen
