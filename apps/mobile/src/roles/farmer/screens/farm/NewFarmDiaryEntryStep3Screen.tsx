@@ -222,7 +222,7 @@ export function NewFarmDiaryEntryStep3Screen({
           <View style={styles.photosRow}>
             <View style={styles.photoBox}>
               <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1592982537447-6f233486df81?auto=format&fit=crop&q=80&w=200&h=200' }} 
+                source={{ uri: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&q=80' }} 
                 style={styles.photoImg} 
               />
               <TouchableOpacity style={styles.deletePhotoBtn}>
@@ -231,7 +231,7 @@ export function NewFarmDiaryEntryStep3Screen({
             </View>
             <View style={styles.photoBox}>
               <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1589255243171-cb8f6a98fba0?auto=format&fit=crop&q=80&w=200&h=200' }} 
+                source={{ uri: 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=400&q=80' }} 
                 style={styles.photoImg} 
               />
               <TouchableOpacity style={styles.deletePhotoBtn}>

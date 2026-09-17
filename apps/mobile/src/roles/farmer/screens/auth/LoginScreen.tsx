@@ -8,15 +8,84 @@ import {
   View,
   Image,
 } from 'react-native';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { t, getLocale, setLocale } from '../../../../i18n/farmer';
 import { Button, ErrorState, Icon } from '@tohfa/mobile-ui';
 import { loginWithPassword, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
-import { authPalette as P } from '../../theme';
+import { authPalette as P, typography, weights } from '../../theme';
 import googleIcon from '../../assets/icons/googleee.png';
 import appleIcon from '../../assets/icons/apple.png';
 import facebookIcon from '../../assets/icons/facebook.png';
 import tohfaLogo from '../../assets/tohfa-logo.png';
+
+// ── SVG Icons ────────────────────────────────────────────────────────────────
+
+function PhoneIcon({ size = 18, color = '#718274' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function LockIcon({ size = 20, color = '#718274' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="5" y="10.5" width="14" height="10.5" rx="2.5" stroke={color} strokeWidth="2" />
+      <Path
+        d="M7.5 10.5V7a4.5 4.5 0 0 1 9 0v3.5"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx="12" cy="15.75" r="1.5" fill={color} />
+    </Svg>
+  );
+}
+
+function EyeIcon({ size = 18, color = '#718274' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="2" />
+    </Svg>
+  );
+}
+
+function EyeOffIcon({ size = 18, color = '#718274' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M1 1l22 22"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 interface LoginScreenProps {
   onNavigate: (
@@ -33,16 +102,6 @@ interface LoginScreenProps {
   ) => void;
 }
 
-/**
- * Approved Login design (branding guidelines, Screen 10).
- *
- * Light screen: back button, green home icon, "Welcome back" title,
- * +91 mobile field, password field with show/hide, remember-me + forgot row,
- * solid Login button, "OR CONTINUE WITH" divider with Google / Apple /
- * Facebook buttons, an "Apply as Farmer" register link, the EN / Tamil
- * toggle and a legal footer.
- */
-
 const MOBILE_PREFIX = '+91';
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
@@ -53,6 +112,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [locale, setLocaleState] = useState(getLocale());
+  const [isMobileFocused, setIsMobileFocused] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   const switchLocale = (lang: 'en' | 'ta') => {
     setLocale(lang);
@@ -138,15 +199,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
 
       <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>{t('farmer.auth.login.mobile')}</Text>
-        <View style={styles.fieldRow}>
-          <Icon name="call" size={16} color={P.muted} />
+        <View style={[styles.fieldRow, isMobileFocused && styles.fieldRowFocused]}>
+          <View style={styles.fieldIconWrap}>
+            <PhoneIcon size={18} color={isMobileFocused ? P.primary : '#8C9088'} />
+          </View>
           <Text style={styles.prefix}>{MOBILE_PREFIX}</Text>
+          <View style={styles.prefixDivider} />
           <TextInput
             value={mobile}
             onChangeText={setMobile}
+            onFocus={() => setIsMobileFocused(true)}
+            onBlur={() => setIsMobileFocused(false)}
             keyboardType="phone-pad"
             placeholder="98765 43210"
-            placeholderTextColor={P.muted}
+            placeholderTextColor="#9CA3AF"
             style={styles.fieldInput}
             accessibilityLabel={t('farmer.auth.login.mobile')}
           />
@@ -155,22 +221,36 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
 
       <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>{t('farmer.auth.login.password')}</Text>
-        <View style={styles.fieldRow}>
-          <Icon name="lock" size={16} color={P.muted} />
+        <View style={[styles.fieldRow, isPasswordFocused && styles.fieldRowFocused]}>
+          <View style={styles.fieldIconWrap}>
+            <LockIcon size={18} color={isPasswordFocused ? P.primary : '#8C9088'} />
+          </View>
           <TextInput
             value={password}
             onChangeText={setPassword}
+            onFocus={() => setIsPasswordFocused(true)}
+            onBlur={() => setIsPasswordFocused(false)}
             secureTextEntry={!showPassword}
-            placeholder="........"
-            placeholderTextColor={P.muted}
-            style={styles.fieldInput}
+            placeholder="••••••••"
+            placeholderTextColor="#9CA3AF"
+            style={[
+              styles.fieldInput,
+              styles.passwordInput,
+              !showPassword && styles.passwordInputMasked,
+            ]}
             accessibilityLabel={t('farmer.auth.login.password')}
           />
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => setShowPassword((s) => !s)}
+            style={styles.eyeToggleBtn}
+            activeOpacity={0.7}
           >
-            <Icon name={showPassword ? 'visibility_off' : 'visibility'} size={16} color={P.muted} />
+            {showPassword ? (
+              <EyeOffIcon size={18} color="#8C9088" />
+            ) : (
+              <EyeIcon size={18} color="#8C9088" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -308,14 +388,15 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   title: {
-    fontSize: 23,
-    fontWeight: '800',
+    fontSize: typography.title,
+    fontWeight: weights.bold,
     color: P.ink,
     textAlign: 'center',
     marginTop: 18,
   },
   subtitle: {
-    fontSize: 12.8,
+    fontSize: typography.bodySmall,
+    fontWeight: weights.regular,
     lineHeight: 19,
     color: P.muted,
     textAlign: 'center',
@@ -363,32 +444,79 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   fieldLabel: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: P.ink,
-    marginBottom: 6,
+    fontSize: typography.caption,
+    fontWeight: weights.bold,
+    color: '#1A2E1A',
+    marginBottom: 8,
   },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: P.white,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: P.border,
-    borderRadius: 12,
+    borderColor: '#ECE8DD',
+    borderRadius: 14,
     paddingHorizontal: 14,
-    height: 48,
+    height: 52,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  fieldRowFocused: {
+    borderColor: P.primary,
+    backgroundColor: '#FFFFFF',
+    shadowColor: P.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  fieldIconWrap: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   prefix: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: P.ink,
+    fontSize: typography.body,
+    fontWeight: weights.bold,
+    color: '#1A2E1A',
+  },
+  prefixDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: '#E5E7EB',
+    marginLeft: 10,
+    marginRight: 10,
   },
   fieldInput: {
     flex: 1,
-    fontSize: 14,
-    color: P.ink,
+    height: '100%',
+    fontSize: typography.body,
+    fontWeight: weights.medium,
+    color: '#1A2E1A',
     paddingVertical: 0,
+    paddingHorizontal: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+  passwordInput: {
+    paddingRight: 4,
+  },
+  passwordInputMasked: {
+    fontSize: 21,
+    letterSpacing: 3,
+    fontWeight: '700',
+  },
+  eyeToggleBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
   optionRow: {
     flexDirection: 'row',
@@ -416,13 +544,13 @@ const styles = StyleSheet.create({
     borderColor: P.primary,
   },
   rememberText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: typography.caption,
+    fontWeight: weights.medium,
     color: P.ink,
   },
   forgotText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: typography.caption,
+    fontWeight: weights.bold,
     color: P.primary,
   },
   loginButton: {
@@ -432,8 +560,8 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   loginButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: typography.bodySmall,
+    fontWeight: weights.bold,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -448,8 +576,8 @@ const styles = StyleSheet.create({
     backgroundColor: P.border,
   },
   dividerText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: typography.caption,
+    fontWeight: weights.semibold,
     color: '#43566B',
   },
   registerWrap: {
@@ -457,12 +585,13 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   registerText: {
-    fontSize: 14,
+    fontSize: typography.bodySmall,
+    fontWeight: weights.regular,
     color: '#43566B',
   },
   registerLink: {
     color: P.primary,
-    fontWeight: '700',
+    fontWeight: weights.bold,
   },
   langRow: {
     flexDirection: 'row',
@@ -477,8 +606,8 @@ const styles = StyleSheet.create({
     backgroundColor: P.lightGreen,
   },
   langPillActiveText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: typography.bodySmall,
+    fontWeight: weights.bold,
     color: P.primary,
   },
   langPill: {
@@ -487,8 +616,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   langPillText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: typography.bodySmall,
+    fontWeight: weights.semibold,
     color: '#43566B',
   },
   legalRow: {
@@ -496,7 +625,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   legalText: {
-    fontSize: 12,
+    fontSize: typography.caption,
+    fontWeight: weights.regular,
     color: '#8A9BAE',
   },
   legalLink: {

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { BackHandler, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { setOnAuthFailure } from './api/client';
 import { Icon } from '@tohfa/mobile-ui';
 import { LOCALES, setLocale, t, type Locale } from '../../i18n/farmer';
@@ -21,7 +22,11 @@ import { ActiveCropsScreen } from './screens/dashboard/ActiveCropsScreen';
 import { TohfaCalendarScreen } from './screens/dashboard/TohfaCalendarScreen';
 import { CropPlanningInsightScreen } from './screens/dashboard/CropPlanningInsightScreen';
 import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
+import { CropManagementScreen } from './screens/farm/CropManagementScreen';
+import { LivestockScreen } from './screens/farm/LivestockScreen';
+import { WorkforceScreen } from './screens/farm/WorkforceScreen';
 import { FarmDiaryScreen } from './screens/farm/FarmDiaryScreen';
+import { DiaryCalendarScreen } from './screens/farm/DiaryCalendarScreen';
 import { DailyAttendanceScreen } from './screens/farm/DailyAttendanceScreen';
 import { FarmInventoryScreen } from './screens/farm/FarmInventoryScreen';
 import { ToolsListScreen } from './screens/farm/ToolsListScreen';
@@ -43,6 +48,7 @@ import { NotificationsScreen } from './screens/notifications/NotificationsScreen
 import { AuditsScreen } from './screens/audits/AuditsScreen';
 import { AuditResultScreen } from './screens/audits/AuditResultScreen';
 import { ProfileScreen } from './screens/profile/ProfileScreen';
+import { SettingsScreen } from './screens/profile/SettingsScreen';
 import { FMBSketchScreen } from './screens/profile/FMBSketchScreen';
 import { FieldContextScreen } from './screens/profile/FieldContextScreen';
 import { ZonesScreen } from './screens/profile/ZonesScreen';
@@ -88,11 +94,15 @@ export type ScreenName =
   | 'Audits'
   | 'AuditResult'
   | 'FarmManagement'
+  | 'CropManagement'
+  | 'Livestock'
+  | 'Workforce'
   | 'FarmRatings'
   | 'SoilTest'
   | 'NewSoilTest'
   | 'Weather'
   | 'FarmDiary'
+  | 'DiaryCalendar'
   | 'NewFarmDiaryEntry'
   | 'NewFarmDiaryEntryStep2'
   | 'NewFarmDiaryEntryStep3'
@@ -107,20 +117,37 @@ export type ScreenName =
   | 'LearningHub'
   | 'ContentDetail'
   | 'Groups'
-  | 'GroupDetail';
+  | 'GroupDetail'
+  | 'Settings';
 
 type TabName = 'Home' | 'Listings' | 'Wallet' | 'Profile';
 
 /** Near-black green used behind the splash photo + status bar while Splash shows. */
 const SPLASH_DARK = authPalette.splashDark;
 
+function TabPlusIcon({ size = 22, color = colors.white }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 5V19M5 12H19"
+        stroke={color}
+        strokeWidth="2.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+interface StackEntry {
+  screen: ScreenName;
+  params?: Record<string, string | number | undefined>;
+  tab?: TabName;
+}
+
 export default function App(): React.JSX.Element {
   const [screen, setScreen] = useState<ScreenName>('Splash');
-  // Tracks where we navigated *from*, so a handful of deep screens (reached
-  // from more than one place -- e.g. Certifications from both the Profile
-  // card and FarmManagement) can return the caller to where they actually
-  // came from instead of a hardcoded screen.
-  const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
+  const [history, setHistory] = useState<StackEntry[]>([]);
   const [currentTab, setCurrentTab] = useState<TabName>('Home');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null);
@@ -129,15 +156,86 @@ export default function App(): React.JSX.Element {
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
-  function navigate(nextScreen: ScreenName, nextParams: Record<string, string | number | undefined> = {}) {
-    setPreviousScreen(screen);
-    setParams(nextParams);
-    setScreen(nextScreen);
-  }
+  const navigate = useCallback(
+    (nextScreen: ScreenName, nextParams: Record<string, string | number | undefined> = {}) => {
+      if (nextScreen === screen) {
+        setParams(nextParams);
+        return;
+      }
+
+      if (nextScreen === 'Splash' || nextScreen === 'Welcome') {
+        setHistory([]);
+      } else if (nextScreen === 'MainTabs') {
+        setHistory([]);
+      } else {
+        setHistory((prev) => [...prev, { screen, params, tab: currentTab }]);
+      }
+
+      setParams(nextParams);
+      setScreen(nextScreen);
+    },
+    [screen, params, currentTab],
+  );
+
+  const goBack = useCallback(() => {
+    if (history.length > 0) {
+      setHistory((prev) => {
+        const nextHistory = [...prev];
+        const previous = nextHistory.pop();
+        if (previous) {
+          setScreen(previous.screen);
+          setParams(previous.params || {});
+          if (previous.tab && previous.screen === 'MainTabs') {
+            setCurrentTab(previous.tab);
+          }
+        }
+        return nextHistory;
+      });
+    } else {
+      const authScreens: ScreenName[] = [
+        'Login',
+        'RoleSelection',
+        'Register',
+        'Otp',
+        'ForgotPassword',
+        'ResetPassword',
+        'PasswordChangedSuccess',
+        'ApplicationStatus',
+      ];
+      if (authScreens.includes(screen)) {
+        setScreen('Welcome');
+        setParams({});
+      } else if (screen !== 'MainTabs' && screen !== 'Splash' && screen !== 'Welcome') {
+        setScreen('MainTabs');
+        setParams({});
+      }
+    }
+  }, [history, screen]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (screen === 'Splash' || screen === 'Welcome') {
+        return false;
+      }
+      if (screen === 'MainTabs' && history.length === 0) {
+        if (currentTab !== 'Home') {
+          setCurrentTab('Home');
+          return true;
+        }
+        return false;
+      }
+      goBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [screen, currentTab, history, goBack]);
 
   useEffect(() => {
     setOnAuthFailure(() => {
       setScreen('Welcome');
+      setHistory([]);
     });
     return () => {
       setOnAuthFailure(null);
@@ -158,8 +256,6 @@ export default function App(): React.JSX.Element {
         barStyle="light-content"
         backgroundColor={isAuthLanding ? SPLASH_DARK : colors.primaryPressed}
       />
-
-
 
       <View style={styles.content}>
         {screen === 'Splash' ? (
@@ -192,15 +288,15 @@ export default function App(): React.JSX.Element {
             onNavigate={(s, p) => navigate(s, p)}
           />
         ) : screen === 'ForgotPassword' ? (
-          <ForgotPasswordScreen onNavigate={(s) => navigate(s)} />
+          <ForgotPasswordScreen onNavigate={(s, p) => navigate(s, p)} />
         ) : screen === 'ResetPassword' ? (
           <ResetPasswordScreen
             challengeId={String(params['challengeId'] ?? '')}
             code={String(params['code'] ?? '')}
-            onNavigate={(s, p) => navigate(s, p)}
+            onNavigate={(s) => navigate(s)}
           />
         ) : screen === 'PasswordChangedSuccess' ? (
-          <PasswordChangedSuccessScreen onNavigate={(s, p) => navigate(s, p)} />
+          <PasswordChangedSuccessScreen onNavigate={(s) => navigate(s)} />
         ) : screen === 'ApplicationStatus' ? (
           <ApplicationStatusScreen
             applicationId={String(params['applicationId'] ?? 'DEMO-APP-001')}
@@ -214,13 +310,7 @@ export default function App(): React.JSX.Element {
           </View>
         ) : screen === 'Certifications' ? (
           <CertificationsScreen
-            onBack={() =>
-              navigate(
-                previousScreen && previousScreen !== 'AddCertification' && previousScreen !== 'EditCertification'
-                  ? previousScreen
-                  : 'MainTabs',
-              )
-            }
+            onBack={goBack}
             onNavigateToAddCertification={() => navigate('AddCertification')}
             onNavigateToEditCertification={(certification) => {
               setSelectedCertification(certification);
@@ -229,15 +319,15 @@ export default function App(): React.JSX.Element {
           />
         ) : screen === 'AddCertification' ? (
           <AddCertificationScreen
-            onSuccess={() => navigate('Certifications')}
-            onCancel={() => navigate('Certifications')}
+            onSuccess={goBack}
+            onCancel={goBack}
           />
         ) : screen === 'EditCertification' && selectedCertification ? (
           <EditCertificationScreen
             certification={selectedCertification}
-            onCancel={() => navigate('Certifications')}
-            onSave={() => navigate('Certifications')}
-            onDelete={() => navigate('Certifications')}
+            onCancel={goBack}
+            onSave={goBack}
+            onDelete={goBack}
           />
         ) : screen === 'CreateListing' ? (
           <CreateListingScreen
@@ -245,20 +335,13 @@ export default function App(): React.JSX.Element {
               setCurrentTab('Listings');
               navigate('MainTabs');
             }}
-            onCancel={() => {
-              setCurrentTab('Listings');
-              navigate('MainTabs');
-            }}
-            onNavigateToCertifications={() => navigate('Certifications')}
+            onCancel={goBack}
             onNext={() => navigate('CreateListingStep2')}
           />
         ) : screen === 'CreateListingStep2' ? (
           <CreateListingStep2Screen
-            onCancel={() => {
-              setCurrentTab('Listings');
-              navigate('MainTabs');
-            }}
-            onBack={() => navigate('CreateListing')}
+            onCancel={goBack}
+            onBack={goBack}
             onSuccess={() => {
               navigate('MyListings');
             }}
@@ -277,43 +360,36 @@ export default function App(): React.JSX.Element {
               setCurrentTab('Listings');
               navigate('MainTabs');
             }}
-            onCancel={() => {
-              if (previousScreen && previousScreen !== 'CounterOffer') {
-                navigate(previousScreen);
-              } else {
-                setCurrentTab('Listings');
-                navigate('MainTabs');
-              }
-            }}
+            onCancel={goBack}
           />
         ) : screen === 'ListingDetail' ? (
-          <ListingDetailScreen onBack={() => navigate('MyListings')} />
+          <ListingDetailScreen onBack={goBack} />
         ) : screen === 'FMBSketch' ? (
           <FMBSketchScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+            onNavigateBack={goBack} 
             onNavigateToFieldContext={() => navigate('FieldContext')}
           />
         ) : screen === 'FieldContext' ? (
           <FieldContextScreen 
-            onNavigateBack={() => navigate('MainTabs')}
+            onNavigateBack={goBack}
             onNavigateToZones={() => navigate('Zones')}
           />
         ) : screen === 'Zones' ? (
           <ZonesScreen 
-            onNavigateBack={() => navigate('MainTabs')}
+            onNavigateBack={goBack}
             onNavigateToAddZone={() => navigate('AddZone')}
-            onSave={() => navigate('MainTabs')}
+            onSave={goBack}
           />
         ) : screen === 'AddZone' ? (
           <AddZoneScreen
-            onNavigateBack={() => navigate('Zones')}
-            onSave={() => navigate('Zones')}
+            onNavigateBack={goBack}
+            onSave={goBack}
           />
         ) : screen === 'PersonalDetails' ? (
-          <PersonalDetailsScreen onBack={() => navigate('MainTabs')} />
+          <PersonalDetailsScreen onBack={goBack} />
         ) : screen === 'Notifications' ? (
           <NotificationsScreen
-            onBack={() => navigate('MainTabs')}
+            onBack={goBack}
             onNavigateToCounterOffer={() => {
               if (!selectedListing) {
                 setSelectedListing({
@@ -344,103 +420,114 @@ export default function App(): React.JSX.Element {
           />
         ) : screen === 'AuditResult' ? (
           <AuditResultScreen
-            onBack={() => navigate('Audits')}
+            onBack={goBack}
             auditId={typeof params['auditId'] === 'string' ? params['auditId'] : undefined}
           />
         ) : screen === 'Audits' ? (
           <AuditsScreen
-            onBack={() =>
-              navigate(
-                previousScreen && previousScreen !== 'Audits' && previousScreen !== 'AuditResult'
-                  ? previousScreen
-                  : 'MainTabs',
-              )
-            }
+            onBack={goBack}
             onNavigateToResult={(auditId) => navigate('AuditResult', { auditId })}
+          />
+        ) : screen === 'CropManagement' ? (
+          <CropManagementScreen
+            onBack={goBack}
           />
         ) : screen === 'FarmManagement' ? (
           <FarmManagementScreen
-            onBack={() =>
-              navigate(
-                previousScreen && previousScreen !== 'FarmManagement' ? previousScreen : 'MainTabs',
-              )
-            }
+            onBack={goBack}
             onNavigateToAudits={() => navigate('Audits')}
             onNavigateToDiary={() => navigate('FarmDiary')}
             onNavigateToWeather={() => navigate('Weather')}
             onNavigateToCalendar={() => navigate('TohfaCalendar')}
             onNavigateToActiveCrops={() => navigate('ActiveCrops')}
+            onNavigateToCropManagement={() => navigate('CropManagement')}
             onNavigateToAttendance={() => navigate('DailyAttendance')}
+            onNavigateToWorkforce={() => navigate('Workforce')}
+            onNavigateToLivestock={() => navigate('Livestock')}
             onNavigateToLearningHub={() => navigate('LearningHub')}
+          />
+        ) : screen === 'Livestock' ? (
+          <LivestockScreen
+            onBack={goBack}
+          />
+        ) : screen === 'Workforce' ? (
+          <WorkforceScreen
+            onBack={goBack}
+            onNavigateToTimesheet={() => navigate('DailyAttendance')}
           />
         ) : screen === 'FarmDiary' ? (
           <FarmDiaryScreen 
-            onBack={() => navigate('FarmManagement')} 
+            onBack={goBack} 
             onNavigateToNewEntry={() => navigate('NewFarmDiaryEntry')} 
+            onNavigateToCalendar={() => navigate('DiaryCalendar')}
+          />
+        ) : screen === 'DiaryCalendar' ? (
+          <DiaryCalendarScreen 
+            onBack={goBack} 
           />
         ) : screen === 'NewFarmDiaryEntry' ? (
           <NewFarmDiaryEntryScreen 
-            onBack={() => navigate('FarmDiary')} 
+            onBack={goBack} 
             onNext={() => navigate('NewFarmDiaryEntryStep2')} 
           />
         ) : screen === 'NewFarmDiaryEntryStep2' ? (
           <NewFarmDiaryEntryStep2Screen 
-            onBack={() => navigate('NewFarmDiaryEntry')} 
+            onBack={goBack} 
             onNext={() => navigate('NewFarmDiaryEntryStep3')} 
           />
         ) : screen === 'NewFarmDiaryEntryStep3' ? (
           <NewFarmDiaryEntryStep3Screen 
-            onBack={() => navigate('NewFarmDiaryEntryStep2')} 
+            onBack={goBack} 
             onSave={() => navigate('FarmDiary')} 
           />
         ) : screen === 'FarmRatings' ? (
-          <FarmRatingsScreen onNavigateBack={() => navigate('MainTabs')} />
+          <FarmRatingsScreen onNavigateBack={goBack} />
         ) : screen === 'SoilTest' ? (
           <SoilTestScreen
-            onNavigateBack={() => navigate('MainTabs')}
+            onNavigateBack={goBack}
             onNavigateToNewSoilTest={() => navigate('NewSoilTest')}
           />
         ) : screen === 'NewSoilTest' ? (
-          <NewSoilTestScreen onNavigateBack={() => navigate('SoilTest')} onSave={() => navigate('SoilTest')} />
+          <NewSoilTestScreen onNavigateBack={goBack} onSave={goBack} />
         ) : screen === 'Weather' ? (
-          <WeatherScreen onNavigateBack={() => navigate('MainTabs')} />
+          <WeatherScreen
+            onNavigateBack={goBack}
+          />
         ) : screen === 'ActiveCrops' ? (
-          <ActiveCropsScreen onNavigateBack={() => navigate('MainTabs')} />
+          <ActiveCropsScreen
+            onNavigateBack={goBack}
+          />
         ) : screen === 'MyListings' ? (
           <MyListingsScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+            onNavigateBack={goBack} 
             onNavigateToListingDetail={() => navigate('ListingDetail')}
           />
         ) : screen === 'TohfaCalendar' ? (
           <TohfaCalendarScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+            onNavigateBack={goBack} 
             onNavigateToCropInsight={() => navigate('CropPlanningInsight')}
           />
         ) : screen === 'CropPlanningInsight' ? (
-          <CropPlanningInsightScreen onNavigateBack={() => navigate('TohfaCalendar')} />
+          <CropPlanningInsightScreen onNavigateBack={goBack} />
         ) : screen === 'FarmInventory' ? (
           <FarmInventoryScreen 
-            onNavigateBack={() => navigate('MainTabs')} 
+            onNavigateBack={goBack} 
             onNavigateToCategory={(category) => {
               if (category === 'Tools') navigate('ToolsList');
             }}
           />
         ) : screen === 'ToolsList' ? (
           <ToolsListScreen 
-            onNavigateBack={() => navigate('FarmInventory')} 
+            onNavigateBack={goBack} 
             onNavigateToAddTool={() => navigate('AddTool')}
           />
         ) : screen === 'AddTool' ? (
-          <AddToolScreen onNavigateBack={() => navigate('ToolsList')} />
+          <AddToolScreen onNavigateBack={goBack} />
         ) : screen === 'DailyAttendance' ? (
-          <DailyAttendanceScreen onNavigateBack={() => navigate('MainTabs')} />
+          <DailyAttendanceScreen onNavigateBack={goBack} />
         ) : screen === 'LearningHub' ? (
           <LearningHubScreen 
-            onBack={() => 
-              navigate(
-                previousScreen && previousScreen !== 'LearningHub' ? previousScreen : 'MainTabs',
-              )
-            } 
+            onBack={goBack} 
             onNavigateToContentDetail={(content) => {
               setSelectedContentDetail(content);
               navigate('ContentDetail');
@@ -454,19 +541,11 @@ export default function App(): React.JSX.Element {
         ) : screen === 'ContentDetail' ? (
           <ContentDetailScreen
             content={selectedContentDetail ?? undefined}
-            onBack={() =>
-              navigate(
-                previousScreen && previousScreen !== 'ContentDetail' ? previousScreen : 'LearningHub',
-              )
-            }
+            onBack={goBack}
           />
         ) : screen === 'Groups' ? (
           <GroupsScreen
-            onBack={() =>
-              navigate(
-                previousScreen && previousScreen !== 'Groups' ? previousScreen : 'LearningHub',
-              )
-            }
+            onBack={goBack}
             onNavigateToGroupDetail={(group) => {
               setSelectedGroup(group);
               navigate('GroupDetail');
@@ -475,11 +554,12 @@ export default function App(): React.JSX.Element {
         ) : screen === 'GroupDetail' ? (
           <GroupDetailScreen
             group={selectedGroup ?? undefined}
-            onBack={() =>
-              navigate(
-                previousScreen && previousScreen !== 'GroupDetail' ? previousScreen : 'Groups',
-              )
-            }
+            onBack={goBack}
+          />
+        ) : screen === 'Settings' ? (
+          <SettingsScreen
+            onBack={goBack}
+            onNavigateToProfile={() => navigate('PersonalDetails')}
           />
         ) : (
           /* MainTabs layout */
@@ -493,7 +573,8 @@ export default function App(): React.JSX.Element {
                   onNavigateToWallet={() => setCurrentTab('Wallet')}
                   onNavigateToProfile={() => setCurrentTab('Profile')}
                   onNavigateToNotifications={() => navigate('Notifications')}
-                  onNavigateToFarmManagement={() => navigate('FarmManagement')}
+                  onNavigateToFarmManagement={() => navigate('CropManagement')}
+                  onNavigateToCropManagement={() => navigate('CropManagement')}
                   onNavigateToWeather={() => navigate('Weather')}
                   onNavigateToActiveCrops={() => navigate('ActiveCrops')}
                   onNavigateToFarmDiary={() => navigate('FarmDiary')}
@@ -573,6 +654,7 @@ export default function App(): React.JSX.Element {
                   onNavigateToAudits={() => navigate('Audits')}
                   onNavigateToFarmRatings={() => navigate('FarmRatings')}
                   onNavigateToSoilTest={() => navigate('SoilTest')}
+                  onNavigateToSettings={() => navigate('Settings')}
                 />
               )}
             </View>
@@ -605,27 +687,17 @@ export default function App(): React.JSX.Element {
                 <Text style={styles.tabItemText}>Farm</Text>
               </Pressable>
 
-              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={styles.centerTabContainer}>
                 <Pressable
-                  style={{
-                    backgroundColor: authPalette.deepGreen,
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: -30,
-                    shadowColor: authPalette.deepGreen,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 5,
-                    elevation: 5,
-                    borderWidth: 4,
-                    borderColor: colors.white,
-                  }}
+                  style={({ pressed }) => [
+                    styles.centerAddButton,
+                    pressed && { opacity: 0.88, transform: [{ scale: 0.96 }] },
+                  ]}
                   onPress={() => navigate('CreateListing')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create listing"
                 >
-                  <Icon name="add" size={28} color={colors.white} />
+                  <TabPlusIcon size={22} color={colors.white} />
                 </Pressable>
               </View>
 
@@ -725,6 +797,28 @@ const styles = StyleSheet.create({
   tabItemTextActive: {
     color: colors.primary,
     fontWeight: weights.bold,
+  },
+  centerTabContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
+  centerAddButton: {
+    backgroundColor: authPalette.deepGreen,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -24,
+    shadowColor: authPalette.deepGreen,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 6,
+    elevation: 6,
+    borderWidth: 3.5,
+    borderColor: colors.white,
   },
   unsupportedContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
   unsupportedText: { fontSize: typography.body, color: colors.onSurface, textAlign: 'center' },

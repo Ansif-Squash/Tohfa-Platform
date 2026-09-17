@@ -710,20 +710,19 @@ export function LearningHubScreen({
                 </View>
                 {group.isJoined ? (
                   <TouchableOpacity
-                    style={styles.joinedBadge}
+                    style={[styles.groupActionBtn, styles.groupActionBtnJoined]}
                     onPress={() => toggleGroupJoin(group.id)}
                     activeOpacity={0.75}
                   >
-                    <CheckmarkIcon size={12} color="#1E5E2B" />
-                    <Text style={styles.joinedBadgeText}>Joined</Text>
+                    <Text style={styles.groupActionBtnTextJoined}>Joined</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    style={styles.joinButton}
+                    style={styles.groupActionBtn}
                     onPress={() => toggleGroupJoin(group.id)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.joinButtonText}>Join</Text>
+                    <Text style={styles.groupActionBtnText}>Join</Text>
                   </TouchableOpacity>
                 )}
               </TouchableOpacity>

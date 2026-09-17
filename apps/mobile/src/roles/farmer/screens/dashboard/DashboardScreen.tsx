@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import {
   evalCertificateWarning,
   evalMarketBlock,
@@ -23,6 +24,36 @@ import { t, type TranslationKey } from '../../../../i18n/farmer';
 
 import { authPalette as P, colors } from '../../theme';
 
+function HeaderSearchIcon({ size = 19, color = colors.white }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth="2.2" />
+      <Path d="M20 20L16.2 16.2" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function HeaderBellIcon({ size = 19, color = colors.white }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M13.73 21a2 2 0 0 1-3.46 0"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 interface DashboardScreenProps {
   onNavigateToListings?: () => void;
   onNavigateToCreateListing?: () => void;
@@ -31,6 +62,7 @@ interface DashboardScreenProps {
   onNavigateToCertifications?: () => void;
   onNavigateToNotifications?: () => void;
   onNavigateToFarmManagement?: () => void;
+  onNavigateToCropManagement?: () => void;
   onNavigateToWeather?: () => void;
   onNavigateToActiveCrops?: () => void;
   onNavigateToFarmDiary?: () => void;
@@ -54,6 +86,7 @@ export function DashboardScreen({
   onNavigateToCertifications,
   onNavigateToNotifications,
   onNavigateToFarmManagement,
+  onNavigateToCropManagement,
   onNavigateToWeather,
   onNavigateToActiveCrops,
   onNavigateToFarmDiary,
@@ -169,16 +202,20 @@ export function DashboardScreen({
                     Alert.alert('Search', 'Search functionality is coming soon.');
                   });
                 }}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel="Search"
               >
-                <Icon name="search" size={18} color={colors.white} />
+                <HeaderSearchIcon size={19} color={colors.white} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.headerIconButton}
                 onPress={onNavigateToNotifications}
+                activeOpacity={0.75}
                 accessibilityRole="button"
                 accessibilityLabel={t('farmer.dashboard.header.notifications')}
               >
-                <Icon name="notifications" size={18} color={colors.white} />
+                <HeaderBellIcon size={19} color={colors.white} />
                 <View style={styles.notificationDot} />
               </TouchableOpacity>
             </View>
@@ -309,11 +346,17 @@ export function DashboardScreen({
 
           {/* Grid Menu */}
           <View style={styles.gridContainer}>
-            <TouchableOpacity style={styles.gridCard} onPress={onNavigateToFarmManagement}>
+            <TouchableOpacity 
+              style={styles.gridCard} 
+              onPress={onNavigateToCropManagement || onNavigateToFarmManagement}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Crop Management"
+            >
               <View style={[styles.gridIconCircle, { backgroundColor: P.paleMintBg }]}>
                 <Icon name="eco" size={20} color={colors.brandGreen} />
               </View>
-              <Text style={styles.gridTitle}>Farm Management</Text>
+              <Text style={styles.gridTitle}>Crop Management</Text>
               <Text style={styles.gridSubtitle}>3 crops · diary due</Text>
             </TouchableOpacity>
 
@@ -373,12 +416,21 @@ export function DashboardScreen({
           {/* Active Crops */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Active Crops</Text>
-            <TouchableOpacity onPress={onNavigateToActiveCrops}>
+            <TouchableOpacity onPress={onNavigateToActiveCrops} activeOpacity={0.75}>
               <Text style={styles.viewAllText}>View all {'>'}</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cropsScroll}>
-            <View style={styles.cropCard}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.cropsScroll}
+            contentContainerStyle={styles.cropsScrollContent}
+          >
+            <TouchableOpacity 
+              style={styles.cropCard}
+              activeOpacity={0.85}
+              onPress={onNavigateToActiveCrops}
+            >
               <Image 
                 source={{ uri: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&q=80' }} 
                 style={styles.cropImagePlaceholder}
@@ -392,8 +444,12 @@ export function DashboardScreen({
                   <View style={[styles.progressBarFill, { width: '80%', backgroundColor: colors.brandGreen }]} />
                 </View>
               </View>
-            </View>
-            <View style={styles.cropCard}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.cropCard}
+              activeOpacity={0.85}
+              onPress={onNavigateToActiveCrops}
+            >
               <Image 
                 source={{ uri: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400&q=80' }} 
                 style={styles.cropImagePlaceholder}
@@ -407,14 +463,33 @@ export function DashboardScreen({
                   <View style={[styles.progressBarFill, { width: '40%', backgroundColor: P.orange700 }]} />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.cropCard}
+              activeOpacity={0.85}
+              onPress={onNavigateToActiveCrops}
+            >
+              <Image 
+                source={{ uri: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&q=80' }} 
+                style={styles.cropImagePlaceholder}
+                resizeMode="cover"
+              />
+              <View style={styles.cropInfo}>
+                <Text style={styles.cropName}>Wheat</Text>
+                <Text style={styles.cropDetail}>Zone C · 14 days</Text>
+                <Text style={[styles.cropHarvest, { color: P.blue700 }]}>Harvest in 90d</Text>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: '15%', backgroundColor: P.blue700 }]} />
+                </View>
+              </View>
+            </TouchableOpacity>
           </ScrollView>
 
           {/* Action Buttons */}
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity style={styles.actionButton} onPress={onNavigateToFarmDiary}>
               <Icon name="edit_note" size={22} color={colors.brandGreen} style={styles.actionButtonIcon} />
-              <Text style={styles.actionButtonText}>Log Diary</Text>
+              <Text style={styles.actionButtonText}>Farm Diary</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={onNavigateToMyListings}>
               <Icon name="assignment" size={22} color={colors.brandGreen} style={styles.actionButtonIcon} />
@@ -442,7 +517,7 @@ export function DashboardScreen({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: P.lightSurfaceAlt },
-  scrollContent: { paddingBottom: 100 },
+  scrollContent: { paddingBottom: 20 },
   skeletonContainer: { padding: 20, gap: 12 },
   skeletonItem: { borderRadius: 8 },
   skeletonCard: { borderRadius: 16, marginTop: 8 },
@@ -488,25 +563,30 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    gap: 10,
   },
   headerIconButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   notificationDot: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 7,
+    right: 7,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: P.redAccent200,
+    borderWidth: 1.5,
+    borderColor: P.deepGreen,
   },
   headerCardsRow: {
     flexDirection: 'row',
@@ -724,52 +804,60 @@ const styles = StyleSheet.create({
   },
   cropsScroll: {
     marginHorizontal: -20,
+  },
+  cropsScrollContent: {
     paddingHorizontal: 20,
+    paddingVertical: 4,
   },
   cropCard: {
-    width: 160,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    marginRight: 15,
+    width: 172,
+    backgroundColor: P.white,
+    borderRadius: 18,
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: P.twGray100,
     shadowColor: P.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
     overflow: 'hidden',
   },
   cropImagePlaceholder: {
-    height: 100,
+    height: 104,
     width: '100%',
+    backgroundColor: P.twGray100,
   },
   cropInfo: {
-    padding: 12,
+    padding: 13,
   },
   cropName: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: P.grey900,
+    fontSize: 15.5,
+    fontWeight: '700',
+    color: P.twGray900,
     marginBottom: 2,
+    letterSpacing: -0.2,
   },
   cropDetail: {
     fontSize: 12,
-    color: P.grey600,
-    marginBottom: 8,
+    color: P.twGray500,
+    marginBottom: 10,
   },
   cropHarvest: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 12.5,
+    fontWeight: '700',
     marginBottom: 6,
   },
   progressBarBg: {
-    height: 4,
-    backgroundColor: P.grey200,
-    borderRadius: 2,
+    height: 5,
+    backgroundColor: P.twGray100,
+    borderRadius: 3,
     width: '100%',
+    overflow: 'hidden',
   },
   progressBarFill: {
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 3,
   },
 
   actionButtonsRow: {

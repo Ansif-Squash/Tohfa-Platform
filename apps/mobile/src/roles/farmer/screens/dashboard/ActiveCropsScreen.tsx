@@ -52,7 +52,7 @@ export function ActiveCropsScreen({ onNavigateBack }: ActiveCropsScreenProps): R
         {/* Mocking one more crop for demonstration */}
         <View style={styles.cropCard}>
           <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1518977672851-f7eeaf69f4c8?w=400&q=80' }} 
+            source={{ uri: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&q=80' }} 
             style={styles.cropImage}
             resizeMode="cover"
           />

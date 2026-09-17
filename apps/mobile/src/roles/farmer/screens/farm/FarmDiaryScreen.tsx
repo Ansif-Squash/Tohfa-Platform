@@ -132,8 +132,8 @@ const ENTRIES = [
       labour: '2 labour',
       description: 'Morning drip cycle on the lower beds; checked emitters on rows 4-7, two were clogged and cleared.',
       images: [
-        'https://images.unsplash.com/photo-1592982537447-6f233486df81?auto=format&fit=crop&q=80&w=200&h=200', // tractor in field
-        'https://images.unsplash.com/photo-1589255243171-cb8f6a98fba0?auto=format&fit=crop&q=80&w=200&h=200', // green field
+        'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&q=80', // fresh tomatoes on vine
+        'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=400&q=80', // plants and drip irrigation
       ],
     },
   },
@@ -179,9 +179,10 @@ const ENTRIES = [
 interface FarmDiaryScreenProps {
   onBack?: () => void;
   onNavigateToNewEntry?: () => void;
+  onNavigateToCalendar?: () => void;
 }
 
-export function FarmDiaryScreen({ onBack, onNavigateToNewEntry }: FarmDiaryScreenProps): React.JSX.Element {
+export function FarmDiaryScreen({ onBack, onNavigateToNewEntry, onNavigateToCalendar }: FarmDiaryScreenProps): React.JSX.Element {
   const [expandedId, setExpandedId] = useState<string | null>('1');
 
   const toggleExpand = (id: string) => {
@@ -207,7 +208,13 @@ export function FarmDiaryScreen({ onBack, onNavigateToNewEntry }: FarmDiaryScree
             <Text style={styles.headerTitle}>Farm Diary</Text>
             <Text style={styles.headerSubtitle}>Thursday, 16 July 2026</Text>
           </View>
-          <TouchableOpacity style={styles.calendarBtn} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.calendarBtn} 
+            activeOpacity={0.7}
+            onPress={onNavigateToCalendar}
+            accessibilityRole="button"
+            accessibilityLabel="Diary Calendar"
+          >
             <CalendarIcon size={22} color={P.white} />
           </TouchableOpacity>
         </View>

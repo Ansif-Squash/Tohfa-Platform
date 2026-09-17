@@ -59,6 +59,7 @@ const CROP_IMAGES: Record<string, string> = {
   'French Beans': 'https://images.unsplash.com/photo-1567375698348-5d9d5ae10c3a?w=100&q=80',
   Beetroot: 'https://images.unsplash.com/photo-1593105544559-ecb03bf76f82?w=100&q=80',
   Cauliflower: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=100&q=80',
+  Wheat: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=100&q=80',
 };
 
 // ── Data ─────────────────────────────────────────────────────────────────────

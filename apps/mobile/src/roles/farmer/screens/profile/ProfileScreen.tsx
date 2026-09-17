@@ -34,6 +34,7 @@ interface ProfileScreenProps {
   onNavigateToAudits?: () => void;
   onNavigateToFarmRatings?: () => void;
   onNavigateToSoilTest?: () => void;
+  onNavigateToSettings?: () => void;
 }
 
 interface PersonalDetailsData {
@@ -64,6 +65,7 @@ export function ProfileScreen({
   onNavigateToAudits,
   onNavigateToFarmRatings,
   onNavigateToSoilTest,
+  onNavigateToSettings,
 }: ProfileScreenProps): React.JSX.Element {
   // --- Profile State ---
   const [personalDetails, setPersonalDetails] = useState<PersonalDetailsData>({
@@ -249,7 +251,13 @@ export function ProfileScreen({
 
               <TouchableOpacity
                 style={styles.navCircleButton}
-                onPress={() => setIsSettingsModalVisible(true)}
+                onPress={() => {
+                  if (onNavigateToSettings) {
+                    onNavigateToSettings();
+                  } else {
+                    setIsSettingsModalVisible(true);
+                  }
+                }}
                 accessibilityLabel="Settings"
                 activeOpacity={0.7}
               >
@@ -814,7 +822,13 @@ export function ProfileScreen({
 
           <TouchableOpacity
             style={styles.menuItemRow}
-            onPress={() => setIsSettingsModalVisible(true)}
+            onPress={() => {
+              if (onNavigateToSettings) {
+                onNavigateToSettings();
+              } else {
+                setIsSettingsModalVisible(true);
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.menuIconBox, { backgroundColor: P.sky100 }]}>
