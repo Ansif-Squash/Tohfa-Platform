@@ -92,11 +92,7 @@ export const RoleSelectionScreen: React.FC<RoleSelectionProps> = ({ onNavigate }
         </TouchableOpacity>
 
         {/* Info Box */}
-        <View style={[styles.infoBox, { backgroundColor: '#edf2f7', borderColor: '#475569' }]}>
-          <Text style={[styles.infoText, { color: '#334155' }]}>
-            Admin roles are assigned internally by TOHFA. They are never a self-registration option.
-          </Text>
-        </View>
+
       </ScrollView>
 
       {/* Footer */}
@@ -181,7 +177,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   activeCardShadow: {
-    shadowColor: P.brandGreen,
+    shadowColor: P.primary,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.15,
     shadowRadius: 24,

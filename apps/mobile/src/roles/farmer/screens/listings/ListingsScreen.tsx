@@ -1,678 +1,521 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import {
-  computeRemainingTime,
-  formatCountdown,
-  getMyListings,
-  withdrawListing,
-  type Listing,
-  type ListingStatus,
-} from '../../api/listings';
-import { Badge, Button, Card, EmptyState, ErrorState, Icon, Skeleton } from '@tohfa/mobile-ui';
-import { t } from '../../../../i18n/farmer';
-import { MIN_TOUCH_TARGET, colors, radius, spacing, typography, weights } from '../../theme';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Image } from 'react-native';
+import Svg, { Path, Circle, Rect, Line, G } from 'react-native-svg';
+
+// Simple SVG Icons to match design exactly
+const ChevronLeft = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M15 18L9 12L15 6" stroke="#2e7d32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const Beaker = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+    <Path d="M19 21H5C4.4 21 4 20.6 4 20C4 19.8 4.1 19.6 4.2 19.4L9 12V5H8C7.4 5 7 4.6 7 4C7 3.4 7.4 3 8 3H16C16.6 3 17 3.4 17 4C17 4.6 16.6 5 16 5H15V12L19.8 19.4C20.1 19.8 20 20.4 19.6 20.8C19.4 20.9 19.2 21 19 21ZM10 13L6.1 19H17.9L14 13V5H10V13Z" fill="#9e9e9e" />
+  </Svg>
+);
+
+const BellAlert = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.36 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.63 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16ZM16 17H8V11C8 8.52 9.51 6.5 12 6.5C14.49 6.5 16 8.52 16 11V17Z" fill="#d84315"/>
+  </Svg>
+);
+
+const ChevronRight = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+    <Path d="M9 18L15 12L9 6" stroke="#d84315" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const StoreIcon = () => (
+  <Svg width={120} height={120} viewBox="0 0 24 24" fill="none">
+    <Path d="M2 6L4 11V20C4 20.5523 4.44772 21 5 21H19C19.5523 21 20 20.5523 20 20V11L22 6V5C22 4.44772 21.5523 4 21 4H3C2.44772 4 2 4.44772 2 5V6Z" fill="#ffffff" opacity={0.2} />
+    <Path d="M22 6L20 11V12C20 12.5523 19.5523 13 19 13C18.4477 13 18 12.5523 18 12V11C18 11.5523 17.5523 12 17 12C16.4477 12 16 11.5523 16 11V12C16 12.5523 15.5523 13 15 13C14.4477 13 14 12.5523 14 12V11L14 6H22Z" fill="#ffffff" opacity={0.3} />
+  </Svg>
+);
+
+const CropTomato = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M12 2V6M12 6L9 9M12 6L15 9" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+const CropCarrot = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Path d="M17.414 4.586A2 2 0 0 0 16 4H8a2 2 0 0 0-1.414.586l-2 2a2 2 0 0 0 0 2.828l6 6a2 2 0 0 0 2.828 0l6-6a2 2 0 0 0 0-2.828l-2-2z" stroke="#f57c00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M12 2V4M9 2V4M15 2V4" stroke="#f57c00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+const CropBeans = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 22S4 18 4 12V6L12 2L20 6V12C20 18 12 22 12 22Z" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M12 12V22" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+const Plus = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 5V19M5 12H19" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 interface ListingsScreenProps {
   onNavigateToCreateListing?: () => void;
-  onNavigateToCounterOffer?: (listing: Listing) => void;
+  onNavigateToCounterOffer?: (listing: any) => void;
+  onNavigateBack?: () => void;
 }
-
-type TabType = 'ACTIVE' | 'SOLD' | 'CLOSED';
 
 export function ListingsScreen({
   onNavigateToCreateListing,
   onNavigateToCounterOffer,
+  onNavigateBack
 }: ListingsScreenProps): React.JSX.Element {
-  const [currentTab, setCurrentTab] = useState<TabType>('ACTIVE');
-  const [allListings, setAllListings] = useState<Listing[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [error, setError] = useState<unknown | null>(null);
-  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
-
-  // Monotonic timer tick for real-time countdown on active counter-offers
-  const clientBasePerfMsRef = useRef<number>(performance.now());
-  const clientBaseDateMsRef = useRef<number>(Date.now());
-  const [currentPerfMs, setCurrentPerfMs] = useState<number>(performance.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentPerfMs(performance.now());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const loadListings = useCallback(async () => {
-    try {
-      setError(null);
-      const res = await getMyListings();
-      setAllListings(res.items || []);
-    } catch (err: unknown) {
-      setError(err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadListings();
-  }, [loadListings]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    clientBasePerfMsRef.current = performance.now();
-    clientBaseDateMsRef.current = Date.now();
-    void loadListings();
-  }, [loadListings]);
-
-  // Tab filtering
-  const filteredListings = useMemo(() => {
-    if (currentTab === 'ACTIVE') {
-      return allListings.filter(
-        (l) => l.status === 'PENDING_APPROVAL' || l.status === 'COUNTER_OFFERED',
-      );
-    }
-    if (currentTab === 'SOLD') {
-      return allListings.filter((l) => l.status === 'ACCEPTED');
-    }
-    return allListings.filter(
-      (l) => l.status === 'REJECTED' || l.status === 'WITHDRAWN' || l.status === 'EXPIRED',
-    );
-  }, [allListings, currentTab]);
-
-  const handleWithdraw = useCallback(
-    async (listing: Listing) => {
-      Alert.alert(
-        t('farmer.listings.withdraw.confirm') || 'Withdraw Listing',
-        `Are you sure you want to withdraw listing #${listing.listingNumber}?`,
-        [
-          { text: t('farmer.common.cancel') || 'Cancel', style: 'cancel' },
-          {
-            text: t('farmer.listings.button.withdraw') || 'Withdraw',
-            style: 'destructive',
-            onPress: async () => {
-              setWithdrawingId(listing.id);
-              try {
-                await withdrawListing(listing.id, listing.version);
-                void loadListings();
-              } catch (err: unknown) {
-                const anyErr = err as { detail?: string; message?: string };
-                Alert.alert('Error', anyErr.detail || anyErr.message || 'Failed to withdraw listing.');
-              } finally {
-                setWithdrawingId(null);
-              }
-            },
-          },
-        ],
-      );
-    },
-    [loadListings],
-  );
-
-  const renderStatusBadge = (status: ListingStatus) => {
-    switch (status) {
-      case 'PENDING_APPROVAL':
-        return <Badge label={t('farmer.listing.status.PENDING') || 'Pending Approval'} variant="warning" />;
-      case 'COUNTER_OFFERED':
-        return <Badge label={t('farmer.listing.status.COUNTER_OFFERED') || 'Counter-Offer'} variant="info" />;
-      case 'ACCEPTED':
-        return <Badge label={t('farmer.listing.status.APPROVED') || 'Sold'} variant="success" />;
-      case 'REJECTED':
-        return <Badge label={t('farmer.listing.status.REJECTED') || 'Rejected'} variant="danger" />;
-      case 'WITHDRAWN':
-        return <Badge label="Withdrawn" variant="info" />;
-      case 'EXPIRED':
-        return <Badge label="Expired" variant="danger" />;
-      default:
-        return <Badge label={status} variant="info" />;
-    }
-  };
-
-  const renderListingItem = ({ item }: { item: Listing }) => {
-    const isCounterOffered = item.status === 'COUNTER_OFFERED' && item.activeCounterOffer;
-
-    // Countdown calculation for active counter-offer (BR-10)
-    let remainingTimeText = '';
-    let isOfferExpired = false;
-    if (isCounterOffered && item.activeCounterOffer?.expiresAt) {
-      const time = computeRemainingTime(
-        item.activeCounterOffer.expiresAt,
-        clientBaseDateMsRef.current,
-        clientBasePerfMsRef.current,
-        currentPerfMs,
-      );
-      isOfferExpired = time.isExpired;
-      remainingTimeText = isOfferExpired ? 'Expired' : formatCountdown(time.remainingMs);
-    }
-
-    return (
-      <Card
-        style={[
-          styles.listingCard,
-          isCounterOffered ? styles.counterOfferCard : null,
-        ]}
-      >
-        {/* Card Header: Crop name + Grade + Status */}
-        <View style={styles.cardHeaderRow}>
-          <View style={styles.cropTitleContainer}>
-            <Text style={styles.cropNameText}>{item.cropName}</Text>
-            <Text style={styles.gradeBadgeText}>{item.grade.replace('_', ' ')}</Text>
-          </View>
-          {renderStatusBadge(item.status)}
-        </View>
-
-        <Text style={styles.listingNumberText}>
-          #{item.listingNumber} • Available: {item.availableFrom || 'Immediate'}
-        </Text>
-
-        {/* Pricing and Quantity Grid */}
-        <View style={styles.metricsRow}>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Quantity</Text>
-            <Text style={styles.metricValue}>{item.quantityKg} kg</Text>
-          </View>
-
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Asking Price</Text>
-            <Text style={styles.metricValue}>₹{item.askingPricePerKg}/kg</Text>
-          </View>
-
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Ceiling (BR-07)</Text>
-            <Text style={styles.metricValueMuted}>₹{item.ceilingPricePerKg}/kg</Text>
-          </View>
-        </View>
-
-        {/* Counter-Offer Banner with BR-10 Countdown Timer */}
-        {isCounterOffered && item.activeCounterOffer ? (
-          <View style={styles.counterOfferBanner}>
-            <View style={styles.counterOfferHeaderRow}>
-              <View style={styles.counterOfferTag}>
-                <Icon name="swap_horiz" size={18} color={colors.secondary} />
-                <Text style={styles.counterOfferTagText}>Counter-Offer Received</Text>
-              </View>
-
-              {/* 24-hr Expiry Countdown Badge */}
-              <View
-                style={[
-                  styles.countdownBadge,
-                  isOfferExpired ? styles.countdownBadgeExpired : styles.countdownBadgeActive,
-                ]}
-              >
-                <Icon
-                  name="schedule"
-                  size={14}
-                  color={isOfferExpired ? colors.danger : colors.primary}
-                />
-                <Text
-                  style={[
-                    styles.countdownText,
-                    isOfferExpired ? styles.countdownTextExpired : styles.countdownTextActive,
-                  ]}
-                >
-                  {remainingTimeText}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.counterTermsRow}>
-              <Text style={styles.counterOfferedPrice}>
-                Offered: ₹{item.activeCounterOffer.pricePerKg}/kg
-              </Text>
-              <Text style={styles.counterOfferedQty}>
-                Qty: {item.activeCounterOffer.quantityKg} kg
-              </Text>
-            </View>
-
-            {item.activeCounterOffer.message ? (
-              <Text style={styles.counterOfferNote} numberOfLines={2}>
-                "{item.activeCounterOffer.message}"
-              </Text>
-            ) : null}
-
-            <Button
-              title={t('farmer.listings.button.reviewOffer') || 'Review Counter-Offer'}
-              variant="primary"
-              onPress={() => onNavigateToCounterOffer?.(item)}
-              style={styles.reviewOfferButton}
-            />
-          </View>
-        ) : null}
-
-        {/* Sold / Accepted Details */}
-        {item.status === 'ACCEPTED' && item.finalPricePerKg ? (
-          <View style={styles.soldBanner}>
-            <Icon name="check_circle" size={16} color={colors.success} />
-            <Text style={styles.soldBannerText}>
-              Sold at ₹{item.finalPricePerKg}/kg for {item.finalQuantityKg || item.quantityKg} kg
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Rejection Details */}
-        {item.status === 'REJECTED' && item.rejectionReason ? (
-          <View style={styles.rejectedBanner}>
-            <Icon name="cancel" size={16} color={colors.danger} />
-            <Text style={styles.rejectedBannerText}>Reason: {item.rejectionReason}</Text>
-          </View>
-        ) : null}
-
-        {/* Action Row for Pending Listing (Withdraw) */}
-        {item.status === 'PENDING_APPROVAL' ? (
-          <View style={styles.cardActionsRow}>
-            <Button
-              title={t('farmer.listings.button.withdraw') || 'Withdraw Listing'}
-              variant="outline"
-              loading={withdrawingId === item.id}
-              disabled={withdrawingId === item.id}
-              onPress={() => void handleWithdraw(item)}
-              style={styles.withdrawButton}
-            />
-          </View>
-        ) : null}
-      </Card>
-    );
-  };
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {t('farmer.listings.title') || 'My Produce Listings'}
-        </Text>
-        <Pressable
-          style={styles.newListingButton}
-          onPress={() => onNavigateToCreateListing?.()}
-          accessibilityRole="button"
-          accessibilityLabel="Create produce listing"
-        >
-          <Icon name="add" size={20} color={colors.white} />
-          <Text style={styles.newListingButtonText}>
-            {t('farmer.listings.button.new') || 'New Listing'}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer} accessibilityRole="tablist">
-        <Pressable
-          style={[styles.tabButton, currentTab === 'ACTIVE' && styles.tabButtonActive]}
-          onPress={() => setCurrentTab('ACTIVE')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: currentTab === 'ACTIVE' }}
-        >
-          <Text
-            style={[styles.tabButtonText, currentTab === 'ACTIVE' && styles.tabButtonTextActive]}
+        <View style={styles.headerRow}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={onNavigateBack}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
           >
-            {t('farmer.listings.tab.active') || 'Active / Review'}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={[styles.tabButton, currentTab === 'SOLD' && styles.tabButtonActive]}
-          onPress={() => setCurrentTab('SOLD')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: currentTab === 'SOLD' }}
-        >
-          <Text style={[styles.tabButtonText, currentTab === 'SOLD' && styles.tabButtonTextActive]}>
-            {t('farmer.listings.tab.sold') || 'Sold'}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={[styles.tabButton, currentTab === 'CLOSED' && styles.tabButtonActive]}
-          onPress={() => setCurrentTab('CLOSED')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: currentTab === 'CLOSED' }}
-        >
-          <Text
-            style={[styles.tabButtonText, currentTab === 'CLOSED' && styles.tabButtonTextActive]}
-          >
-            {t('farmer.listings.tab.closed') || 'Closed'}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Main List */}
-      {loading ? (
-        <View style={styles.skeletonContainer}>
-          <Skeleton height={140} width="100%" style={styles.skeletonCard} />
-          <Skeleton height={140} width="100%" style={styles.skeletonCard} />
-          <Skeleton height={140} width="100%" style={styles.skeletonCard} />
+            <ChevronLeft />
+          </TouchableOpacity>
+          <View style={styles.headerTextCol}>
+            <Text style={styles.headerTitle}>Marketing</Text>
+            <Text style={styles.headerSub}>List your harvest & get paid</Text>
+          </View>
         </View>
-      ) : error ? (
-        <ErrorState
-          error={error}
-          onRetry={() => {
-            setLoading(true);
-            void loadListings();
-          }}
-        />
-      ) : (
-        <FlatList
-          data={filteredListings}
-          keyExtractor={(item) => item.id}
-          renderItem={renderListingItem}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[colors.primary]}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <EmptyState
-                iconName="inventory_2"
-                title={
-                  currentTab === 'ACTIVE'
-                    ? t('farmer.listings.empty.active') || 'No active listings'
-                    : currentTab === 'SOLD'
-                      ? t('farmer.listings.empty.sold') || 'No sold listings'
-                      : t('farmer.listings.empty.closed') || 'No closed listings'
-                }
-                message={
-                  currentTab === 'ACTIVE'
-                    ? 'Your active listings or pending counter-offers will appear here.'
-                    : currentTab === 'SOLD'
-                      ? 'Listings that have been accepted and finalized will appear here.'
-                      : 'Rejected, expired, or withdrawn listings will appear here.'
-                }
-              />
-              {currentTab === 'ACTIVE' ? (
-                <Button
-                  title={t('farmer.listings.button.new') || 'Create New Listing'}
-                  variant="primary"
-                  onPress={() => onNavigateToCreateListing?.()}
-                  style={styles.emptyAction}
-                />
-              ) : null}
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Prototype Banner */}
+        <View style={styles.prototypeBanner}>
+          <View style={styles.protoRow}>
+            <Beaker />
+            <Text style={styles.protoText}>Prototype only · market-day state</Text>
+          </View>
+          <View style={styles.protoToggle}>
+            <View style={styles.protoToggleActive}>
+              <Text style={styles.protoToggleActiveText}>Open</Text>
             </View>
-          }
-        />
-      )}
+            <View style={styles.protoToggleInactive}>
+              <Text style={styles.protoToggleInactiveText}>Closed</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Alert Banner */}
+        <TouchableOpacity style={styles.alertBanner} onPress={() => onNavigateToCounterOffer?.({})}>
+          <View style={styles.alertIconBox}>
+            <BellAlert />
+          </View>
+          <View style={styles.alertTextCol}>
+            <Text style={styles.alertTitle}>1 listing needs your response</Text>
+            <Text style={styles.alertSub}>Carrot · counter-offer expires in 22h 30m</Text>
+          </View>
+          <View style={styles.alertChevron}>
+            <ChevronRight />
+          </View>
+        </TouchableOpacity>
+
+        {/* Market Day Hero */}
+        <View style={styles.heroCard}>
+          <View style={{position:'absolute', right: -20, bottom: -10}}>
+             <StoreIcon />
+          </View>
+          <View style={styles.heroChip}>
+            <View style={styles.heroChipDot} />
+            <Text style={styles.heroChipText}>MARKET DAY IS OPEN</Text>
+          </View>
+          <Text style={styles.heroTitle}>Today is a market day</Text>
+          <Text style={styles.heroSub}>Listings are being accepted now. Add a harvest-ready crop to start selling.</Text>
+        </View>
+
+        {/* Metrics */}
+        <View style={styles.metricsContainer}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricValueBlack}>3</Text>
+            <Text style={styles.metricLabel}>Active{'\n'}listings</Text>
+          </View>
+          <View style={[styles.metricCard, { flex: 1.2 }]}>
+            <Text style={styles.metricValueGreen}>₹13,440</Text>
+            <Text style={styles.metricLabel}>Earned this{'\n'}month</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricValueRed}>1</Text>
+            <Text style={styles.metricLabel}>Need{'\n'}reply</Text>
+          </View>
+        </View>
+
+        {/* Recent Listings */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>RECENT LISTINGS</Text>
+          <TouchableOpacity>
+            <Text style={styles.viewAllBtn}>View all</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* List items */}
+        <View style={styles.listItem}>
+          <View style={[styles.listIconBox, { backgroundColor: '#e8f5e9' }]}>
+            <Image source={require('../../../../assets/images/real_tomato.jpg')} style={styles.realCropImg} />
+          </View>
+          <View style={styles.listTextCol}>
+            <Text style={styles.listTitle}>Tomato · Hybrid</Text>
+            <Text style={styles.listSub}>200 kg · ₹38/kg</Text>
+          </View>
+          <View style={[styles.badge, { backgroundColor: '#e8f5e9' }]}>
+            <Text style={[styles.badgeText, { color: '#2e7d32' }]}>Approved</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.listItem} onPress={() => onNavigateToCounterOffer?.({})}>
+          <View style={[styles.listIconBox, { backgroundColor: '#fff3e0' }]}>
+            <Image source={require('../../../../assets/images/real_carrot.jpg')} style={styles.realCropImg} />
+          </View>
+          <View style={styles.listTextCol}>
+            <Text style={styles.listTitle}>Carrot · Ooty</Text>
+            <Text style={styles.listSub}>150 kg · ₹40/kg</Text>
+          </View>
+          <View style={[styles.badge, { backgroundColor: '#f3e5f5' }]}>
+            <Text style={[styles.badgeText, { color: '#8e24aa' }]}>Counter-offer</Text>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.listItem}>
+          <View style={[styles.listIconBox, { backgroundColor: '#e8f5e9' }]}>
+            <Image source={require('../../../../assets/images/real_french_beans.jpg')} style={styles.realCropImg} />
+          </View>
+          <View style={styles.listTextCol}>
+            <Text style={styles.listTitle}>French Beans</Text>
+            <Text style={styles.listSub}>80 kg · ₹55/kg</Text>
+          </View>
+          <View style={[styles.badge, { backgroundColor: '#fff3e0' }]}>
+            <Text style={[styles.badgeText, { color: '#e65100' }]}>Waiting</Text>
+          </View>
+        </View>
+        
+        <View style={{height: 100}} />
+      </ScrollView>
+
+      {/* Floating Action Button */}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity style={styles.fab} onPress={onNavigateToCreateListing}>
+          <Plus />
+          <Text style={styles.fabText}>Create listing</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: '#fafafa',
   },
   header: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfacePressed,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  headerTextCol: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: typography.title,
-    fontWeight: weights.bold,
-    color: colors.onSurface,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#004d40',
   },
-  newListingButton: {
+  headerSub: {
+    fontSize: 14,
+    color: '#78909c',
+    marginTop: 2,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  prototypeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    minHeight: 38,
+    justifyContent: 'space-between',
+    backgroundColor: '#f9f9f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
   },
-  newListingButtonText: {
-    color: colors.white,
-    fontSize: typography.bodySmall,
-    fontWeight: weights.bold,
-  },
-  tabsContainer: {
+  protoRow: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfacePressed,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: spacing.md,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    minHeight: MIN_TOUCH_TARGET,
-    justifyContent: 'center',
-  },
-  tabButtonActive: {
-    borderBottomColor: colors.primary,
-  },
-  tabButtonText: {
-    fontSize: typography.bodySmall,
-    fontWeight: weights.medium,
-    color: colors.onSurfaceVariant,
-  },
-  tabButtonTextActive: {
-    color: colors.primary,
-    fontWeight: weights.bold,
-  },
-  centerContainer: {
+    gap: 8,
     flex: 1,
-    justifyContent: 'center',
+  },
+  protoText: {
+    fontSize: 12,
+    color: '#757575',
+    fontWeight: '600',
+  },
+  protoToggle: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.xl,
-    gap: spacing.md,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 2,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  errorText: {
-    fontSize: typography.body,
-    color: colors.danger,
-    textAlign: 'center',
+  protoToggleActive: {
+    backgroundColor: '#2e7d32',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 14,
   },
-  listContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
-    gap: spacing.md,
+  protoToggleActiveText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
   },
-  listingCard: {
-    padding: spacing.md,
-    gap: spacing.xs,
+  protoToggleInactive: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
-  counterOfferCard: {
-    borderColor: colors.secondary,
-    borderWidth: 1.5,
+  protoToggleInactiveText: {
+    color: '#9e9e9e',
+    fontSize: 10,
+    fontWeight: '700',
   },
-  cardHeaderRow: {
+  alertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffebee',
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#d84315',
+    marginBottom: 20,
+  },
+  alertIconBox: {
+    marginRight: 12,
+  },
+  alertTextCol: {
+    flex: 1,
+  },
+  alertTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#5d4037',
+    marginBottom: 4,
+  },
+  alertSub: {
+    fontSize: 13,
+    color: '#d84315',
+  },
+  alertChevron: {
+    marginLeft: 8,
+  },
+  heroCard: {
+    backgroundColor: '#2e7d32',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  heroChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  heroChipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ffffff',
+    marginRight: 6,
+  },
+  heroChipText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  heroSub: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    lineHeight: 20,
+    paddingRight: 40,
+  },
+  metricsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 28,
   },
-  cropTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  cropNameText: {
-    fontSize: typography.headline,
-    fontWeight: weights.bold,
-    color: colors.onSurface,
+  metricValueBlack: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#212121',
+    marginBottom: 4,
   },
-  gradeBadgeText: {
-    fontSize: typography.caption,
-    color: colors.onSurfaceVariant,
-    backgroundColor: colors.surfacePressed,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    fontWeight: weights.medium,
+  metricValueGreen: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#2e7d32',
+    marginBottom: 4,
   },
-  listingNumberText: {
-    fontSize: typography.caption,
-    color: colors.onSurfaceVariant,
-    marginBottom: spacing.xs,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.surfacePressed,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfacePressed,
-  },
-  metricItem: {
-    gap: 2,
+  metricValueRed: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#d84315',
+    marginBottom: 4,
   },
   metricLabel: {
-    fontSize: typography.caption,
-    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    color: '#9e9e9e',
+    fontWeight: '500',
+    lineHeight: 16,
   },
-  metricValue: {
-    fontSize: typography.body,
-    fontWeight: weights.bold,
-    color: colors.onSurface,
-  },
-  metricValueMuted: {
-    fontSize: typography.body,
-    fontWeight: weights.medium,
-    color: colors.textMuted,
-  },
-  counterOfferBanner: {
-    backgroundColor: colors.surfaceVariant,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    marginTop: spacing.xs,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.secondary,
-  },
-  counterOfferHeaderRow: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
-  counterOfferTag: {
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#9e9e9e',
+    letterSpacing: 0.5,
+  },
+  viewAllBtn: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2e7d32',
+  },
+  listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  counterOfferTagText: {
-    fontSize: typography.bodySmall,
-    fontWeight: weights.bold,
-    color: colors.secondary,
-  },
-  countdownBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  countdownBadgeActive: {
-    backgroundColor: colors.white,
-  },
-  countdownBadgeExpired: {
-    backgroundColor: colors.surfacePressed,
-  },
-  countdownText: {
-    fontSize: typography.caption,
-    fontWeight: weights.bold,
-  },
-  countdownTextActive: {
-    color: colors.primary,
-  },
-  countdownTextExpired: {
-    color: colors.danger,
-  },
-  counterTermsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  counterOfferedPrice: {
-    fontSize: typography.body,
-    fontWeight: weights.bold,
-    color: colors.onSurface,
-  },
-  counterOfferedQty: {
-    fontSize: typography.bodySmall,
-    color: colors.onSurfaceVariant,
-  },
-  counterOfferNote: {
-    fontSize: typography.caption,
-    fontStyle: 'italic',
-    color: colors.onSurfaceVariant,
-  },
-  reviewOfferButton: {
-    marginTop: spacing.xs,
-  },
-  soldBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: spacing.xs,
-    backgroundColor: colors.surfaceVariant,
-    padding: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  soldBannerText: {
-    fontSize: typography.bodySmall,
-    fontWeight: weights.bold,
-    color: colors.success,
-  },
-  rejectedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: spacing.xs,
-    backgroundColor: colors.surfacePressed,
-    padding: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  rejectedBannerText: {
-    fontSize: typography.caption,
-    color: colors.danger,
-  },
-  cardActionsRow: {
-    marginTop: spacing.xs,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  withdrawButton: {
-    paddingHorizontal: spacing.md,
-  },
-  emptyContainer: {
+  listIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xxl * 2,
-    gap: spacing.sm,
+    marginRight: 16,
+    overflow: 'hidden',
   },
-  emptyText: {
-    fontSize: typography.bodyLarge,
-    color: colors.onSurfaceVariant,
-    textAlign: 'center',
+  realCropImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
-  emptyAction: {
-    marginTop: spacing.md,
+  listTextCol: {
+    flex: 1,
   },
-  skeletonContainer: {
-    padding: spacing.md,
-    gap: spacing.md,
+  listTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#212121',
+    marginBottom: 4,
   },
-  skeletonCard: {
-    borderRadius: radius.card,
+  listSub: {
+    fontSize: 13,
+    color: '#9e9e9e',
+  },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#2e7d32',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  fab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2e7d32',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 28,
+  },
+  fabText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '800',
+    marginLeft: 8,
   },
 });

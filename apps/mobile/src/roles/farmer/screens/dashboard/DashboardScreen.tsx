@@ -7,6 +7,7 @@ import {
   Text,
   View,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import {
   evalCertificateWarning,
@@ -31,6 +32,14 @@ interface DashboardScreenProps {
   onNavigateToNotifications?: () => void;
   onNavigateToFarmManagement?: () => void;
   onNavigateToWeather?: () => void;
+  onNavigateToActiveCrops?: () => void;
+  onNavigateToFarmDiary?: () => void;
+  onNavigateToMyListings?: () => void;
+  onNavigateToAttendance?: () => void;
+  onNavigateToReviewOffer?: () => void;
+  onNavigateToTohfaCalendar?: () => void;
+  onNavigateToInventory?: () => void;
+  onNavigateToLearningHub?: () => void;
 }
 
 export function DashboardScreen({
@@ -46,6 +55,14 @@ export function DashboardScreen({
   onNavigateToNotifications,
   onNavigateToFarmManagement,
   onNavigateToWeather,
+  onNavigateToActiveCrops,
+  onNavigateToFarmDiary,
+  onNavigateToMyListings,
+  onNavigateToAttendance,
+  onNavigateToReviewOffer,
+  onNavigateToTohfaCalendar,
+  onNavigateToInventory,
+  onNavigateToLearningHub,
 }: DashboardScreenProps): React.JSX.Element {
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -284,7 +301,7 @@ export function DashboardScreen({
             <View style={styles.alertContent}>
               <Text style={styles.alertTitle}>Counter-offer received</Text>
               <Text style={styles.alertMessage}>Admin offered ₹42/kg for your tomatoes. Respond within 24 hours.</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={onNavigateToReviewOffer}>
                 <Text style={styles.alertAction}>Review offer {'>'}</Text>
               </TouchableOpacity>
             </View>
@@ -292,20 +309,20 @@ export function DashboardScreen({
 
           {/* Grid Menu */}
           <View style={styles.gridContainer}>
-            <TouchableOpacity style={styles.gridCard} onPress={onNavigateToProfile}>
-              <View style={[styles.gridIconCircle, { backgroundColor: P.paleLavenderBg }]}>
-                <Icon name="person" size={20} color={P.violetAccent} />
-              </View>
-              <Text style={styles.gridTitle}>Crop Management</Text>
-              <Text style={styles.gridSubtitle}>Cert renewal in 24 days</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity style={styles.gridCard} onPress={onNavigateToFarmManagement}>
               <View style={[styles.gridIconCircle, { backgroundColor: P.paleMintBg }]}>
                 <Icon name="eco" size={20} color={colors.brandGreen} />
               </View>
-              <Text style={styles.gridTitle}>Certifications</Text>
+              <Text style={styles.gridTitle}>Farm Management</Text>
               <Text style={styles.gridSubtitle}>3 crops · diary due</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.gridCard} onPress={onNavigateToCertifications}>
+              <View style={[styles.gridIconCircle, { backgroundColor: P.paleLavenderBg }]}>
+                <Icon name="verified" size={20} color={P.violetAccent} />
+              </View>
+              <Text style={styles.gridTitle}>Certifications</Text>
+              <Text style={styles.gridSubtitle}>Cert renewal in 24 days</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.gridCard} onPress={onNavigateToListings}>
@@ -319,7 +336,7 @@ export function DashboardScreen({
               <Text style={styles.gridSubtitle}>1 counter offer pending</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.gridCard}>
+            <TouchableOpacity style={styles.gridCard} onPress={onNavigateToInventory}>
               <View style={[styles.gridIconCircle, { backgroundColor: P.paleSkyBg }]}>
                 <Icon name="inventory_2" size={20} color={P.blue700} />
               </View>
@@ -327,7 +344,7 @@ export function DashboardScreen({
               <Text style={styles.gridSubtitle}>Tractor service due</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.gridCard}>
+            <TouchableOpacity style={styles.gridCard} onPress={onNavigateToTohfaCalendar}>
               <View style={[styles.gridIconCircle, { backgroundColor: P.paleCreamBg }]}>
                 <Icon name="calendar_month" size={20} color={P.amber600} />
               </View>
@@ -335,7 +352,13 @@ export function DashboardScreen({
               <Text style={styles.gridSubtitle}>Market day tomorrow</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.gridCard}>
+            <TouchableOpacity 
+              style={styles.gridCard}
+              onPress={onNavigateToLearningHub}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Learning Hub"
+            >
               <View style={[styles.gridIconCircle, { backgroundColor: P.palePinkBg }]}>
                 <Icon name="menu_book" size={20} color={P.red600} />
               </View>
@@ -350,13 +373,17 @@ export function DashboardScreen({
           {/* Active Crops */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Active Crops</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={onNavigateToActiveCrops}>
               <Text style={styles.viewAllText}>View all {'>'}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cropsScroll}>
             <View style={styles.cropCard}>
-              <View style={[styles.cropImagePlaceholder, { backgroundColor: P.gold }]} />
+              <Image 
+                source={{ uri: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&q=80' }} 
+                style={styles.cropImagePlaceholder}
+                resizeMode="cover"
+              />
               <View style={styles.cropInfo}>
                 <Text style={styles.cropName}>Tomato</Text>
                 <Text style={styles.cropDetail}>Zone A · 62 days</Text>
@@ -367,7 +394,11 @@ export function DashboardScreen({
               </View>
             </View>
             <View style={styles.cropCard}>
-              <View style={[styles.cropImagePlaceholder, { backgroundColor: P.darkOrange }]} />
+              <Image 
+                source={{ uri: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400&q=80' }} 
+                style={styles.cropImagePlaceholder}
+                resizeMode="cover"
+              />
               <View style={styles.cropInfo}>
                 <Text style={styles.cropName}>Carrot</Text>
                 <Text style={styles.cropDetail}>Zone B · 34 days</Text>
@@ -381,15 +412,15 @@ export function DashboardScreen({
 
           {/* Action Buttons */}
           <View style={styles.actionButtonsRow}>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={onNavigateToFarmDiary}>
               <Icon name="edit_note" size={22} color={colors.brandGreen} style={styles.actionButtonIcon} />
               <Text style={styles.actionButtonText}>Log Diary</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={onNavigateToCreateListing}>
+            <TouchableOpacity style={styles.actionButton} onPress={onNavigateToMyListings}>
               <Icon name="assignment" size={22} color={colors.brandGreen} style={styles.actionButtonIcon} />
-              <Text style={styles.actionButtonText}>List Produce</Text>
+              <Text style={styles.actionButtonText}>My Listings</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={onNavigateToAttendance}>
               <Icon name="groups" size={22} color={colors.brandGreen} style={styles.actionButtonIcon} />
               <Text style={styles.actionButtonText}>Attendance</Text>
             </TouchableOpacity>
