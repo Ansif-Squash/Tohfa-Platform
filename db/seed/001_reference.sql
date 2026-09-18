@@ -132,6 +132,13 @@ ON CONFLICT (code) DO UPDATE SET
     name       = EXCLUDED.name,
     max_points = EXCLUDED.max_points,
     sort_order = EXCLUDED.sort_order,
+    -- Force is_active back to true (its own default for a fresh row) on every
+    -- reseed. Without this, a database that once ran the reverted "5 active
+    -- of 10" design stays poisoned forever: is_active isn't in this INSERT's
+    -- column list, so a plain re-run of this file could never repair the 5
+    -- rows an earlier bad seed had already flipped to false. BR-06 (LOCKED)
+    -- requires all 10 active.
+    is_active  = true,
     updated_at = now();
 
 -- -----------------------------------------------------------------------------
@@ -150,6 +157,40 @@ INSERT INTO rating_tier_config (tier_code, label, min_score, max_score, color_he
     ('MODERATE',  'Moderate',  650.00, 700.00, '#E48932', 2, DATE '2025-01-01'),
     ('GOOD',      'Good',      700.00, 750.00, '#854F0B', 3, DATE '2025-01-01'),
     ('EXCELLENT', 'Excellent', 750.00, NULL,   '#0F6E56', 4, DATE '2025-01-01')
+ON CONFLICT (tier_code, effective_from) DO UPDATE SET
+    label      = EXCLUDED.label,
+    min_score  = EXCLUDED.min_score,
+    max_score  = EXCLUDED.max_score,
+    color_hex  = EXCLUDED.color_hex,
+    sort_order = EXCLUDED.sort_order,
+    updated_at = now();
+
+-- -----------------------------------------------------------------------------
+-- Rating tiers — BR-04 RESOLVED for Farm Rating (append-only: the 2025-01-01
+-- placeholder rows above are LEFT IN PLACE as history per root CLAUDE.md
+-- §2.3's append-only-ledger philosophy; they are simply no longer the
+-- generation `resolveTierForScore` picks once a row with a later
+-- `effective_from` exists — see farm-ratings.repo.ts's "latest effective_from
+-- <= today" query).
+--
+-- The client has confirmed the real Farm Rating tier scale: total_score is a
+-- direct 0-100 sum of 10 categories x 10 points each (BR-06, LOCKED) — NOT the
+-- 0-100+ "max 100 points" vs "<650/650-700/700-749/750+" bands the 2025-01-01
+-- rows straddle. Bands (min inclusive, max exclusive, NULL = unbounded):
+--   POOR      < 50
+--   MODERATE  50 - 69
+--   GOOD      70 - 84
+--   EXCELLENT >= 85
+-- -----------------------------------------------------------------------------
+-- A literal date, not CURRENT_DATE: this file is re-run idempotently (see the
+-- ON CONFLICT clause), and CURRENT_DATE would mint a fresh row set — and a
+-- fresh "generation" for resolveTierForScore to pick — every time the seed
+-- runs on a new calendar day. 2026-09-17 is the date this resolution shipped.
+INSERT INTO rating_tier_config (tier_code, label, min_score, max_score, color_hex, sort_order, effective_from) VALUES
+    ('POOR',      'Poor',      0.00, 50.00, '#A32D2D', 1, DATE '2026-09-17'),
+    ('MODERATE',  'Moderate',  50.00, 70.00, '#E48932', 2, DATE '2026-09-17'),
+    ('GOOD',      'Good',      70.00, 85.00, '#854F0B', 3, DATE '2026-09-17'),
+    ('EXCELLENT', 'Excellent', 85.00, NULL,  '#0F6E56', 4, DATE '2026-09-17')
 ON CONFLICT (tier_code, effective_from) DO UPDATE SET
     label      = EXCLUDED.label,
     min_score  = EXCLUDED.min_score,

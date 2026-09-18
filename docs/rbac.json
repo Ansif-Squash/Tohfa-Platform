@@ -181,6 +181,51 @@
       "source": "inferred — every client shell reads this to render"
     },
     {
+      "code": "auth.oauth.login",
+      "module": "Authentication & Onboarding",
+      "description": "Log in with a verified Google/Facebook identity already linked to an account (BR-39). Never creates or activates an account by itself — an unlinked identity gets NOT_LINKED, not a session.",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "inferred — OAuth is an alternate login method for auth.session.login, same population (BR-39)"
+    },
+    {
+      "code": "auth.oauth.link_own",
+      "module": "Authentication & Onboarding",
+      "description": "Link a verified Google/Facebook identity to your own already-authenticated account (BR-39).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "inferred — self-service counterpart of auth.session.revoke_own, scoped to BR-39"
+    },
+    {
+      "code": "auth.oauth.unlink_own",
+      "module": "Authentication & Onboarding",
+      "description": "Remove a Google/Facebook identity linked to your own account (BR-39).",
+      "grants": {
+        "SUPER_ADMIN": "all",
+        "TOHFA_ADMIN": "all",
+        "FARMER_ADMIN": "all",
+        "MAIN_WH_ADMIN": "all",
+        "SUB_WH_ADMIN": "all",
+        "FARMER": "all",
+        "CUSTOMER": "all"
+      },
+      "source": "inferred — self-service counterpart of auth.session.revoke_own, scoped to BR-39"
+    },
+    {
       "code": "farmer.application.list_pending",
       "module": "Farmers Management",
       "description": "View the pending farmer-application queue.",
@@ -570,6 +615,21 @@
         "CUSTOMER": "none"
       },
       "source": "matrix §2"
+    },
+    {
+      "code": "farmer.weather.view_own",
+      "module": "Farmers Management",
+      "description": "View current weather data for own registered farm location. Scoped to the farmer's own coordinates — no other farm or global weather data is returned.",
+      "grants": {
+        "SUPER_ADMIN": "none",
+        "TOHFA_ADMIN": "none",
+        "FARMER_ADMIN": "none",
+        "MAIN_WH_ADMIN": "none",
+        "SUB_WH_ADMIN": "none",
+        "FARMER": "own",
+        "CUSTOMER": "none"
+      },
+      "source": "requirements §7.1 — farmer weather dashboard (own-farm scope)"
     },
     {
       "code": "produce.calendar.view_consolidated",

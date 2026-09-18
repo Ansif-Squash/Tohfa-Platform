@@ -38,6 +38,13 @@ export interface Step3LocationData {
   gpsCaptured?: boolean | undefined;
   latitude?: number | undefined;
   longitude?: number | undefined;
+  areaAcres?: number | undefined;
+  calculatedAreaAcres?: number | undefined;
+  calculatedAreaHectares?: number | undefined;
+  fmbPolygon?: {
+    type: 'Polygon';
+    coordinates: number[][][];
+  } | undefined;
   village?: string | undefined;
   taluk?: string | undefined;
   district?: string | undefined;

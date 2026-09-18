@@ -60,6 +60,124 @@ export interface SystemConfig {
   certExpiryWarningDays: number;
 }
 
+export type FarmRatingCategoryCode =
+  | 'CERTIFICATION'
+  | 'SOIL_LAND'
+  | 'FARMING_PRACTICES'
+  | 'ENVIRONMENTAL'
+  | 'PRODUCE_QUALITY'
+  | 'TRACEABILITY'
+  | 'SOCIAL_LABOR'
+  | 'FINANCIAL'
+  | 'MARKET_RELATIONS'
+  | 'INNOVATION';
+
+export type FarmRatingTier = 'POOR' | 'MODERATE' | 'GOOD' | 'EXCELLENT';
+
+export interface FarmRatingModule {
+  categoryCode: FarmRatingCategoryCode;
+  score: number | null;
+  maxScore: number;
+}
+
+export interface FarmRating {
+  farmerId: string;
+  periodLabel: string;
+  status: 'DRAFT' | 'COMPLETE';
+  modules: FarmRatingModule[];
+  overallRating: number | null;
+  ratingTier: FarmRatingTier | null;
+  ratedAt: string | null;
+}
+
+/**
+ * BR-06: the 10 farm-rating categories, in the fixed order the server always
+ * returns them in (also the display order). `nameKey` is a farmer i18n key
+ * but deliberately typed `string`, not `TranslationKey` -- this module has no
+ * dependency on `i18n/farmer`, the same reason `evalMarketBlock`'s
+ * `messageKey` above is untyped. Callers do `t(nameKey as TranslationKey)`.
+ */
+export const FARM_RATING_CATEGORIES: ReadonlyArray<{
+  code: FarmRatingCategoryCode;
+  nameKey: string;
+}> = [
+  { code: 'CERTIFICATION', nameKey: 'farmer.profile.rating.cat.certification' },
+  { code: 'SOIL_LAND', nameKey: 'farmer.profile.rating.cat.soil' },
+  { code: 'FARMING_PRACTICES', nameKey: 'farmer.profile.rating.cat.practices' },
+  { code: 'ENVIRONMENTAL', nameKey: 'farmer.profile.rating.cat.environment' },
+  { code: 'PRODUCE_QUALITY', nameKey: 'farmer.profile.rating.cat.yield' },
+  { code: 'TRACEABILITY', nameKey: 'farmer.profile.rating.cat.traceability' },
+  { code: 'SOCIAL_LABOR', nameKey: 'farmer.profile.rating.cat.social' },
+  { code: 'FINANCIAL', nameKey: 'farmer.profile.rating.cat.financial' },
+  { code: 'MARKET_RELATIONS', nameKey: 'farmer.profile.rating.cat.market' },
+  { code: 'INNOVATION', nameKey: 'farmer.profile.rating.cat.innovation' },
+];
+
+/**
+ * BR-06 tier bands (POOR &lt;50, MODERATE 50-69, GOOD 70-84, EXCELLENT 85+) are
+ * computed server-side against `overallRating` -- this only maps the tier
+ * code the server already returns to a label key, it does not re-derive it.
+ */
+export const FARM_RATING_TIER_LABEL_KEY: Record<FarmRatingTier, string> = {
+  POOR: 'farmer.profile.rating.tier.poor',
+  MODERATE: 'farmer.profile.rating.tier.moderate',
+  GOOD: 'farmer.profile.rating.tier.good',
+  EXCELLENT: 'farmer.profile.rating.tier.excellent',
+};
+
+export interface FarmRatingModuleView {
+  categoryCode: FarmRatingCategoryCode;
+  nameKey: string;
+  score: number | null;
+  maxScore: number;
+  isRated: boolean;
+}
+
+export interface FarmRatingView {
+  /** False when the farmer has never been rated (overallRating is null). A DRAFT
+   * rating with some modules scored and others not is still `isRated: true` here --
+   * each module's own `isRated` flag is what drives that row's empty state. */
+  isRated: boolean;
+  overallRating: number | null;
+  ratingTier: FarmRatingTier | null;
+  tierLabelKey: string | null;
+  ratedAt: string | null;
+  /** Always exactly the 10 canonical categories, in order, even if the server
+   * response omitted one -- a missing module is treated the same as a null score. */
+  modules: FarmRatingModuleView[];
+}
+
+/**
+ * Pure mapping from the wire shape to what the three farmer-facing surfaces
+ * (Profile summary card, Dashboard mini-card, FarmRatingsScreen detail) need
+ * to render, including the "never rated" and "partially scored" empty states.
+ * Kept here (not in a screen) so it has one, independently-testable
+ * implementation instead of three copies.
+ */
+export function deriveFarmRatingView(rating: FarmRating | null | undefined): FarmRatingView {
+  const modules: FarmRatingModuleView[] = FARM_RATING_CATEGORIES.map(({ code, nameKey }) => {
+    const found = rating?.modules.find((m) => m.categoryCode === code);
+    const score = found?.score ?? null;
+    return {
+      categoryCode: code,
+      nameKey,
+      score,
+      maxScore: found?.maxScore ?? 10,
+      isRated: score !== null,
+    };
+  });
+
+  const ratingTier = rating?.ratingTier ?? null;
+  return {
+    isRated: (rating?.overallRating ?? null) !== null,
+    overallRating: rating?.overallRating ?? null,
+    ratingTier,
+    tierLabelKey: ratingTier ? FARM_RATING_TIER_LABEL_KEY[ratingTier] : null,
+    ratedAt: rating?.ratedAt ?? null,
+    modules,
+  };
+}
+
 /**
  * BR-33: Masks Aadhaar number to display only the last 4 digits.
  */
@@ -201,4 +319,12 @@ export async function getSystemConfig(): Promise<SystemConfig> {
     // Specification gap: server has no public /config/farmer endpoint, fallback to business standard 30
     return { certExpiryWarningDays: 30 };
   }
+}
+
+/**
+ * Fetch the current farmer's 10-category farm rating (BR-06).
+ * x-permission: farmer.rating.view_own
+ */
+export async function getMyFarmRating(): Promise<FarmRating> {
+  return api.get<FarmRating>('/farmers/me/rating');
 }

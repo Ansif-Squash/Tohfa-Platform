@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Svg, { Line, Polyline, Circle } from 'react-native-svg';
+import Svg, { Polyline, Circle } from 'react-native-svg';
 import { Icon } from '@tohfa/mobile-ui';
 import { t } from '../../../../i18n/farmer';
 import { authPalette as P, colors } from '../../theme';

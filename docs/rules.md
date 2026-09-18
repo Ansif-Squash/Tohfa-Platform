@@ -75,17 +75,19 @@ Sources: Requirements v1.0 (Chapters 2, 5, 6, and the FR-* lists) and Role & Fea
 | | |
 |---|---|
 | **Source** | Requirements v1.0 §2.1; Matrix §9 |
-| **Status** | CONTESTED |
-| **Layer** | Server-side, audit-scoring service; thresholds read from config, never hard-coded |
-| **Scope** | Deferred |
+| **Status** | LOCKED (resolved for Farm Rating — see below; originally CONTESTED) |
+| **Layer** | Server-side, farm-ratings service; thresholds read from `rating_tier_config`, never hard-coded |
+| **Scope** | Track 1 |
 
-**Rule.** Audit rating is stated as max 100 points, while the tier bands are stated as `<650 Poor`, `650-700 Moderate`, `700-749 Good`, `750+ Excellent`. These cannot both be true. Track 1 seeds the tier thresholds as configuration (editable by SUPER_ADMIN only) and implements no scoring logic. No code may assume either scale until the client confirms.
+**Rule (original contradiction, kept as history).** Audit rating is stated as max 100 points, while the tier bands are stated as `<650 Poor`, `650-700 Moderate`, `700-749 Good`, `750+ Excellent`. These cannot both be true. Track 1 originally seeded the tier thresholds as configuration (editable by SUPER_ADMIN only) and implemented no scoring logic, pending client confirmation.
+
+**Resolution (Farm Rating, 2026-09-17).** The client has confirmed the tier scale for Farm Rating (BR-06's 0-100 direct-sum total_score) specifically: `POOR` < 50, `MODERATE` 50-69, `GOOD` 70-84, `EXCELLENT` >= 85. `rating_tier_config` is Track 1's one live consumer of this rule (see its table comment in `db/migrations/0003_farmers_and_farms.sql`), so this resolves BR-04 for the codebase's only implemented rating/tier concept. The original 2025-01-01 placeholder rows (`<650/650-700/700-749/750+`) are kept in `rating_tier_config` as history per root CLAUDE.md §2.3's append-only philosophy; the new rows carry a later `effective_from` and are the generation `resolveTierForScore` actually picks. If a separate, non-Farm-Rating "audit" scoring feature is ever built, its scale still needs its own client confirmation — this resolution only covers Farm Rating.
 
 **Failure mode if unenforced.** Every farmer scores under 100 and therefore lands in `Poor` forever, or the scale is silently changed to 1000 and the client's signed thresholds no longer mean what they signed.
 
 **Test contract.**
-- `BR-04a` Tier thresholds are read from `config`, not literals — changing config changes the tier a given score maps to.
-- `BR-04b` No test asserts a specific tier for a specific score until the contradiction is resolved; the scoring endpoint returns 501 in Track 1.
+- `BR-04a` Tier thresholds are read from `rating_tier_config`, not literals — changing config changes the tier a given score maps to.
+- `BR-04b` A specific tier IS now asserted for a specific score: 0-49 -> `POOR`, 50-69 -> `MODERATE`, 70-84 -> `GOOD`, 85-100 -> `EXCELLENT`. The Farm Rating scoring endpoint (`PUT /admin/farmers/{id}/rating`) no longer returns 501.
 
 ---
 
@@ -112,8 +114,8 @@ Sources: Requirements v1.0 (Chapters 2, 5, 6, and the FR-* lists) and Role & Fea
 |---|---|
 | **Source** | Requirements v1.0 §2.1 |
 | **Status** | LOCKED |
-| **Layer** | Server-side, rating service + `CHECK (score BETWEEN 0 AND 10)` per category row |
-| **Scope** | Deferred |
+| **Layer** | Server-side, `farm-ratings` module (rating service + `CHECK (score BETWEEN 0 AND 10)` per category row) |
+| **Scope** | Track 1 (accelerated ahead of the original phase plan; see `apps/api/src/modules/farm-ratings/`) |
 
 **Rule.** Farm rating totals 100 points across exactly 10 named categories (Certification, Soil & Land, Farming Practices, Environmental, Produce Quality, Traceability, Social & Labor, Financial, Market Relations, Innovation), each capped at 10. A rating with a missing category is incomplete, not zero.
 
@@ -709,11 +711,33 @@ Sources: Requirements v1.0 (Chapters 2, 5, 6, and the FR-* lists) and Role & Fea
 
 ---
 
+### BR-39 — OAuth (Google/Facebook) is login/linking only, never a bypass of mobile+OTP
+| | |
+|---|---|
+| **Source** | Product decision, 2026-09-17 (OAuth social-login Phase 1 spec — no Requirements v1.0 or Matrix section covers this; the whole platform is phone-first by design: OTP (BR-32), SMS, and farmer Aadhaar-linked KYC all hang off the mobile number) |
+| **Status** | LOCKED |
+| **Layer** | Server-side, `apps/api/src/modules/auth/`; `oauth_identities` has a database-level `UNIQUE (provider, provider_subject_id)` constraint, not just a service-side check |
+| **Scope** | Track 1 (backend only; no farmer/customer app UI in this phase) |
+
+**Rule.** Google/Facebook OAuth is an alternate login method for an already mobile-verified account, or a data-prefill convenience during first-time registration. It is NEVER a way to create or activate a TOHFA account without proving a real phone number via mobile+OTP. `POST /auth/oauth/{provider}` only ever does one of two things: (1) an OAuth identity already linked to a user logs that user in exactly like `/auth/login`, including the multi-role-selection behaviour; or (2) an unlinked identity gets back a `NOT_LINKED` profile and a short-lived, single-use, server-signed `linkToken` — never a token pair, never a created account. The client then completes the normal mobile+OTP challenge and passes `linkToken` to `POST /auth/otp/verify` to complete the link, atomically, in the same transaction as the OTP-driven user lookup/creation: an existing mobile number gets the identity linked to that account; a brand-new mobile number gets the account created (status goes straight to `ACTIVE`, since the OTP that proves the phone number just succeeded in the same call) and then linked. One provider identity (`provider`, `provider_subject_id`) maps to exactly one TOHFA account, enforced by a unique constraint, not only application logic; linking an identity already linked elsewhere is rejected rather than silently reassigned.
+
+**Failure mode if unenforced.** Anyone with a Google or Facebook account could mint a TOHFA account and start transacting without ever proving a real Indian mobile number — breaking OTP-based order pickup, SMS notifications, and the KYC chain the farmer side depends on for Aadhaar-linked identity.
+
+**Test contract.**
+- `BR-39a` A verified Google/Facebook token whose identity is already linked → same response shape as `/auth/login` (token pair, or `requiresRoleSelection`); `last_login_at` updates.
+- `BR-39b` A verified token whose identity is NOT linked → 200 `{ status: 'NOT_LINKED', profile: {...}, linkToken }`; no user row is created, no token pair is issued.
+- `BR-39c` `POST /auth/otp/verify` with a valid `linkToken` for a mobile number with no existing account → creates the account AND links the identity, both inside one transaction.
+- `BR-39d` `POST /auth/otp/verify` with a valid `linkToken` for a mobile number that already has an account → links the identity to that existing account; no duplicate account is created.
+- `BR-39e` `POST /auth/me/oauth/link` against an identity already linked to a different account → 409, `code: OAUTH_IDENTITY_ALREADY_LINKED`.
+- `BR-39f` An invalid, expired, or tampered provider token or `linkToken` → rejected with `code: OAUTH_TOKEN_INVALID` / `code: OAUTH_LINK_TOKEN_INVALID` respectively, never with a generic 401.
+
+---
+
 ## Open contradictions — DO NOT GUESS
 
 | # | Topic | Requirements v1.0 says | Role & Feature Matrix v1.0 says | Codebase default | Status |
 |---|---|---|---|---|---|
-| 1 | Audit scoring scale (BR-04) | §2.1: "max 100 points" and tiers `<650 / 650-700 / 700-749 / 750+` in the same bullet | §9 repeats both verbatim | Thresholds seeded as config; no scoring logic; scoring endpoint returns 501 | requires client confirmation |
+| 1 | Audit scoring scale (BR-04) | §2.1: "max 100 points" and tiers `<650 / 650-700 / 700-749 / 750+` in the same bullet | §9 repeats both verbatim | `rating_tier_config` now carries a second, later-`effective_from` generation with the client-confirmed 0-100 bands (`POOR`<50, `MODERATE` 50-69, `GOOD` 70-84, `EXCELLENT`>=85); the 2025-01-01 placeholder rows are kept as history, not read by `resolveTierForScore` any more | resolved for Farm Rating (BR-06), recorded for completeness |
 | 2 | Automation (BR-38) | FR-F06/FR-F07: auto-reminders, system-suggested treatments, weather risk indicators; §2.2 automatic B2B/Horeca allocation | Principle 5: "All data is entered manually... No automated processes" | No advisory automation; only the three rule-enforcement jobs | requires client confirmation |
 | 3 | Fulfilment model (BR-21) | §2.3 doorstep OTP at delivery hub, FR-C04 delivery slots + out-for-delivery, FR-A04 driver performance, module 14 drivers | Principle 9: "All orders fulfilled via warehouse pickup"; no driver or fleet feature anywhere | Pickup + 4-digit OTP only; delivery slot fields modelled but unused; no driver entity | requires client confirmation |
 | 4 | Audit log scope for Main Warehouse Admin | §6.4: `View audit logs` MW = `Own` | §15: `View system audit logs` MW = `View` (all) | MAIN_WH_ADMIN = `own` (Ch.6 precedence) | requires client confirmation |
@@ -731,29 +755,28 @@ Sources: Requirements v1.0 (Chapters 2, 5, 6, and the FR-* lists) and Role & Fea
 
 ## Rules NOT enforced in Track 1
 
-Chapter 2 contains roughly 33 discrete client-locked rules. Track 1 enforces 12 of them server-side with tests (BR-01, BR-02, BR-07, BR-08, BR-10, BR-11, BR-12, BR-16, BR-17, BR-18/BR-19, BR-20, BR-28/BR-29/BR-30/BR-31). The rest are listed here so the gap is a decision, not a surprise.
+Chapter 2 contains roughly 33 discrete client-locked rules. Track 1 enforces 14 of them server-side with tests (BR-01, BR-02, BR-04, BR-06, BR-07, BR-08, BR-10, BR-11, BR-12, BR-16, BR-17, BR-18/BR-19, BR-20, BR-28/BR-29/BR-30/BR-31). The rest are listed here so the gap is a decision, not a surprise.
 
 | # | Rule | Source | Rule ID | Why not enforced in Track 1 |
 |---|---|---|---|---|
 | 1 | 4 audits per year, one per quarter | §2.1 | BR-03 | Audit Management (admin module 5) is Phase 3 |
-| 2 | Audit rating scale and tier thresholds | §2.1 | BR-04 | Config seeded only; no scoring logic — and the source is self-contradictory (contradiction 1) |
-| 3 | Major violation red-flag threshold | §2.1 | BR-05 | Audit module deferred; the rule as written is inverted |
-| 4 | Farm rating, 10 categories x 10 points | §2.1 | BR-06 | Categories seeded; rating capture and scoring are Phase 3 |
-| 5 | Farmer-side certification entry, renewal tracking, expiry countdown | §2.1 | BR-01/BR-02 | Enforcement is server-side in Track 1, but the farmer-facing entry screens ship with the Farmer app (Track 2) |
-| 6 | B2B/Horeca allocation from consolidated inventory | §2.2 | BR-13 | Only the Online channel is in scope; source contradiction unresolved |
-| 7 | Four sales channels | §2.2 | BR-15 | Online only; Market, Horeca and B2B each need their own order, pricing and invoicing path |
-| 8 | Farmer subscription Rs 500/year and free-tier limits | §2.2 | BR-14 | Billing module is Phase 2; free-tier limits are undefined in both documents |
-| 9 | Dual fulfilment / home delivery with slots | §2.3 | BR-21 | Pickup path only; delivery model is contested (contradiction 3) |
-| 10 | Live order tracking beyond packed/picked-up | FR-C04 | — | Dispatch and out-for-delivery states belong to the delivery model that is not in scope |
-| 11 | Rate & review, tags, one-tap reorder | FR-C05 | — | Customer app Phase 5 screens; no backend dependency in the golden thread |
-| 12 | RMA issue categories, ticket lifecycle, bank refunds | FR-C05, matrix §6 | — | Returns module is Phase 2-3; wallet refund path exists in the ledger, no RMA workflow |
-| 13 | Each warehouse has its own Sub Warehouse Admin (5 incl. standby) | §2.4 | BR-25 | Modelled in `user_roles`; no staffing management UI |
-| 14 | Main Warehouse Admin oversees all 4 warehouses | §2.4 | — | RBAC grants exist; the consolidated MW dashboard is Phase 3 |
-| 15 | Inter-warehouse transfers restricted to MW + SA | §2.4 | BR-26 | The ledger has a transfer type; there is no transfer endpoint or UI in this scope |
-| 16 | Warehouse capacity limits and quotas/targets | §6.2, FR-A04 | — | Contested authority (contradiction 5); no capacity model until resolved |
-| 17 | Stock verification (physical count vs system) | §6.2 | — | Ledger supports it; the counting workflow and variance report are Phase 2 |
-| 18 | Farm rating edit scoped to Farmer Admin's own zone | §6.1 | — | Ratings module is Phase 3; the `OWN_ZONE_ONLY` predicate is defined in `rbac.json` but unused |
-| 19 | Quality counter-offer at goods receipt | matrix §7 | — | Second counter-offer surface; the listing counter-offer (BR-10/BR-11) is the one in scope |
-| 20 | Market day scheduling per warehouse | matrix §5 | — | Belongs to the Market sales channel, which is Phase 3 |
-| 21 | GDPR data export and account deletion requests | matrix §15 | — | Absent from the Requirements document entirely; needs a retention policy first, which no document states |
-| 22 | Advisory automation (reminders, treatments, weather risk) | FR-F06/F07 | BR-38 | Blocked on contradiction 2 — do not build either way until the client answers |
+| 2 | Major violation red-flag threshold | §2.1 | BR-05 | Audit module deferred; the rule as written is inverted |
+| 3 | Farmer-side certification entry, renewal tracking, expiry countdown | §2.1 | BR-01/BR-02 | Enforcement is server-side in Track 1, but the farmer-facing entry screens ship with the Farmer app (Track 2) |
+| 4 | B2B/Horeca allocation from consolidated inventory | §2.2 | BR-13 | Only the Online channel is in scope; source contradiction unresolved |
+| 5 | Four sales channels | §2.2 | BR-15 | Online only; Market, Horeca and B2B each need their own order, pricing and invoicing path |
+| 6 | Farmer subscription Rs 500/year and free-tier limits | §2.2 | BR-14 | Billing module is Phase 2; free-tier limits are undefined in both documents |
+| 7 | Dual fulfilment / home delivery with slots | §2.3 | BR-21 | Pickup path only; delivery model is contested (contradiction 3) |
+| 8 | Live order tracking beyond packed/picked-up | FR-C04 | — | Dispatch and out-for-delivery states belong to the delivery model that is not in scope |
+| 9 | Rate & review, tags, one-tap reorder | FR-C05 | — | Customer app Phase 5 screens; no backend dependency in the golden thread |
+| 10 | RMA issue categories, ticket lifecycle, bank refunds | FR-C05, matrix §6 | — | Returns module is Phase 2-3; wallet refund path exists in the ledger, no RMA workflow |
+| 11 | Each warehouse has its own Sub Warehouse Admin (5 incl. standby) | §2.4 | BR-25 | Modelled in `user_roles`; no staffing management UI |
+| 12 | Main Warehouse Admin oversees all 4 warehouses | §2.4 | — | RBAC grants exist; the consolidated MW dashboard is Phase 3 |
+| 13 | Inter-warehouse transfers restricted to MW + SA | §2.4 | BR-26 | The ledger has a transfer type; there is no transfer endpoint or UI in this scope |
+| 14 | Warehouse capacity limits and quotas/targets | §6.2, FR-A04 | — | Contested authority (contradiction 5); no capacity model until resolved |
+| 15 | Stock verification (physical count vs system) | §6.2 | — | Ledger supports it; the counting workflow and variance report are Phase 2 |
+| 16 | Quality counter-offer at goods receipt | matrix §7 | — | Second counter-offer surface; the listing counter-offer (BR-10/BR-11) is the one in scope |
+| 17 | Market day scheduling per warehouse | matrix §5 | — | Belongs to the Market sales channel, which is Phase 3 |
+| 18 | GDPR data export and account deletion requests | matrix §15 | — | Absent from the Requirements document entirely; needs a retention policy first, which no document states |
+| 19 | Advisory automation (reminders, treatments, weather risk) | FR-F06/F07 | BR-38 | Blocked on contradiction 2 — do not build either way until the client answers |
+
+Farm rating, 10 categories x 10 points (BR-06), its Farmer-Admin-own-zone edit predicate, and the Farm Rating tier scale (BR-04) moved OUT of this table and into Track 1 on 2026-09-17 — see BR-04 and BR-06 above and `apps/api/src/modules/farm-ratings/`.

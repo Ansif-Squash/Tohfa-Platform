@@ -71,6 +71,14 @@ export const ErrorCode = {
   INVALID_STATE_TRANSITION: 'INVALID_STATE_TRANSITION',
   /** Idempotency-Key seen before with a different request body. */
   IDEMPOTENCY_KEY_REUSED: 'IDEMPOTENCY_KEY_REUSED',
+  /** The upstream weather provider was unreachable, misconfigured or returned an unusable response. */
+  WEATHER_PROVIDER_ERROR: 'WEATHER_PROVIDER_ERROR',
+  /** Google/Facebook rejected, could not verify, or returned an unusable token (BR-39). */
+  OAUTH_TOKEN_INVALID: 'OAUTH_TOKEN_INVALID',
+  /** That provider identity is already linked to a different TOHFA account (BR-39). */
+  OAUTH_IDENTITY_ALREADY_LINKED: 'OAUTH_IDENTITY_ALREADY_LINKED',
+  /** The `linkToken` passed to `/auth/otp/verify` is expired, malformed or tampered with (BR-39). */
+  OAUTH_LINK_TOKEN_INVALID: 'OAUTH_LINK_TOKEN_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

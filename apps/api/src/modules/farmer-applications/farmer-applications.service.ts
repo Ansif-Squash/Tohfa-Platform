@@ -3,6 +3,7 @@ import type { Actor } from '../../auth/requireAuth.js';
 import { pool, withTransaction } from '../../db/pool.js';
 import { eventBus } from '../../events/bus.js';
 import { AppError } from '../../http/problem.js';
+import { calculatePolygonMetrics } from './geo.utils.js';
 import {
   farmerApplicationsRepo,
   type ApplicationStatus,
@@ -134,6 +135,17 @@ export function createFarmerApplicationsService(
         }
       } else if (step === 3) {
         stepData = payload && typeof payload === 'object' && !Array.isArray(payload) ? { ...(payload as Record<string, unknown>) } : {};
+        // Server recomputes area from the surveyed boundary rather than trusting
+        // whatever the client's own (device-side) estimate was.
+        const fmbPolygon = stepData['fmbPolygon'] as
+          | { type: 'Polygon'; coordinates: number[][][] }
+          | undefined;
+        const exteriorRing = fmbPolygon?.coordinates?.[0];
+        if (exteriorRing !== undefined) {
+          const metrics = calculatePolygonMetrics(exteriorRing);
+          stepData['calculatedAreaAcres'] = metrics.areaAcres;
+          stepData['calculatedAreaHectares'] = metrics.areaHectares;
+        }
       } else if (step === 4) {
         if (Array.isArray(payload)) {
           stepData = { documents: payload };
@@ -294,6 +306,7 @@ export function createFarmerApplicationsService(
         kycStatus: profile.kyc_status,
         applicationStatus: profile.application_status,
         overallRating: profile.overall_rating,
+        ratingTier: profile.rating_tier_code,
         isMarketBlocked: profile.is_market_blocked,
         marketBlockReason: profile.market_block_reason,
         createdAt: profile.created_at.toISOString(),
@@ -343,6 +356,7 @@ export function createFarmerApplicationsService(
         kycStatus: updated.kyc_status,
         applicationStatus: updated.application_status,
         overallRating: updated.overall_rating,
+        ratingTier: updated.rating_tier_code,
         isMarketBlocked: updated.is_market_blocked,
         marketBlockReason: updated.market_block_reason,
         createdAt: updated.created_at.toISOString(),

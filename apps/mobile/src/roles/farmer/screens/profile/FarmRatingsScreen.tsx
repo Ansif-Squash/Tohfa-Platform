@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -9,7 +9,13 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Line, Polygon, Text as SvgText } from 'react-native-svg';
-import { Icon } from '@tohfa/mobile-ui';
+import { ErrorState, Icon, Skeleton } from '@tohfa/mobile-ui';
+import {
+  deriveFarmRatingView,
+  getMyFarmRating,
+  type FarmRating,
+  type FarmRatingCategoryCode,
+} from '../../api/farmer';
 import { t, type TranslationKey } from '../../../../i18n/farmer';
 import { authPalette as P, colors } from '../../theme';
 
@@ -17,61 +23,100 @@ interface FarmRatingsScreenProps {
   onNavigateBack: () => void;
 }
 
-// Category defs carry i18n *keys*, not resolved strings -- the actual
-// labels are resolved inside the component on every render (via `t()`) so
-// the radar chart and list re-render correctly when the locale switcher in
-// App.tsx's header changes languages. A module-level array of already
-// translated strings would freeze at whatever locale was active when the
-// module first loaded.
-const CATEGORY_DEFS: Array<{
-  id: string;
-  nameKey: TranslationKey;
-  shortKey: TranslationKey;
-  score: number;
-  delta: number;
-  icon: string;
-  color: string;
-  tagKeys?: TranslationKey[];
-}> = [
-  {
-    id: 'cert',
-    nameKey: 'farmer.profile.rating.cat.certification',
-    shortKey: 'farmer.profile.rating.catShort.cert',
-    score: 9,
-    delta: 1,
-    icon: 'shield',
-    color: P.primary,
-    tagKeys: [
-      'farmer.profile.rating.tag.validCertification',
-      'farmer.profile.rating.tag.yearsSinceRenewal',
-      'farmer.profile.rating.tag.complianceRecord',
-      'farmer.profile.rating.tag.transitionStatus',
-    ],
-  },
-  { id: 'soil', nameKey: 'farmer.profile.rating.cat.soil', shortKey: 'farmer.profile.rating.catShort.soil', score: 8, delta: 1, icon: 'eco', color: P.primary },
-  { id: 'prac', nameKey: 'farmer.profile.rating.cat.practices', shortKey: 'farmer.profile.rating.catShort.practices', score: 9, delta: 0, icon: 'science', color: P.primary },
-  { id: 'env', nameKey: 'farmer.profile.rating.cat.environment', shortKey: 'farmer.profile.rating.catShort.environment', score: 8, delta: 2, icon: 'park', color: P.primary },
-  { id: 'yield', nameKey: 'farmer.profile.rating.cat.yield', shortKey: 'farmer.profile.rating.catShort.yield', score: 7, delta: 1, icon: 'star', color: P.primary },
-  { id: 'trace', nameKey: 'farmer.profile.rating.cat.traceability', shortKey: 'farmer.profile.rating.catShort.traceability', score: 6, delta: -1, icon: 'QR', color: P.orange700 },
-  { id: 'social', nameKey: 'farmer.profile.rating.cat.social', shortKey: 'farmer.profile.rating.catShort.social', score: 8, delta: 0, icon: 'groups', color: P.primary },
-  { id: 'fin', nameKey: 'farmer.profile.rating.cat.financial', shortKey: 'farmer.profile.rating.catShort.financial', score: 5, delta: -1, icon: 'credit_card', color: P.red700 },
-  { id: 'mkt', nameKey: 'farmer.profile.rating.cat.market', shortKey: 'farmer.profile.rating.catShort.market', score: 7, delta: 1, icon: 'storefront', color: P.primary },
-  { id: 'innov', nameKey: 'farmer.profile.rating.cat.innovation', shortKey: 'farmer.profile.rating.catShort.innovation', score: 6, delta: 1, icon: 'lightbulb', color: P.primary },
-];
+/** Icon + short (radar-label) key per category, in BR-06's fixed order. Purely
+ * cosmetic metadata -- scores and names come from the real fetch below. */
+const CATEGORY_META: Record<FarmRatingCategoryCode, { icon: string; shortKey: TranslationKey }> = {
+  CERTIFICATION: { icon: 'shield', shortKey: 'farmer.profile.rating.catShort.cert' },
+  SOIL_LAND: { icon: 'eco', shortKey: 'farmer.profile.rating.catShort.soil' },
+  FARMING_PRACTICES: { icon: 'science', shortKey: 'farmer.profile.rating.catShort.practices' },
+  ENVIRONMENTAL: { icon: 'park', shortKey: 'farmer.profile.rating.catShort.environment' },
+  PRODUCE_QUALITY: { icon: 'star', shortKey: 'farmer.profile.rating.catShort.yield' },
+  TRACEABILITY: { icon: 'visibility', shortKey: 'farmer.profile.rating.catShort.traceability' },
+  SOCIAL_LABOR: { icon: 'groups', shortKey: 'farmer.profile.rating.catShort.social' },
+  FINANCIAL: { icon: 'credit_card', shortKey: 'farmer.profile.rating.catShort.financial' },
+  MARKET_RELATIONS: { icon: 'storefront', shortKey: 'farmer.profile.rating.catShort.market' },
+  INNOVATION: { icon: 'lightbulb', shortKey: 'farmer.profile.rating.catShort.innovation' },
+};
+
+/**
+ * Colour is driven by the category's own real score, not a fixed per-category
+ * colour (the old mock hardcoded specific categories as orange/red) -- two
+ * farmers with different weak spots should still see the same colour meaning
+ * the same score band. Unrated (null) renders muted grey, never as a "0".
+ */
+function scoreTone(score: number | null): string {
+  if (score === null) return P.slate300;
+  if (score >= 8) return colors.brandGreen;
+  if (score >= 6) return P.green700;
+  if (score >= 4) return P.orange700;
+  return P.red600;
+}
 
 export function FarmRatingsScreen({ onNavigateBack }: FarmRatingsScreenProps): React.JSX.Element {
-  const [expandedId, setExpandedId] = useState<string | null>('cert');
+  const [rating, setRating] = useState<FarmRating | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const categories = CATEGORY_DEFS.map((def) => ({
-    ...def,
-    name: t(def.nameKey),
-    short: t(def.shortKey),
-    tags: def.tagKeys?.map((key) => t(key)),
+  const loadRating = useCallback(async () => {
+    try {
+      setError(null);
+      const res = await getMyFarmRating();
+      setRating(res);
+    } catch {
+      setError(t('error.generic'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadRating();
+  }, [loadRating]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <StatusBar barStyle="light-content" backgroundColor={P.deepGreen} />
+        <View style={styles.skeletonContainer}>
+          <Skeleton height={140} width="100%" style={styles.skeletonBlock} />
+          <Skeleton height={280} width="100%" style={styles.skeletonBlock} />
+          <Skeleton height={200} width="100%" style={styles.skeletonBlock} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !rating) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            setLoading(true);
+            void loadRating();
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const view = deriveFarmRatingView(rating);
+  const categories = view.modules.map((mod) => ({
+    ...mod,
+    name: t(mod.nameKey as TranslationKey),
+    short: t(CATEGORY_META[mod.categoryCode].shortKey),
+    icon: CATEGORY_META[mod.categoryCode].icon,
+    color: scoreTone(mod.score),
   }));
 
-  const toggleExpand = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  };
+  // "Focus next" surfaces the two lowest *actually scored* categories -- it is
+  // derived purely from real scores, never a fabricated trend/delta (the API
+  // contract has no history field to compute one from).
+  const focusCategories = categories
+    .filter((c) => c.isRated && c.score !== null)
+    .slice()
+    .sort((a, b) => (a.score as number) - (b.score as number))
+    .slice(0, 2);
 
   const renderRadarChart = () => {
     const size = 280;
@@ -80,9 +125,8 @@ export function FarmRatingsScreen({ onNavigateBack }: FarmRatingsScreenProps): R
     const numCategories = categories.length;
     const angleStep = (2 * Math.PI) / numCategories;
 
-    // Helper to get coordinates
     const getCoords = (score: number, index: number, radiusMax: number = maxRadius) => {
-      const angle = -Math.PI / 2 + index * angleStep; // Start at top
+      const angle = -Math.PI / 2 + index * angleStep;
       const r = (score / 10) * radiusMax;
       return {
         x: center + r * Math.cos(angle),
@@ -90,10 +134,12 @@ export function FarmRatingsScreen({ onNavigateBack }: FarmRatingsScreenProps): R
       };
     };
 
-    // Build data polygon points
+    // Unrated categories plot at the centre (score treated as 0 for the
+    // shape only) rather than being omitted, so the polygon still has one
+    // vertex per category.
     const dataPoints = categories
       .map((cat, i) => {
-        const { x, y } = getCoords(cat.score, i);
+        const { x, y } = getCoords(cat.score ?? 0, i);
         return `${x},${y}`;
       })
       .join(' ');
@@ -101,7 +147,6 @@ export function FarmRatingsScreen({ onNavigateBack }: FarmRatingsScreenProps): R
     return (
       <View style={styles.radarContainer}>
         <Svg width={size} height={size}>
-          {/* Concentric polygons for background (2, 4, 6, 8, 10) */}
           {[2, 4, 6, 8, 10].map((step) => {
             const points = categories
               .map((_, i) => {
@@ -112,24 +157,25 @@ export function FarmRatingsScreen({ onNavigateBack }: FarmRatingsScreenProps): R
             return <Polygon key={`grid-${step}`} points={points} stroke={P.slate200} strokeWidth="1" fill="none" />;
           })}
 
-          {/* Axes lines */}
           {categories.map((_, i) => {
             const { x, y } = getCoords(10, i);
             return <Line key={`axis-${i}`} x1={center} y1={center} x2={x} y2={y} stroke={P.slate200} strokeWidth="1" />;
           })}
 
-          {/* Data Polygon */}
-          <Polygon points={dataPoints} fill="rgba(46, 125, 50, 0.2)" stroke={P.primary} strokeWidth="2" strokeLinejoin="round" />
+          <Polygon
+            points={dataPoints}
+            fill={view.isRated ? 'rgba(46, 125, 50, 0.2)' : 'rgba(148, 163, 184, 0.15)'}
+            stroke={view.isRated ? P.primary : P.slate300}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
 
-          {/* Data Points */}
           {categories.map((cat, i) => {
-            const { x, y } = getCoords(cat.score, i);
-            return <Circle key={`point-${i}`} cx={x} cy={y} r="4" fill={P.primary} />;
+            const { x, y } = getCoords(cat.score ?? 0, i);
+            return <Circle key={`point-${i}`} cx={x} cy={y} r="4" fill={cat.color} />;
           })}
 
-          {/* Labels */}
           {categories.map((cat, i) => {
-            // Push labels out a bit further than maxRadius
             const { x, y } = getCoords(10, i, maxRadius + 20);
             return (
               <SvgText key={`label-${i}`} x={x} y={y} fill={P.slate500} fontSize="10" textAnchor="middle" alignmentBaseline="middle">
@@ -162,101 +208,96 @@ export function FarmRatingsScreen({ onNavigateBack }: FarmRatingsScreenProps): R
         </View>
 
         <View style={styles.scoreRow}>
-          <Text style={styles.mainScore}>73</Text>
+          <Text style={styles.mainScore}>{view.isRated ? view.overallRating : '—'}</Text>
           <Text style={styles.maxScore}>{t('farmer.profile.rating.outOf', { max: 100 })}</Text>
-          <View style={[styles.deltaBadge, styles.deltaBadgeRow]}>
-            <Icon name="trending_up" size={13} color={P.white} />
-            <Text style={styles.deltaBadgeText}>{t('farmer.profile.rating.deltaQuarter', { points: 4 })}</Text>
-          </View>
+          {view.isRated && view.tierLabelKey ? (
+            <View style={[styles.deltaBadge, styles.deltaBadgeRow]}>
+              <Text style={styles.deltaBadgeText}>{t(view.tierLabelKey as TranslationKey)}</Text>
+            </View>
+          ) : null}
         </View>
 
-        <Text style={styles.recalcText}>{t('farmer.profile.rating.recalculated', { date: '18 Jul 2025' })}</Text>
+        <Text style={styles.recalcText}>
+          {view.isRated && view.ratedAt
+            ? t('farmer.profile.rating.recalculated', { date: new Date(view.ratedAt).toLocaleDateString() })
+            : t('farmer.profile.rating.notRatedTitle')}
+        </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {!view.isRated ? (
+          <View style={styles.emptyStateCard}>
+            <Icon name="info" size={28} color={P.slate400} />
+            <Text style={styles.emptyStateTitle}>{t('farmer.profile.rating.notRatedTitle')}</Text>
+            <Text style={styles.emptyStateBody}>{t('farmer.profile.rating.notRatedBody')}</Text>
+          </View>
+        ) : null}
+
         {/* Radar Chart */}
         <View style={styles.chartCard}>{renderRadarChart()}</View>
 
-        {/* Focus Next Section */}
-        <View style={styles.focusCard}>
-          <View style={styles.focusHeader}>
-            <Icon name="info" size={18} color={P.darkGreyText} style={styles.focusIcon} />
-            <Text style={styles.focusTitle}>{t('farmer.profile.rating.focusNext')}</Text>
-          </View>
-
-          <View style={styles.focusTilesRow}>
-            {/* Financial & Operational Tile */}
-            <View style={[styles.focusTile, { backgroundColor: P.red50 }]}>
-              <Text style={[styles.focusTileTitle, { color: P.red800 }]}>{t('farmer.profile.rating.cat.financial')}</Text>
-              <View style={styles.focusTileScoreRow}>
-                <Text style={[styles.focusTileScore, { color: P.red800 }]}>5</Text>
-                <Text style={styles.focusTileScoreMax}>{t('farmer.profile.rating.outOf', { max: 10 })}</Text>
-                <Text style={[styles.focusTileDelta, { color: P.red800 }]}>↓1</Text>
-              </View>
+        {/* Focus Next Section -- only when there is at least one real score to focus on */}
+        {focusCategories.length > 0 ? (
+          <View style={styles.focusCard}>
+            <View style={styles.focusHeader}>
+              <Icon name="info" size={18} color={P.darkGreyText} style={styles.focusIcon} />
+              <Text style={styles.focusTitle}>{t('farmer.profile.rating.focusNext')}</Text>
             </View>
 
-            {/* Traceability Tile */}
-            <View style={[styles.focusTile, { backgroundColor: P.orange50 }]}>
-              <Text style={[styles.focusTileTitle, { color: P.orange900 }]}>{t('farmer.profile.rating.cat.traceability')}</Text>
-              <View style={styles.focusTileScoreRow}>
-                <Text style={[styles.focusTileScore, { color: P.orange900 }]}>6</Text>
-                <Text style={styles.focusTileScoreMax}>{t('farmer.profile.rating.outOf', { max: 10 })}</Text>
-                <Text style={[styles.focusTileDelta, { color: P.orange900 }]}>↓1</Text>
-              </View>
+            <View style={styles.focusTilesRow}>
+              {focusCategories.map((cat) => (
+                <View key={cat.categoryCode} style={[styles.focusTile, { backgroundColor: P.red50 }]}>
+                  <Text style={[styles.focusTileTitle, { color: cat.color }]}>{cat.name}</Text>
+                  <View style={styles.focusTileScoreRow}>
+                    <Text style={[styles.focusTileScore, { color: cat.color }]}>{cat.score}</Text>
+                    <Text style={styles.focusTileScoreMax}>
+                      {t('farmer.profile.rating.outOf', { max: cat.maxScore })}
+                    </Text>
+                  </View>
+                </View>
+              ))}
             </View>
           </View>
-        </View>
+        ) : null}
 
         <Text style={styles.sectionHeading}>{t('farmer.profile.rating.categoryBreakdown')}</Text>
 
-        {/* Category List */}
+        {/* Category List -- all 10, always, per category own empty state */}
         <View style={styles.categoryList}>
-          {categories.map((cat) => {
-            const isExpanded = expandedId === cat.id;
-            return (
-              <View key={cat.id} style={styles.categoryCard}>
-                <TouchableOpacity style={styles.categoryRow} onPress={() => toggleExpand(cat.id)} activeOpacity={0.7}>
-                  <View style={styles.catIconContainer}>
-                    {cat.icon === 'QR' ? (
-                      <Text style={[styles.catIconEmoji, { fontSize: 12 }]}>QR</Text>
-                    ) : (
-                      <Icon name={cat.icon} size={18} color={cat.color} />
-                    )}
-                  </View>
+          {categories.map((cat) => (
+            <View key={cat.categoryCode} style={styles.categoryCard}>
+              <View style={styles.categoryRow}>
+                <View style={styles.catIconContainer}>
+                  <Icon name={cat.icon} size={18} color={cat.color} />
+                </View>
 
-                  <View style={styles.catInfo}>
-                    <Text style={styles.catName}>{cat.name}</Text>
-                    <View style={styles.barTrack}>
-                      <View style={[styles.barFill, { width: `${cat.score * 10}%`, backgroundColor: cat.color }]} />
-                    </View>
+                <View style={styles.catInfo}>
+                  <Text style={styles.catName}>{cat.name}</Text>
+                  <View style={styles.barTrack}>
+                    <View
+                      style={[
+                        styles.barFill,
+                        { width: `${(cat.score ?? 0) * 10}%`, backgroundColor: cat.color },
+                      ]}
+                    />
                   </View>
+                </View>
 
-                  <View style={styles.catScoreSection}>
+                <View style={styles.catScoreSection}>
+                  {cat.isRated ? (
                     <View style={styles.catScoreRow}>
                       <Text style={[styles.catScore, { color: cat.color }]}>{cat.score}</Text>
-                      <Text style={styles.catScoreMax}>{t('farmer.profile.rating.outOf', { max: 10 })}</Text>
+                      <Text style={styles.catScoreMax}>
+                        {t('farmer.profile.rating.outOf', { max: cat.maxScore })}
+                      </Text>
                     </View>
-                    <View style={styles.catDeltaRow}>
-                      {cat.delta > 0 && <Text style={[styles.catDelta, { color: P.primary }]}>↑{cat.delta}</Text>}
-                      {cat.delta < 0 && <Text style={[styles.catDelta, { color: P.red700 }]}>↓{Math.abs(cat.delta)}</Text>}
-                      {cat.delta === 0 && <Text style={styles.catDeltaNeutral}>–</Text>}
-                      <Text style={styles.chevron}>{isExpanded ? '⌃' : '⌄'}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-
-                {isExpanded && cat.tags && (
-                  <View style={styles.tagsContainer}>
-                    {cat.tags.map((tag) => (
-                      <View key={tag} style={styles.tagPill}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                  ) : (
+                    <Text style={styles.catNotRated}>{t('farmer.profile.rating.notRatedShort')}</Text>
+                  )}
+                </View>
               </View>
-            );
-          })}
+            </View>
+          ))}
         </View>
 
         <TouchableOpacity style={styles.calcButton}>
@@ -270,6 +311,8 @@ export function FarmRatingsScreen({ onNavigateBack }: FarmRatingsScreenProps): R
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: P.slate50 },
+  skeletonContainer: { padding: 16, gap: 12 },
+  skeletonBlock: { borderRadius: 16 },
   header: {
     backgroundColor: P.deepGreen,
     paddingHorizontal: 20,
@@ -324,6 +367,30 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 
+  emptyStateCard: {
+    backgroundColor: P.white,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: P.slate200,
+  },
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: P.darkGreyText,
+    marginTop: 10,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  emptyStateBody: {
+    fontSize: 13,
+    color: P.slate500,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+
   chartCard: {
     backgroundColor: P.white,
     borderRadius: 16,
@@ -363,7 +430,6 @@ const styles = StyleSheet.create({
   focusTileScoreRow: { flexDirection: 'row', alignItems: 'baseline' },
   focusTileScore: { fontSize: 24, fontWeight: 'bold' },
   focusTileScoreMax: { fontSize: 12, color: P.midGrey, marginLeft: 2 },
-  focusTileDelta: { fontSize: 14, fontWeight: 'bold', marginLeft: 8 },
 
   sectionHeading: {
     fontSize: 12,
@@ -390,39 +456,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   catIconContainer: { width: 24, alignItems: 'center' },
-  catIconEmoji: { fontSize: 18 },
   catInfo: { flex: 1, marginLeft: 12, marginRight: 16 },
   catName: { fontSize: 15, fontWeight: '600', color: P.inkBlack, marginBottom: 8 },
   barTrack: { height: 6, backgroundColor: P.slate100, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 3 },
 
   catScoreSection: { alignItems: 'flex-end', justifyContent: 'center' },
-  catScoreRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 4 },
+  catScoreRow: { flexDirection: 'row', alignItems: 'baseline' },
   catScore: { fontSize: 16, fontWeight: 'bold' },
   catScoreMax: { fontSize: 11, color: P.placeholderGrey, marginLeft: 1 },
-  catDeltaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  catDelta: { fontSize: 12, fontWeight: 'bold' },
-  catDeltaNeutral: { fontSize: 12, fontWeight: 'bold', color: P.mutedGrey },
-  chevron: { fontSize: 16, color: P.midGrey, lineHeight: 18 },
-
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: P.slate100,
-  },
-  tagPill: {
-    backgroundColor: P.slate50,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: P.slate200,
-  },
-  tagText: { fontSize: 12, color: P.slate600, fontWeight: '500' },
+  catNotRated: { fontSize: 12, fontWeight: '600', color: P.slate400 },
 
   calcButton: {
     flexDirection: 'row',

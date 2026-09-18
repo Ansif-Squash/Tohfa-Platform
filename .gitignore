@@ -5,9 +5,14 @@ coverage/
 .tsbuildinfo
 *.tsbuildinfo
 
+# Environment files - strictly prevent committing secret keys
 .env
 .env.*
+.env*.local
+*.env
+!apps/mobile/ios/.xcode.env
 !.env.example
+!.env*.example
 
 .DS_Store
 Thumbs.db
@@ -47,3 +52,5 @@ AI_BUILD_MANUAL.md
 
 # User uploaded assets
 Farmer app branding guidelines/
+requirement-doc/
+

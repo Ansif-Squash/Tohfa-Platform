@@ -40,6 +40,41 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<!-- PLACEHOLDER — Google/Facebook Sign-In (farmer OAuth, see
+	     roles/farmer/screens/auth/LoginScreen.tsx). Replace YOUR_FACEBOOK_APP_ID
+	     and YOUR_IOS_GOOGLE_CLIENT_ID below with real values once TOHFA's app
+	     exists in the Facebook Developer Console / Google Cloud Console — the
+	     app cannot complete a real sign-in on iOS until then. The Google
+	     reversed-client-id scheme must exactly match GoogleService-Info.plist's
+	     REVERSED_CLIENT_ID once that file is added. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fbYOUR_FACEBOOK_APP_ID</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.YOUR_IOS_GOOGLE_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
+	<key>FacebookAppID</key>
+	<string>YOUR_FACEBOOK_APP_ID</string>
+	<key>FacebookClientToken</key>
+	<string>YOUR_FACEBOOK_CLIENT_TOKEN</string>
+	<key>FacebookDisplayName</key>
+	<string>TOHFA</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
 	<!-- Declarative only: the font file at Fonts/MaterialSymbolsOutlined.ttf
 	     still needs to be added as a resource in Xcode (pbxproj) before this
 	     actually bundles it. Not done here — no Xcode in this repo's dev

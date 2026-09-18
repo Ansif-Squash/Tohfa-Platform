@@ -120,7 +120,7 @@ export function AddZoneScreen({ onNavigateBack, onSave }: AddZoneScreenProps) {
           <View style={styles.dropdownRow}>
             <View style={styles.dropdownCol}>
               <View style={styles.inputLabelRow}>
-                <Icon name="terrain" size={13} color={colors.textDark} />
+                <Icon name="eco" size={13} color={colors.textDark} />
                 <Text style={[styles.inputLabel, { color: colors.textDark, marginBottom: 0 }]}> Soil Type</Text>
               </View>
               <View style={[styles.dropdownBox, { borderColor: colors.borderLight }]}>

@@ -25,3 +25,34 @@ allprojects {
         mavenCentral()
     }
 }
+
+// @rnmapbox/maps (farm boundary map, roles/farmer registration Step 3 + FMB
+// Sketch — see packages/mobile-ui/src/FarmBoundaryMap.tsx). Mapbox's Android
+// SDK no longer strictly requires an authenticated download token (see
+// https://github.com/mapbox/mapbox-maps-flutter/issues/775), but the block
+// below is kept, exactly as @rnmapbox/maps' own installer generates it, for
+// any Mapbox SDK version that still enforces it. MAPBOX_DOWNLOADS_TOKEN below
+// is a PLACEHOLDER — replace it in gradle.properties (or export
+// RNMAPBOX_MAPS_DOWNLOAD_TOKEN in the environment) with a real Mapbox
+// "secret" (downloads:read scope) token from
+// https://account.mapbox.com/access-tokens/ once one exists. Until then this
+// resolves with no credentials, which is fine for the public Mapbox maven
+// artifacts this app actually needs.
+allprojects {
+    repositories {
+        maven {
+            url 'https://api.mapbox.com/downloads/v2/releases/maven'
+            // Only attach credentials if a token is actually configured —
+            // matches @rnmapbox/maps' own generated Gradle snippet so an
+            // empty PLACEHOLDER never turns into a broken auth header.
+            def token = project.properties['MAPBOX_DOWNLOADS_TOKEN'] ?: System.getenv('RNMAPBOX_MAPS_DOWNLOAD_TOKEN')
+            if (token) {
+                authentication { basic(BasicAuthentication) }
+                credentials {
+                    username = 'mapbox'
+                    password = token
+                }
+            }
+        }
+    }
+}

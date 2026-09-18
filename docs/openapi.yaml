@@ -100,6 +100,10 @@ tags:
     description: The 5-step farmer application and the admin review queue.
   - name: Farmer Profile & Certifications
     description: Farmer self-service profile and PGS/NPOP certification lifecycle.
+  - name: Farm Rating
+    description: |
+      The 10-category, 0-100 farm rating (BR-06): admin scoring and the farmer's own
+      read-only view of it.
   - name: Pricing
     description: Super-Admin fair price ceilings and admin retail prices.
   - name: Marketing
@@ -202,9 +206,16 @@ paths:
         Exchanges the challenge id and the 6-digit code for an access/refresh token pair. A
         wrong code decrements `attemptsRemaining`; the third failure locks the challenge and a
         new one must be requested (BR-32).
+
+        Optionally carries a BR-39 `linkToken` (from `POST /auth/oauth/{provider}`'s
+        NOT_LINKED response) to complete an OAuth link atomically, in the same transaction as
+        this OTP verification: an existing mobile number gets the identity linked to that
+        account; a brand-new number gets the account created (straight to ACTIVE) and then
+        linked. The response then also carries `oauthProfile` so the client can prefill Step 1
+        of registration.
       security: []
       x-permission: public
-      x-business-rules: [BR-32]
+      x-business-rules: [BR-32, BR-39]
       requestBody:
         required: true
         content:
@@ -218,7 +229,7 @@ paths:
           description: OTP accepted.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/TokenPair' }
+              schema: { $ref: '#/components/schemas/OtpVerifyResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
@@ -423,6 +434,119 @@ paths:
                     warehouseName: Coonoor
                 permissions: [goods_receipt.create, order.verify_otp, wallet.cash_topup]
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/oauth/{provider}:
+    post:
+      tags: [Auth]
+      operationId: loginWithOAuth
+      summary: Log in with a verified Google/Facebook identity (BR-39)
+      description: |
+        OAuth is an alternate login method for an already mobile-verified account, or a
+        data-prefill convenience during first-time registration — it is NEVER a way to create
+        or activate an account without mobile+OTP (BR-39).
+
+        The server verifies `token` against the provider (Google ID token signature/audience,
+        or a Facebook Graph API `/me` call) and looks it up by `(provider, providerSubjectId)`:
+
+        * **Linked already** — logs in exactly like `/auth/login`, including
+          `requiresRoleSelection` when the account holds more than one role.
+        * **Not linked** — 200 `NOT_LINKED` with whatever profile fields the provider gave
+          (`fullName`, `email`, `photoUrl` — none guaranteed) and a `linkToken`: a short-lived
+          (10 minute), single-use, server-signed token. No account is created and no tokens are
+          issued. The client runs the normal `/auth/otp/send` + `/auth/otp/verify` flow and
+          passes `linkToken` to `/auth/otp/verify` to complete the link.
+      security: []
+      x-permission: public
+      x-business-rules: [BR-39]
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/OAuthProvider' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OAuthLoginRequest' }
+            example:
+              token: eyJhbGciOiJSUzI1NiIsImtpZCI6IjazEyMyJ9.eyJzdWIiOiIxMDc2NTQzMjEwIn0.sig
+              deviceId: 6f2a-android-pixel7
+              platform: android
+      responses:
+        '200':
+          description: Either an authenticated session (identity already linked) or a NOT_LINKED profile + linkToken.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/TokenPair'
+                  - $ref: '#/components/schemas/OAuthNotLinkedResponse'
+              example:
+                status: NOT_LINKED
+                profile:
+                  fullName: Priya Raman
+                  email: priya@example.com
+                  photoUrl: https://lh3.googleusercontent.com/a/photo.jpg
+                linkToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXAiOiJvYXV0aF9saW5rIn0.sig
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/me/oauth/link:
+    post:
+      tags: [Auth]
+      operationId: linkOwnOAuthIdentity
+      summary: Link a Google/Facebook identity to your own account (BR-39)
+      description: |
+        Self-service linking for an already-authenticated caller: verifies `token` against the
+        named provider and attaches the resulting identity to the caller's own account.
+        Rejects with `OAUTH_IDENTITY_ALREADY_LINKED` if that identity is already linked to a
+        DIFFERENT account. Linking an identity already linked to the caller's own account is a
+        no-op that returns the existing link.
+      x-permission: auth.oauth.link_own
+      x-business-rules: [BR-39]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OAuthLinkRequest' }
+            example: { provider: google, token: eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMDc2NTQzMjEwIn0.sig }
+      responses:
+        '200':
+          description: Identity linked (or already linked to this same account).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OAuthIdentity' }
+              example:
+                provider: google
+                email: priya@example.com
+                linkedAt: '2026-09-17T06:35:00Z'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /auth/me/oauth/{provider}:
+    delete:
+      tags: [Auth]
+      operationId: unlinkOwnOAuthIdentity
+      summary: Unlink a Google/Facebook identity from your own account (BR-39)
+      description: Removes the caller's own linked identity for the given provider, if one exists.
+      x-permission: auth.oauth.unlink_own
+      x-business-rules: [BR-39]
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/OAuthProvider' }
+      responses:
+        '204': { description: Identity unlinked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '500': { $ref: '#/components/responses/ServerError' }
 
   /warehouses:
@@ -939,6 +1063,59 @@ paths:
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
         '500': { $ref: '#/components/responses/ServerError' }
 
+  /farmers/me/rating:
+    get:
+      tags: [Farm Rating]
+      operationId: getMyFarmRating
+      summary: Own farm rating
+      description: |
+        Returns the caller's own current/most-recent rating cycle: all 10 categories, in
+        sort order, with a null score for any category not yet scored. A farmer who has
+        never been rated gets all-null scores and `status: DRAFT` — never a 404 (BR-06).
+      x-permission: farmer.rating.view
+      x-business-rules: [BR-06]
+      responses:
+        '200':
+          description: The caller's farm rating.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmRating' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /farmers/me/weather:
+    get:
+      tags: [Farmer Profile & Certifications]
+      operationId: getMyFarmWeather
+      summary: Weather at own farm
+      description: |
+        Current conditions, the next 24 hours in 3-hour steps, and a multi-day outlook for the
+        caller's own primary farm centroid (BR-36). Always served by the real OpenWeatherMap
+        API — there is no mock/offline mode.
+
+        Returns 404 when the caller has no farm with a recorded centroid, and 502
+        (`WEATHER_PROVIDER_ERROR`) when the upstream provider is unreachable or misconfigured.
+
+        This response carries farm name, village and GPS coordinates, so it is granted to the
+        owning farmer only and is never reachable by a customer (BR-16).
+      x-permission: farmer.weather.view_own
+      x-business-rules: [BR-36]
+      responses:
+        '200':
+          description: Weather snapshot for the farm's registered location.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmWeather' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+        '502':
+          description: The upstream weather provider failed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /admin/certifications/{id}/verify:
     post:
       tags: [Farmer Profile & Certifications]
@@ -1003,6 +1180,68 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /admin/farmers/{id}/rating:
+    get:
+      tags: [Farm Rating]
+      operationId: getFarmerRating
+      summary: Farm rating detail for admin review
+      description: |
+        Returns all 10 categories, in sort order, with a null score for any category not
+        yet scored for the farmer's current cycle. A farmer never rated gets all-null
+        scores and `status: DRAFT` — never a 404 for that reason alone. 404 means the
+        farmer does not exist, or exists outside the caller's scope (root CLAUDE.md
+        §2.1 — a cross-scope read must not be distinguishable from a nonexistent row).
+      x-permission: farmer.rating.view
+      x-business-rules: [BR-06]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Farm rating detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmRating' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    put:
+      tags: [Farm Rating]
+      operationId: setFarmerRating
+      summary: Submit category scores for a farm rating cycle
+      description: |
+        Submits 1-10 category scores; a cycle may be built up incrementally across
+        multiple calls. Only once all 10 currently-active categories have been scored
+        does `total_score` get computed (a direct sum, no multiplier), `tier_code` get
+        resolved from `rating_tier_config` (BR-04), and `status` flip to `COMPLETE`
+        (BR-06). A Farmer Admin may only edit a farmer in their own zone
+        (`WAREHOUSE_SCOPE_VIOLATION`, 403).
+      x-permission: farmer.rating.edit
+      x-business-rules: [BR-06, BR-04]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmRatingUpdate' }
+            example:
+              modules:
+                - { categoryCode: CERTIFICATION, score: 8 }
+                - { categoryCode: SOIL_LAND, score: 7 }
+              notes: Strong compost practice; irrigation log incomplete.
+      responses:
+        '200':
+          description: Updated farm rating (DRAFT until all 10 categories are scored).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FarmRating' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
         '500': { $ref: '#/components/responses/ServerError' }
 
   /fair-prices:
@@ -3554,6 +3793,10 @@ components:
         * `FIELD_LOCKED` — Aadhaar or mobile may only be changed by a Super Admin (BR-33).
         * `INVALID_STATE_TRANSITION` — the entity is not in a state that permits this operation.
         * `IDEMPOTENCY_KEY_REUSED` — the key was reused with a different payload.
+        * `WEATHER_PROVIDER_ERROR` — the upstream weather provider was unreachable or misconfigured.
+        * `OAUTH_TOKEN_INVALID` — Google/Facebook rejected, or could not verify, the provided token (BR-39).
+        * `OAUTH_IDENTITY_ALREADY_LINKED` — that provider identity is already linked to a different account (BR-39).
+        * `OAUTH_LINK_TOKEN_INVALID` — the `linkToken` passed to `/auth/otp/verify` is expired, malformed or tampered with (BR-39).
       required: [type, title, status, code, correlationId]
       properties:
         type:
@@ -3763,6 +4006,23 @@ components:
         code: { type: string, pattern: '^[0-9]{6}$' }
         deviceId: { type: string, maxLength: 120 }
         platform: { type: string, enum: [ios, android, web] }
+        linkToken:
+          type: string
+          description: |
+            BR-39, optional. The `linkToken` returned by `POST /auth/oauth/{provider}`'s
+            NOT_LINKED response, identifying which verified provider identity to link once this
+            OTP verification succeeds. Omitted on a plain mobile+OTP verify.
+
+    OtpVerifyResponse:
+      description: |
+        `TokenPair`, plus BR-39's additive/optional `oauthProfile` — present only when the
+        request carried a `linkToken`, so the mobile client can prefill Step 1 of its
+        registration stepper without a second API call.
+      allOf:
+        - $ref: '#/components/schemas/TokenPair'
+        - type: object
+          properties:
+            oauthProfile: { $ref: '#/components/schemas/OAuthProfile' }
 
     LoginRequest:
       type: object
@@ -3818,6 +4078,63 @@ components:
           type: array
           description: Resolved permission codes from rbac.json. Advisory for UI gating only; the server re-checks every request.
           items: { type: string }
+
+    OAuthProvider:
+      type: string
+      enum: [google, facebook]
+      description: The only two social-login providers TOHFA recognises (BR-39).
+
+    OAuthLoginRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: A Google ID token, or a Facebook access token, depending on the `:provider` path segment.
+        deviceId: { type: string, maxLength: 120 }
+        platform: { type: string, enum: [ios, android, web] }
+        roleCode:
+          type: string
+          description: Required on the second call when the linked account holds multiple admin roles.
+          enum: [SUPER_ADMIN, TOHFA_ADMIN, FARMER_ADMIN, MAIN_WH_ADMIN, SUB_WH_ADMIN]
+
+    OAuthProfile:
+      type: object
+      description: |
+        Whatever of these the provider actually returned. `email` and `photoUrl` are usually
+        present; `fullName` usually is; none are guaranteed (BR-39).
+      properties:
+        fullName: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        photoUrl: { type: string, format: uri, nullable: true }
+
+    OAuthNotLinkedResponse:
+      type: object
+      description: Returned by `POST /auth/oauth/{provider}` when the verified identity has no linked account yet (BR-39). No account is created; no tokens are issued.
+      required: [status, profile, linkToken]
+      properties:
+        status: { type: string, enum: [NOT_LINKED] }
+        profile: { $ref: '#/components/schemas/OAuthProfile' }
+        linkToken:
+          type: string
+          description: Short-lived (10 minute), single-use, server-signed token. Pass to `POST /auth/otp/verify` to complete the link.
+
+    OAuthLinkRequest:
+      type: object
+      required: [provider, token]
+      properties:
+        provider: { $ref: '#/components/schemas/OAuthProvider' }
+        token:
+          type: string
+          description: A Google ID token, or a Facebook access token, matching `provider`.
+
+    OAuthIdentity:
+      type: object
+      required: [provider, linkedAt]
+      properties:
+        provider: { $ref: '#/components/schemas/OAuthProvider' }
+        email: { type: string, format: email, nullable: true }
+        linkedAt: { type: string, format: date-time }
 
     FarmerApplicationStepPayload:
       type: object
@@ -3957,6 +4274,67 @@ components:
         marketBlockReason: { type: [string, 'null'] }
         preferredLocale: { $ref: '#/components/schemas/Locale' }
 
+    FarmWeather:
+      type: object
+      description: A weather snapshot for one farm's registered centroid (BR-16 — farmer-only).
+      required: [provider, observedAt, location, current, hourly, daily]
+      properties:
+        provider: { type: string, enum: [openweathermap], description: Which adapter served this snapshot. }
+        observedAt: { type: string, format: date-time, description: When the upstream observation was taken. }
+        location: { $ref: '#/components/schemas/FarmWeatherLocation' }
+        current: { $ref: '#/components/schemas/FarmWeatherCurrent' }
+        hourly:
+          type: array
+          description: Up to 8 entries covering the next 24 hours in 3-hour steps.
+          items: { $ref: '#/components/schemas/FarmWeatherHourly' }
+        daily:
+          type: array
+          description: Up to 7 entries. The first entry is always the farm's local today.
+          items: { $ref: '#/components/schemas/FarmWeatherDaily' }
+
+    FarmWeatherLocation:
+      type: object
+      required: [farmName, village, latitude, longitude]
+      properties:
+        farmName: { type: string }
+        village: { type: [string, 'null'] }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+
+    FarmWeatherCurrent:
+      type: object
+      required: [temperatureC, feelsLikeC, condition, humidityPct, windKph, precipitationChancePct]
+      properties:
+        temperatureC: { type: number, description: Degrees Celsius. }
+        feelsLikeC: { type: number, description: Apparent temperature in degrees Celsius. }
+        condition: { $ref: '#/components/schemas/WeatherCondition' }
+        humidityPct: { type: number, minimum: 0, maximum: 100 }
+        windKph: { type: number, minimum: 0, description: Wind speed in kilometres per hour. }
+        precipitationChancePct: { type: number, minimum: 0, maximum: 100 }
+
+    FarmWeatherHourly:
+      type: object
+      required: [at, temperatureC, condition]
+      properties:
+        at: { type: string, format: date-time }
+        temperatureC: { type: number }
+        condition: { $ref: '#/components/schemas/WeatherCondition' }
+
+    FarmWeatherDaily:
+      type: object
+      required: [date, minTempC, maxTempC, condition, precipitationMm]
+      properties:
+        date: { type: string, format: date }
+        minTempC: { type: number }
+        maxTempC: { type: number }
+        condition: { $ref: '#/components/schemas/WeatherCondition' }
+        precipitationMm: { type: number, minimum: 0 }
+
+    WeatherCondition:
+      type: string
+      description: Provider-neutral weather taxonomy. Both adapters map their vocabulary onto this set.
+      enum: [CLEAR, CLEAR_NIGHT, PARTLY_CLOUDY, CLOUDY, FOG, LIGHT_RAIN, RAIN, THUNDERSTORM]
+
     FarmerProfileUpdate:
       type: object
       description: Aadhaar and mobile are deliberately absent — they are locked (BR-33).
@@ -3967,6 +4345,73 @@ components:
         farmingExperienceYears: { type: integer, minimum: 0, maximum: 90 }
         address: { type: string, maxLength: 300 }
         preferredLocale: { $ref: '#/components/schemas/Locale' }
+      additionalProperties: false
+
+    FarmRatingModule:
+      type: object
+      description: |
+        One rating category's score. No `name`/display-name field on purpose — root
+        CLAUDE.md §2.7 forbids user-facing strings sourced from the DB reaching a client;
+        the mobile/admin clients own category display names via their own i18n catalogues.
+      required: [categoryCode, score, maxScore]
+      properties:
+        categoryCode:
+          type: string
+          enum:
+            [
+              CERTIFICATION,
+              SOIL_LAND,
+              FARMING_PRACTICES,
+              ENVIRONMENTAL,
+              PRODUCE_QUALITY,
+              TRACEABILITY,
+              SOCIAL_LABOR,
+              FINANCIAL,
+              MARKET_RELATIONS,
+              INNOVATION,
+            ]
+        score: { type: [integer, 'null'], minimum: 0, maximum: 10 }
+        maxScore: { type: integer, enum: [10] }
+
+    FarmRating:
+      type: object
+      description: |
+        BR-06 (LOCKED): exactly 10 named categories, each scored 0-10 by an admin, summed
+        DIRECTLY to a 0-100 total — no multiplier. A rating missing any category score is
+        DRAFT/incomplete, not zero; `status` stays `DRAFT` until all 10 are scored.
+      required: [farmerId, periodLabel, status, modules, overallRating, ratingTier, ratedAt]
+      properties:
+        farmerId: { type: string, format: uuid }
+        periodLabel: { type: string, description: Identifies the rating cycle this snapshot belongs to. }
+        status: { type: string, enum: [DRAFT, COMPLETE] }
+        modules:
+          type: array
+          minItems: 10
+          maxItems: 10
+          items: { $ref: '#/components/schemas/FarmRatingModule' }
+        overallRating: { type: [number, 'null'], description: Direct sum of the 10 category scores (0-100). }
+        ratingTier: { type: [string, 'null'], enum: [POOR, MODERATE, GOOD, EXCELLENT, null] }
+        ratedAt: { type: [string, 'null'], format: date-time, description: Set only once status is COMPLETE. }
+
+    FarmRatingUpdate:
+      type: object
+      description: |
+        Accepts 1-10 category scores so a cycle can be built up incrementally across
+        multiple calls. The cycle completes only once all 10 active categories have a
+        score (BR-06).
+      required: [modules]
+      properties:
+        modules:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [categoryCode, score]
+            properties:
+              categoryCode: { type: string }
+              score: { type: integer, minimum: 0, maximum: 10 }
+        notes: { type: string, maxLength: 500 }
       additionalProperties: false
 
     Certification:

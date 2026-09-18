@@ -14,10 +14,13 @@
     "material-symbols": "0.47.2"
   },
   "peerDependencies": {
+    "@rnmapbox/maps": "10.2.9",
     "react": ">=18.0.0",
     "react-native": ">=0.74.0"
   },
   "devDependencies": {
+    "@rnmapbox/maps": "10.2.9",
+    "@types/geojson": "^7946.0.14",
     "@types/react": "^18.2.79",
     "react": "18.2.0",
     "react-native": "0.74.5",

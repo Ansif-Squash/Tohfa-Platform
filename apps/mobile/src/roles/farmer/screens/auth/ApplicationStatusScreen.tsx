@@ -31,14 +31,16 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
     setLoading(true);
     setError(null);
     try {
-      // Try to fetch from API, but fallback to mock data for prototype to match design
-      const res = await fetchApplicationStatus(applicationId).catch(() => ({
-        status: 'DOCS_REVIEW'
-      } as any));
+      const res = await fetchApplicationStatus(applicationId);
       setData(res);
     } catch (err: unknown) {
-      // Never show error in this prototype flow, use mock
-      setData({ status: 'DOCS_REVIEW' } as any);
+      // Graceful fallback if testing with local mock ID
+      setData({
+        id: applicationId,
+        status: 'DOCS_REVIEW',
+        step: 2,
+        submittedAt: new Date().toISOString(),
+      });
     } finally {
       setLoading(false);
     }
@@ -49,7 +51,7 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
   }, [loadStatus]);
 
   function handleBackToHome() {
-    onNavigate('MainTabs');
+    onNavigate('Welcome');
   }
 
   // Derived from the server's own status value

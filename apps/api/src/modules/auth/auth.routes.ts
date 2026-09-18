@@ -7,6 +7,9 @@ import { authRateLimit } from '../../rate-limit/rateLimiter.js';
 import {
   forgotPasswordBody,
   loginBody,
+  oauthLinkBody,
+  oauthLoginBody,
+  oauthProviderParams,
   refreshTokenBody,
   registerCustomerBody,
   resetPasswordBody,
@@ -126,5 +129,46 @@ authRouter.get(
     const actor = requireActor(req.actor);
     const result = await authService.getMe(actor);
     res.json(result);
+  }),
+);
+
+// BR-39: alternate login method for an already mobile-verified account, or a
+// prefill convenience during first-time registration — public like /auth/login,
+// never a way to create/activate an account by itself.
+authRouter.post(
+  '/oauth/:provider',
+  validate({ params: oauthProviderParams, body: oauthLoginBody }),
+  authRateLimit(),
+  asyncHandler(async (req, res) => {
+    const { provider } = getValidated(req, 'params', oauthProviderParams);
+    const body = getValidated(req, 'body', oauthLoginBody);
+    const result = await authService.loginWithOAuth(provider, body, req.ip, req.headers['user-agent']);
+    res.status(200).json(result);
+  }),
+);
+
+authRouter.post(
+  '/me/oauth/link',
+  requireAuth,
+  requirePermission('auth.oauth.link_own'),
+  validate({ body: oauthLinkBody }),
+  asyncHandler(async (req, res) => {
+    const actor = requireActor(req.actor);
+    const body = getValidated(req, 'body', oauthLinkBody);
+    const result = await authService.linkOAuthIdentity(actor, body);
+    res.status(200).json(result);
+  }),
+);
+
+authRouter.delete(
+  '/me/oauth/:provider',
+  requireAuth,
+  requirePermission('auth.oauth.unlink_own'),
+  validate({ params: oauthProviderParams }),
+  asyncHandler(async (req, res) => {
+    const actor = requireActor(req.actor);
+    const { provider } = getValidated(req, 'params', oauthProviderParams);
+    await authService.unlinkOAuthIdentity(actor, provider);
+    res.status(204).send();
   }),
 );

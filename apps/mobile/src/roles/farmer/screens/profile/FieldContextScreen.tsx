@@ -130,7 +130,7 @@ export function FieldContextScreen({ onNavigateBack, onNavigateToZones }: FieldC
 
         <TouchableOpacity style={[styles.cardOption, { borderColor: colors.borderLight, marginBottom: 8 }]}>
           <View style={styles.cardOptionLeft}>
-            <Icon name="terrain" size={20} color={colors.textSubtle} style={styles.cardOptionIcon} />
+            <Icon name="park" size={20} color={colors.textSubtle} style={styles.cardOptionIcon} />
             <View style={styles.cardOptionTextCol}>
               <Text style={[styles.cardOptionTitle, { color: colors.textDark }]}>Forest boundaries</Text>
               <Text style={[styles.cardOptionSub, { color: colors.textSubtle }]}>Adjacent to reserve forest or wildlife zone</Text>

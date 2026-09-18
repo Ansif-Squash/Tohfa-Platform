@@ -118,3 +118,62 @@ export function verifyRefreshToken(token: string): RefreshPayload {
   }
   return parsed.data;
 }
+
+/**
+ * BR-39: a short-lived, single-use, server-signed token identifying which
+ * VERIFIED (provider, subject, email, fullName, photoUrl) tuple to link. It
+ * carries the caller from `POST /auth/oauth/{provider}`'s `NOT_LINKED`
+ * response through the mobile+OTP flow to `POST /auth/otp/verify`, so the
+ * client never has to resend the raw Google/Facebook token, and the server
+ * never has to trust an unsigned client-supplied provider/subject pair at
+ * OTP-verify time. Reuses `JWT_SECRET` rather than provisioning a separate
+ * one — it is a JWT like any other token this module issues, just with its
+ * own `typ` and a much shorter TTL.
+ */
+const OAUTH_LINK_TTL = '10m';
+
+const oauthLinkPayloadSchema = z.object({
+  typ: z.literal('oauth_link'),
+  provider: z.enum(['GOOGLE', 'FACEBOOK']),
+  providerSubjectId: z.string().min(1),
+  email: z.string().optional(),
+  fullName: z.string().optional(),
+  photoUrl: z.string().optional(),
+});
+export type OAuthLinkPayload = z.infer<typeof oauthLinkPayloadSchema>;
+
+export function signOAuthLinkToken(payload: Omit<OAuthLinkPayload, 'typ'>): string {
+  return sign({ ...payload, typ: 'oauth_link' }, OAUTH_LINK_TTL);
+}
+
+/**
+ * Verifies signature, issuer, audience and expiry, all separately from
+ * `verifyRaw` — an expired/tampered `linkToken` must surface as
+ * `OAUTH_LINK_TOKEN_INVALID`, not the generic `UNAUTHENTICATED` `verifyRaw`
+ * throws for access/refresh tokens.
+ */
+export function verifyOAuthLinkToken(token: string): OAuthLinkPayload {
+  let decoded: JwtPayload | string;
+  try {
+    decoded = jwt.verify(token, config.JWT_SECRET, {
+      algorithms: ['HS256'],
+      issuer: ISSUER,
+      audience: AUDIENCE,
+    });
+  } catch (error) {
+    throw new AppError('OAUTH_LINK_TOKEN_INVALID', {
+      detail: 'Link token is invalid, expired, or has been tampered with.',
+      cause: error,
+    });
+  }
+
+  if (typeof decoded === 'string') {
+    throw new AppError('OAUTH_LINK_TOKEN_INVALID', { detail: 'Link token payload is not an object.' });
+  }
+
+  const parsed = oauthLinkPayloadSchema.safeParse(decoded);
+  if (!parsed.success) {
+    throw new AppError('OAUTH_LINK_TOKEN_INVALID', { detail: 'Link token payload is malformed.' });
+  }
+  return parsed.data;
+}

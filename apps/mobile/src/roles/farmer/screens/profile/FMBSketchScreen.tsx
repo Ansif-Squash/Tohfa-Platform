@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,16 @@ import {
   ScrollView,
   StatusBar,
 } from 'react-native';
-import Svg, { Circle, Line, Polygon } from 'react-native-svg';
-import { Icon } from '@tohfa/mobile-ui';
+import {
+  FarmBoundaryMap,
+  Icon,
+  type FarmBoundaryMapHandle,
+  type FarmBoundaryMapMode,
+} from '@tohfa/mobile-ui';
 import { colors, useTheme } from '../../theme';
 import { authPalette as P } from '../../theme';
+import { calculatePolygonMetrics } from '../../utils/geo';
+import { t } from '../../../../i18n/farmer';
 
 interface FMBSketchScreenProps {
   onNavigateBack: () => void;
@@ -23,6 +29,41 @@ type TabType = 'Draw' | 'Upload';
 export function FMBSketchScreen({ onNavigateBack, onNavigateToFieldContext }: FMBSketchScreenProps) {
   const { colors } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('Draw');
+
+  const mapRef = useRef<FarmBoundaryMapHandle>(null);
+  const [mode, setMode] = useState<FarmBoundaryMapMode>('view');
+  const [coords, setCoords] = useState<[number, number][]>([]);
+  const metrics = calculatePolygonMetrics(coords);
+  const pointCount = coords.length > 1 ? coords.length - 1 : coords.length;
+
+  function handlePolygonChange(next: [number, number][]) {
+    setCoords(next);
+  }
+
+  function handleLocateMe() {
+    void mapRef.current?.locateMe();
+  }
+
+  /** Teal FAB: the one draw/edit toggle this screen has (see Screen 17's FAB stack). */
+  function handleToggleDraw() {
+    if (mode !== 'view') {
+      mapRef.current?.finish();
+      return;
+    }
+    if (coords.length >= 3) {
+      mapRef.current?.startEditing();
+    } else {
+      mapRef.current?.startDrawing();
+    }
+  }
+
+  function handleUndo() {
+    mapRef.current?.undo();
+  }
+
+  function handleClear() {
+    mapRef.current?.clear();
+  }
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bgLight }]}>
@@ -37,9 +78,6 @@ export function FMBSketchScreen({ onNavigateBack, onNavigateToFieldContext }: FM
           <Text style={[styles.headerTitle, { color: colors.textDark }]}>FMB Sketch</Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSubtle }]}>Farm map boundary</Text>
         </View>
-        <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brandGreen }]}>
-          <Text style={styles.addBtnIcon}>+</Text>
-        </TouchableOpacity>
       </View>
 
       {/* TABS */}
@@ -85,64 +123,55 @@ export function FMBSketchScreen({ onNavigateBack, onNavigateToFieldContext }: FM
       <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {activeTab === 'Draw' ? (
           <>
-            {/* MAP MOCKUP */}
+            {/* MAP — real satellite map + polygon boundary editor (see
+                packages/mobile-ui/src/FarmBoundaryMap.tsx). Replaces the fake
+                ESRI-static-image + permanently-drawn react-native-svg
+                polygon this screen used to render. */}
             <View style={styles.mapContainer}>
-              <View style={[styles.mapBackground, { backgroundColor: P.oliveGreen }]}>
-                {/* Simulated grid lines to look like map tiles */}
-                <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
-                  <Line x1="0" y1="50" x2="400" y2="50" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                  <Line x1="0" y1="150" x2="400" y2="150" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                  <Line x1="0" y1="250" x2="400" y2="250" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                  <Line x1="100" y1="0" x2="100" y2="400" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                  <Line x1="200" y1="0" x2="200" y2="400" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-
-                  {/* FMB Polygon */}
-                  <Polygon
-                    points="80,50 250,40 300,150 240,240 90,250 50,140"
-                    fill="rgba(38, 166, 154, 0.2)"
-                    stroke={P.teal400}
-                    strokeWidth="3"
-                  />
-                  <Circle cx="80" cy="50" r="6" fill={colors.white} stroke={P.orange500} strokeWidth="3" />
-                  <Circle cx="250" cy="40" r="6" fill={colors.white} stroke={P.orange500} strokeWidth="3" />
-                  <Circle cx="300" cy="150" r="6" fill={colors.white} stroke={P.orange500} strokeWidth="3" />
-                  <Circle cx="240" cy="240" r="6" fill={colors.white} stroke={P.orange500} strokeWidth="3" />
-                  <Circle cx="90" cy="250" r="6" fill={colors.white} stroke={P.orange500} strokeWidth="3" />
-                  <Circle cx="50" cy="140" r="6" fill={colors.white} stroke={P.orange500} strokeWidth="3" />
-
-                  {/* Center pin */}
-                  <Circle cx="160" cy="140" r="4" fill={colors.white} stroke={P.red500} strokeWidth="2" />
-                </Svg>
-              </View>
-
-              {/* Floating map tags */}
-              <View style={styles.coordTag}>
-                <Text style={styles.coordText}>
-                  <Icon name="gps_fixed" size={12} color={colors.white} /> 11.4064, 76.6932
-                </Text>
-              </View>
-              <View style={styles.accuracyTag}>
-                <Text style={styles.accuracyText}>
-                  <Icon name="gps_fixed" size={12} color={colors.brandGreen} /> ±8 m
-                </Text>
-              </View>
-              <View style={styles.scaleTag}>
-                <Text style={styles.scaleText}>50 m</Text>
-                <View style={styles.scaleLine} />
-              </View>
+              <FarmBoundaryMap
+                initialCenter={null}
+                initialPolygon={null}
+                onPolygonChange={handlePolygonChange}
+                onModeChange={setMode}
+                searchPlaceholder={t('farmer.map.searchPlaceholder')}
+                ref={mapRef}
+                testID="fmb-sketch-farm-boundary-map"
+              />
 
               {/* Floating Action Buttons */}
-              <View style={styles.floatingActions}>
-                <TouchableOpacity style={styles.fabWhite}>
+              <View style={styles.floatingActions} pointerEvents="box-none">
+                <TouchableOpacity
+                  style={styles.fabWhite}
+                  onPress={handleLocateMe}
+                  accessibilityLabel={t('farmer.map.locateMe')}
+                >
                   <Icon name="gps_fixed" size={20} color={colors.brandGreen} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.fabTeal}>
-                  <Icon name="edit" size={20} color={colors.white} />
+                <TouchableOpacity
+                  style={styles.fabTeal}
+                  onPress={handleToggleDraw}
+                  accessibilityLabel={
+                    mode !== 'view'
+                      ? t('farmer.map.doneDrawing')
+                      : coords.length >= 3
+                        ? t('farmer.map.editBoundary')
+                        : t('farmer.map.drawBoundary')
+                  }
+                >
+                  <Icon name={mode !== 'view' ? 'check' : 'edit'} size={20} color={colors.white} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.fabWhite}>
+                <TouchableOpacity
+                  style={styles.fabWhite}
+                  onPress={handleUndo}
+                  accessibilityLabel={t('farmer.map.undo')}
+                >
                   <Icon name="undo" size={20} color={colors.brandGreen} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.fabWhite}>
+                <TouchableOpacity
+                  style={styles.fabWhite}
+                  onPress={handleClear}
+                  accessibilityLabel={t('farmer.map.clear')}
+                >
                   <Icon name="delete" size={20} color={P.red500} />
                 </TouchableOpacity>
               </View>
@@ -151,17 +180,20 @@ export function FMBSketchScreen({ onNavigateBack, onNavigateToFieldContext }: FM
             {/* Metrics Row */}
             <View style={styles.metricsRow}>
               <View style={[styles.metricBox, { borderColor: colors.borderLight }]}>
-                <Text style={[styles.metricVal, { color: colors.textDark }]}>6</Text>
+                <Text style={[styles.metricVal, { color: colors.textDark }]}>
+                  {coords.length > 0 ? pointCount : '—'}
+                </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSubtle }]}>Points</Text>
               </View>
               <View style={[styles.metricBox, { borderColor: colors.borderLight }]}>
                 <Text style={[styles.metricVal, { color: colors.textDark }]}>
-                  2.45<Text style={styles.metricValUnit}> ac</Text>
+                  {metrics.areaAcres > 0 ? metrics.areaAcres.toFixed(2) : '—'}
+                  <Text style={styles.metricValUnit}> ac</Text>
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSubtle }]}>Area</Text>
               </View>
               <View style={[styles.metricBox, { borderColor: colors.borderLight }]}>
-                <Text style={[styles.metricVal, { color: colors.textDark }]}>3</Text>
+                <Text style={[styles.metricVal, { color: colors.textDark }]}>—</Text>
                 <Text style={[styles.metricLabel, { color: colors.textSubtle }]}>Zones</Text>
               </View>
             </View>
@@ -169,19 +201,16 @@ export function FMBSketchScreen({ onNavigateBack, onNavigateToFieldContext }: FM
         ) : (
           <>
             {/* UPLOAD FMB TAB */}
-            <View style={[styles.uploadCard, { borderColor: colors.brandGreen, backgroundColor: P.lightGreen50 }]}>
+            <View style={[styles.uploadCard, { borderColor: colors.borderLight, backgroundColor: P.lightGreen50 }]}>
               <View style={styles.uploadCardLeft}>
-                <View style={[styles.uploadDocIcon, { backgroundColor: colors.brandGreen }]}>
+                <View style={[styles.uploadDocIcon, { backgroundColor: colors.textSubtle }]}>
                   <Icon name="description" size={20} color={colors.white} />
                 </View>
                 <View style={styles.uploadDocInfo}>
-                  <Text style={[styles.uploadDocName, { color: colors.textDark }]}>FMB_survey_142B.pdf</Text>
-                  <Text style={[styles.uploadDocSize, { color: colors.textSubtle }]}>2.1 MB · uploaded from VAO records</Text>
+                  <Text style={[styles.uploadDocName, { color: colors.textSubtle }]}>No document uploaded yet</Text>
+                  <Text style={[styles.uploadDocSize, { color: colors.textSubtle }]}>Tap below to upload your FMB document</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.uploadDocTrash}>
-                <Icon name="delete" size={18} color={P.red500} />
-              </TouchableOpacity>
             </View>
 
             <View style={styles.attachedNotice}>
@@ -207,27 +236,18 @@ export function FMBSketchScreen({ onNavigateBack, onNavigateToFieldContext }: FM
               <Text style={styles.farmIndexText}>1</Text>
             </View>
             <View style={styles.farmInfo}>
-              <Text style={[styles.farmName, { color: colors.textDark }]}>Great Earth Organic Farm</Text>
+              <Text style={[styles.farmName, { color: colors.textDark }]}>Your Farm</Text>
               <Text style={[styles.farmSub, { color: colors.textSubtle }]}>
-                <Icon name="place" size={12} color={colors.textSubtle} /> Kotagiri · 2.45 ac · {activeTab === 'Draw' ? '6 pts' : 'FMB attached'}
+                <Icon name="place" size={12} color={colors.textSubtle} />{' '}
+                {activeTab === 'Upload'
+                  ? 'Upload FMB document'
+                  : metrics.areaAcres > 0
+                    ? `${metrics.areaAcres.toFixed(2)} ac · ${pointCount} pts`
+                    : 'Draw boundary to get area'}
               </Text>
             </View>
           </View>
-          <View style={styles.farmCardActions}>
-            <TouchableOpacity style={styles.actionBtn}>
-              <Icon name="edit" size={16} color={P.black} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: P.red50 }]}>
-              <Icon name="delete" size={16} color={P.red500} />
-            </TouchableOpacity>
-          </View>
         </View>
-
-        {activeTab === 'Upload' && (
-          <TouchableOpacity style={[styles.dashedBtn, { borderColor: colors.brandGreen, backgroundColor: P.lightGreen50 }]}>
-            <Text style={[styles.dashedBtnText, { color: colors.brandGreen }]}>+ Add another farm</Text>
-          </TouchableOpacity>
-        )}
 
       </ScrollView>
 
@@ -264,14 +284,6 @@ const styles = StyleSheet.create({
   headerTitleBox: { flex: 1 },
   headerTitle: { fontSize: 18, fontWeight: '700' },
   headerSubtitle: { fontSize: 13, marginTop: 2 },
-  addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addBtnIcon: { color: colors.white, fontSize: 24, lineHeight: 26 },
 
   tabsContainer: {
     flexDirection: 'row',
@@ -300,36 +312,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 16,
   },
-  mapBackground: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  coordTag: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  coordText: { color: colors.white, fontSize: 12, fontWeight: '600' },
-  accuracyTag: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: colors.white,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  accuracyText: { color: colors.brandGreen, fontSize: 12, fontWeight: '700' },
-  scaleTag: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-  },
-  scaleText: { color: colors.white, fontSize: 11, fontWeight: '600', marginBottom: 2 },
-  scaleLine: { width: 40, height: 2, backgroundColor: colors.white },
 
   floatingActions: {
     position: 'absolute',
@@ -403,14 +385,6 @@ const styles = StyleSheet.create({
   uploadDocInfo: { flex: 1 },
   uploadDocName: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
   uploadDocSize: { fontSize: 12 },
-  uploadDocTrash: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: P.red50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 
   attachedNotice: {
     alignItems: 'center',
@@ -452,26 +426,6 @@ const styles = StyleSheet.create({
   farmInfo: { flex: 1 },
   farmName: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
   farmSub: { fontSize: 12 },
-  farmCardActions: { flexDirection: 'row', gap: 8 },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: P.grey100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  dashedBtn: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  dashedBtnText: { fontSize: 15, fontWeight: '700' },
 
   footer: {
     paddingHorizontal: 20,

@@ -13,5 +13,13 @@
  * is discoverable for the next custom font this app adds.
  */
 module.exports = {
+  dependencies: {
+    '@rnmapbox/maps': {
+      platforms: {
+        android: null, // disabled until a real Mapbox secret downloads token (sk.ey...) is configured
+        ios: null,
+      },
+    },
+  },
   assets: ['./src/assets/fonts'],
 };

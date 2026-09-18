@@ -57,6 +57,9 @@ export const step3LocationSchema = z.object({
   gpsCaptured: z.boolean().optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  areaAcres: z.number().positive().optional(),
+  calculatedAreaAcres: z.number().nonnegative().optional(),
+  calculatedAreaHectares: z.number().nonnegative().optional(),
   fmbPolygon: z
     .object({
       type: z.literal('Polygon'),

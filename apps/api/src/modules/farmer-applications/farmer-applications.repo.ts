@@ -56,6 +56,7 @@ export interface FarmerProfileRow {
   kyc_status: string;
   application_status: ApplicationStatus;
   overall_rating: number | null;
+  rating_tier_code: string | null;
   is_market_blocked: boolean;
   market_block_reason: string | null;
   created_at: Date;
@@ -281,7 +282,7 @@ export const farmerApplicationsRepo: FarmerApplicationsRepo = {
               u.preferred_locale, f.zone_id, z.name AS zone_name,
               f.farming_experience_years, f.address_line1, f.village,
               f.taluk, f.district, f.aadhaar_last4, f.kyc_status,
-              f.application_status, f.overall_rating, f.is_market_blocked,
+              f.application_status, f.overall_rating, f.rating_tier_code, f.is_market_blocked,
               f.market_block_reason, f.created_at
          FROM farmers f
          JOIN users u ON u.id = f.user_id
@@ -299,7 +300,7 @@ export const farmerApplicationsRepo: FarmerApplicationsRepo = {
               u.preferred_locale, f.zone_id, z.name AS zone_name,
               f.farming_experience_years, f.address_line1, f.village,
               f.taluk, f.district, f.aadhaar_last4, f.kyc_status,
-              f.application_status, f.overall_rating, f.is_market_blocked,
+              f.application_status, f.overall_rating, f.rating_tier_code, f.is_market_blocked,
               f.market_block_reason, f.created_at
          FROM farmers f
          JOIN users u ON u.id = f.user_id
