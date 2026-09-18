@@ -62,6 +62,24 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
   const initialAddress = initialData?.address ?? fallbackAddress;
   const [address, setAddress] = useState(initialAddress);
 
+  const [district, setDistrict] = useState(initialData?.district ?? 'The Nilgiris');
+  const [state, setState] = useState(initialData?.state ?? 'Tamil Nadu');
+  const [country, setCountry] = useState(initialData?.country ?? 'India');
+  const [pincode, setPincode] = useState(initialData?.pincode ?? '643217');
+  const [showDistrictMenu, setShowDistrictMenu] = useState(false);
+  const [showStateMenu, setShowStateMenu] = useState(false);
+  const [showCountryMenu, setShowCountryMenu] = useState(false);
+
+  const districtOptions = [
+    'The Nilgiris', 'Coimbatore', 'Erode', 'Tiruppur', 'Salem',
+    'Madurai', 'Thanjavur', 'Tiruchirappalli', 'Chennai', 'Dharmapuri',
+  ];
+  const stateOptions = [
+    'Tamil Nadu', 'Kerala', 'Karnataka', 'Andhra Pradesh', 'Telangana',
+    'Maharashtra', 'Gujarat', 'Madhya Pradesh', 'Rajasthan', 'Uttar Pradesh',
+  ];
+  const countryOptions = ['India', 'Nepal', 'Bhutan', 'Sri Lanka', 'Bangladesh'];
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const genderOptions = ['Male', 'Female', 'Other'];
@@ -81,6 +99,10 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
       aadhaarNumber: aadhaarNumber.trim(),
       aadhaarLast4: cleanAadhaar.slice(-4),
       address: address.trim(),
+      district: district.trim(),
+      state: state.trim(),
+      country: country.trim(),
+      pincode: pincode.trim(),
     };
 
     const validation = validateStep(1, payload);
@@ -358,7 +380,7 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
         </View>
 
         {/* Address */}
-        <View style={styles.fieldGroup}>
+        <View style={[styles.fieldGroup, { marginBottom: 24 }]}>
           <Text style={[styles.label, { color: colors.textBody }]}>
             Address <Text style={{ color: colors.requiredRed }}>*</Text>
           </Text>
@@ -380,6 +402,200 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
             placeholder="Kotagiri Village, Kotagiri Taluk, The Nilgiris"
             placeholderTextColor={colors.textPlaceholder}
           />
+        </View>
+
+        {/* District / State row */}
+        <View style={styles.rowGrid}>
+          <View style={styles.gridCol}>
+            <Text style={[styles.label, { color: colors.textBody }]}>
+              District <Text style={{ color: colors.requiredRed }}>*</Text>
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.dropdownSelect,
+                {
+                  borderColor: colors.borderLight,
+                  backgroundColor: colors.white,
+                },
+              ]}
+              onPress={() => setShowDistrictMenu(!showDistrictMenu)}
+            >
+              <Text style={[styles.dropdownText, { color: colors.onSurface }]} numberOfLines={1}>
+                {district}
+              </Text>
+              <Text style={[styles.dropdownArrow, { color: colors.textSubtle }]}>▾</Text>
+            </TouchableOpacity>
+
+            {showDistrictMenu ? (
+              <View
+                style={[
+                  styles.dropdownMenu,
+                  {
+                    backgroundColor: colors.white,
+                    borderColor: colors.borderLight,
+                  },
+                ]}
+              >
+                <ScrollView style={{ maxHeight: 180 }} keyboardShouldPersistTaps="handled">
+                  {districtOptions.map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.dropdownOption, { borderBottomColor: colors.borderSoft }]}
+                      onPress={() => {
+                        setDistrict(opt);
+                        setShowDistrictMenu(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownOptionText,
+                          { color: colors.onSurface },
+                          opt === district && { fontWeight: '700', color: colors.brandGreen },
+                        ]}
+                      >
+                        {opt}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.gridCol}>
+            <Text style={[styles.label, { color: colors.textBody }]}>
+              State <Text style={{ color: colors.requiredRed }}>*</Text>
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.dropdownSelect,
+                {
+                  borderColor: colors.borderLight,
+                  backgroundColor: colors.white,
+                },
+              ]}
+              onPress={() => setShowStateMenu(!showStateMenu)}
+            >
+              <Text style={[styles.dropdownText, { color: colors.onSurface }]} numberOfLines={1}>
+                {state}
+              </Text>
+              <Text style={[styles.dropdownArrow, { color: colors.textSubtle }]}>▾</Text>
+            </TouchableOpacity>
+
+            {showStateMenu ? (
+              <View
+                style={[
+                  styles.dropdownMenu,
+                  {
+                    backgroundColor: colors.white,
+                    borderColor: colors.borderLight,
+                  },
+                ]}
+              >
+                <ScrollView style={{ maxHeight: 180 }} keyboardShouldPersistTaps="handled">
+                  {stateOptions.map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.dropdownOption, { borderBottomColor: colors.borderSoft }]}
+                      onPress={() => {
+                        setState(opt);
+                        setShowStateMenu(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownOptionText,
+                          { color: colors.onSurface },
+                          opt === state && { fontWeight: '700', color: colors.brandGreen },
+                        ]}
+                      >
+                        {opt}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Country / Pincode row */}
+        <View style={styles.rowGrid}>
+          <View style={styles.gridCol}>
+            <Text style={[styles.label, { color: colors.textBody }]}>
+              Country <Text style={{ color: colors.requiredRed }}>*</Text>
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.dropdownSelect,
+                {
+                  borderColor: colors.borderLight,
+                  backgroundColor: colors.white,
+                },
+              ]}
+              onPress={() => setShowCountryMenu(!showCountryMenu)}
+            >
+              <Text style={[styles.dropdownText, { color: colors.onSurface }]} numberOfLines={1}>
+                {country}
+              </Text>
+              <Text style={[styles.dropdownArrow, { color: colors.textSubtle }]}>▾</Text>
+            </TouchableOpacity>
+
+            {showCountryMenu ? (
+              <View
+                style={[
+                  styles.dropdownMenu,
+                  {
+                    backgroundColor: colors.white,
+                    borderColor: colors.borderLight,
+                  },
+                ]}
+              >
+                {countryOptions.map((opt) => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.dropdownOption, { borderBottomColor: colors.borderSoft }]}
+                    onPress={() => {
+                      setCountry(opt);
+                      setShowCountryMenu(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        { color: colors.onSurface },
+                        opt === country && { fontWeight: '700', color: colors.brandGreen },
+                      ]}
+                    >
+                      {opt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.gridCol}>
+            <Text style={[styles.label, { color: colors.textBody }]}>
+              Pincode <Text style={{ color: colors.requiredRed }}>*</Text>
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  borderColor: colors.borderLight,
+                  color: colors.textDark,
+                  backgroundColor: colors.white,
+                },
+              ]}
+              value={pincode}
+              onChangeText={(text) => setPincode(text.replace(/[^0-9]/g, '').slice(0, 6))}
+              keyboardType="number-pad"
+              placeholder="643217"
+              placeholderTextColor={colors.textPlaceholder}
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -417,7 +633,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 12,
-    paddingBottom: 24,
+    paddingBottom: 36,
   },
   errorContainer: {
     marginBottom: 14,
@@ -441,7 +657,7 @@ const styles = StyleSheet.create({
   rowGrid: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   gridCol: {
     flex: 1,
