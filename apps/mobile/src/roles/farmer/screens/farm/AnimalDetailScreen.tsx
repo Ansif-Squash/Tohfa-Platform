@@ -42,12 +42,17 @@ function PencilEditIcon({ size = 18, color = colors.brandGreen }: { size?: numbe
   );
 }
 
-function MoreVerticalIcon({ size = 18, color = P.twGray600 }: { size?: number; color?: string }) {
+function HeaderTagIcon({ size = 18, color = P.twGray600 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="5" r="1.5" fill={color} />
-      <Circle cx="12" cy="12" r="1.5" fill={color} />
-      <Circle cx="12" cy="19" r="1.5" fill={color} />
+      <Path
+        d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx="7" cy="7" r="1.5" fill={color} />
     </Svg>
   );
 }
@@ -347,6 +352,7 @@ export interface AnimalDetailProps {
   statusBadge?: string;
   onBack?: () => void;
   onNavigateToEdit?: (animalData: any) => void;
+  onNavigateToSale?: () => void;
   onNavigateToRegisterOffspring?: () => void;
 }
 
@@ -363,6 +369,7 @@ export function AnimalDetailScreen({
   statusBadge = 'Fully Organic',
   onBack,
   onNavigateToEdit,
+  onNavigateToSale,
   onNavigateToRegisterOffspring,
 }: AnimalDetailProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabKey>('Health');
@@ -388,12 +395,14 @@ export function AnimalDetailScreen({
   };
 
   const handleMoreOptions = () => {
-    Alert.alert('Animal Options', `Options for ${animalName} (${animalCode})`, [
-      { text: 'Edit Profile', onPress: handleEdit },
-      { text: 'Add Health Record', onPress: () => {} },
-      { text: 'Mark as Sold/Transferred', style: 'destructive', onPress: () => {} },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    if (onNavigateToSale) {
+      onNavigateToSale();
+    } else {
+      Alert.alert('Animal Options', `Options for ${animalName} (${animalCode})`, [
+        { text: 'Edit Profile', onPress: handleEdit },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
   };
 
   const handleRegisterOffspring = () => {
@@ -460,12 +469,12 @@ export function AnimalDetailScreen({
 
             <TouchableOpacity
               style={styles.circleHeaderBtn}
-              onPress={handleMoreOptions}
+              onPress={onNavigateToSale || handleMoreOptions}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel="More options"
+              accessibilityLabel="Sale / Transfer / Cull"
             >
-              <MoreVerticalIcon size={18} color={P.twGray600} />
+              <HeaderTagIcon size={18} color={P.twGray600} />
             </TouchableOpacity>
           </View>
         </View>

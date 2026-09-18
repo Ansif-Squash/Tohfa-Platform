@@ -34,7 +34,8 @@ interface ProfileScreenProps {
   onNavigateToAudits?: () => void;
   onNavigateToFarmRatings?: () => void;
   onNavigateToSoilTest?: () => void;
-  onNavigateToSettings?: () => void;
+  onNavigateToSettings?: (() => void) | undefined;
+  onNavigateToAboutSupport?: (() => void) | undefined;
 }
 
 interface PersonalDetailsData {
@@ -66,6 +67,7 @@ export function ProfileScreen({
   onNavigateToFarmRatings,
   onNavigateToSoilTest,
   onNavigateToSettings,
+  onNavigateToAboutSupport,
 }: ProfileScreenProps): React.JSX.Element {
   // --- Profile State ---
   const [personalDetails, setPersonalDetails] = useState<PersonalDetailsData>({
@@ -846,11 +848,15 @@ export function ProfileScreen({
           <TouchableOpacity
             style={styles.menuItemRow}
             onPress={() => {
-              Alert.alert(
-                'TOHFA Help & Support',
-                'Toll-Free Support: 1800-425-8643\nWhatsApp: +91 94432 12345\nEmail: support@tohfa.in',
-                [{ text: 'OK' }]
-              );
+              if (onNavigateToAboutSupport) {
+                onNavigateToAboutSupport();
+              } else {
+                Alert.alert(
+                  'TOHFA Help & Support',
+                  'Toll-Free Support: 1800-425-8643\nWhatsApp: +91 94432 12345\nEmail: support@tohfa.in',
+                  [{ text: 'OK' }]
+                );
+              }
             }}
             activeOpacity={0.7}
           >

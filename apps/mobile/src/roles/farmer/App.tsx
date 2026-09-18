@@ -25,7 +25,9 @@ import { FarmManagementScreen } from './screens/farm/FarmManagementScreen';
 import { CropManagementScreen } from './screens/farm/CropManagementScreen';
 import { LivestockScreen } from './screens/farm/LivestockScreen';
 import { RegisterAnimalScreen } from './screens/farm/RegisterAnimalScreen';
+import { EditAnimalScreen } from './screens/farm/EditAnimalScreen';
 import { AnimalDetailScreen } from './screens/farm/AnimalDetailScreen';
+import { SaleTransferCullScreen } from './screens/farm/SaleTransferCullScreen';
 import { WorkforceScreen } from './screens/farm/WorkforceScreen';
 import { AddWorkerScreen } from './screens/farm/AddWorkerScreen';
 import { WorkerDetailScreen } from './screens/farm/WorkerDetailScreen';
@@ -60,8 +62,19 @@ import { FarmDiaryScreen } from './screens/farm/FarmDiaryScreen';
 import { DiaryCalendarScreen } from './screens/farm/DiaryCalendarScreen';
 import { DailyAttendanceScreen } from './screens/farm/DailyAttendanceScreen';
 import { FarmInventoryScreen } from './screens/farm/FarmInventoryScreen';
-import { ToolsListScreen } from './screens/farm/ToolsListScreen';
+import { ToolsListScreen, type ToolItem } from './screens/farm/ToolsListScreen';
 import { AddToolScreen } from './screens/farm/AddToolScreen';
+import { EditToolScreen } from './screens/farm/EditToolScreen';
+import { EquipmentListScreen, type EquipmentItem } from './screens/farm/EquipmentListScreen';
+import { AddEquipmentScreen } from './screens/farm/AddEquipmentScreen';
+import { EditEquipmentScreen } from './screens/farm/EditEquipmentScreen';
+import { TreesListScreen, type TreePlantingItem } from './screens/farm/TreesListScreen';
+import { AddPlantingScreen } from './screens/farm/AddPlantingScreen';
+import { EditPlantingScreen } from './screens/farm/EditPlantingScreen';
+import { MachineryListScreen, type MachineryItem } from './screens/farm/MachineryListScreen';
+import { AddMachineryScreen } from './screens/farm/AddMachineryScreen';
+import { EditMachineryScreen } from './screens/farm/EditMachineryScreen';
+import { RemoveItemScreen, type RemoveItemData } from './screens/farm/RemoveItemScreen';
 import { LearningHubScreen } from './screens/learning/LearningHubScreen';
 import { ContentDetailScreen, type ContentDetailItem } from './screens/learning/ContentDetailScreen';
 import { GroupsScreen, type GroupItem } from './screens/learning/GroupsScreen';
@@ -80,6 +93,9 @@ import { AuditsScreen } from './screens/audits/AuditsScreen';
 import { AuditResultScreen } from './screens/audits/AuditResultScreen';
 import { ProfileScreen } from './screens/profile/ProfileScreen';
 import { SettingsScreen } from './screens/profile/SettingsScreen';
+import { ChangePasswordScreen } from './screens/profile/ChangePasswordScreen';
+import { ChangeMobileScreen } from './screens/profile/ChangeMobileScreen';
+import { AboutSupportScreen } from './screens/profile/AboutSupportScreen';
 import { FMBSketchScreen } from './screens/profile/FMBSketchScreen';
 import { FieldContextScreen } from './screens/profile/FieldContextScreen';
 import { ZonesScreen } from './screens/profile/ZonesScreen';
@@ -152,16 +168,32 @@ export type ScreenName =
   | 'FarmInventory'
   | 'ToolsList'
   | 'AddTool'
+  | 'EditTool'
+  | 'EquipmentList'
+  | 'AddEquipment'
+  | 'EditEquipment'
+  | 'TreesList'
+  | 'AddPlanting'
+  | 'EditPlanting'
+  | 'MachineryList'
+  | 'AddMachinery'
+  | 'EditMachinery'
+  | 'RemoveItem'
   | 'AddWorker'
   | 'WorkerDetail'
   | 'Payroll'
   | 'RegisterAnimal'
+  | 'EditAnimal'
   | 'AnimalDetail'
+  | 'SaleTransferCull'
   | 'LearningHub'
   | 'ContentDetail'
   | 'Groups'
   | 'GroupDetail'
   | 'Settings'
+  | 'ChangePassword'
+  | 'ChangeMobile'
+  | 'AboutSupport'
   | 'InputManagement'
   | 'LogFertigation'
   | 'LogPestTreatment'
@@ -217,6 +249,11 @@ export default function App(): React.JSX.Element {
   const [selectedContentDetail, setSelectedContentDetail] = useState<ContentDetailItem | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null);
   const [selectedCrop, setSelectedCrop] = useState<CropItem | null>(null);
+  const [selectedToolForEdit, setSelectedToolForEdit] = useState<ToolItem | null>(null);
+  const [selectedEquipmentForEdit, setSelectedEquipmentForEdit] = useState<EquipmentItem | null>(null);
+  const [selectedTreeForEdit, setSelectedTreeForEdit] = useState<TreePlantingItem | null>(null);
+  const [selectedMachineryForEdit, setSelectedMachineryForEdit] = useState<MachineryItem | null>(null);
+  const [selectedItemForRemove, setSelectedItemForRemove] = useState<RemoveItemData | null>(null);
   const [params, setParams] = useState<Record<string, string | number | undefined>>({});
   const [locale, setLocaleState] = useState<Locale>('en');
 
@@ -653,7 +690,29 @@ export default function App(): React.JSX.Element {
             age={typeof params['age'] === 'string' ? params['age'] : '4 yr'}
             statusBadge={typeof params['statusBadge'] === 'string' ? params['statusBadge'] : 'Fully Organic'}
             onBack={goBack}
-            onNavigateToEdit={(animalData) => navigate('RegisterAnimal', animalData || {})}
+            onNavigateToEdit={(animalData) => navigate('EditAnimal', animalData || {})}
+            onNavigateToSale={() =>
+              navigate('SaleTransferCull', {
+                animalId: params['animalId'] || 'a1',
+                animalName: params['animalName'] || 'Lakshmi',
+                animalCode: params['animalCode'] || 'C-014',
+              })
+            }
+          />
+        ) : screen === 'EditAnimal' ? (
+          <EditAnimalScreen
+            initialAnimal={params as any}
+            onBack={goBack}
+            onCancel={goBack}
+            onSave={() => goBack()}
+          />
+        ) : screen === 'SaleTransferCull' ? (
+          <SaleTransferCullScreen
+            animalId={typeof params['animalId'] === 'string' ? params['animalId'] : 'a1'}
+            animalName={typeof params['animalName'] === 'string' ? params['animalName'] : 'Lakshmi'}
+            animalCode={typeof params['animalCode'] === 'string' ? params['animalCode'] : 'C-014'}
+            onBack={goBack}
+            onSuccess={() => navigate('Livestock')}
           />
         ) : screen === 'RegisterAnimal' ? (
           <RegisterAnimalScreen
@@ -836,15 +895,180 @@ export default function App(): React.JSX.Element {
             onNavigateBack={goBack}
             onNavigateToCategory={(category) => {
               if (category === 'Tools') navigate('ToolsList');
+              else if (category === 'Equipment') navigate('EquipmentList');
+              else if (category === 'Trees') navigate('TreesList');
+              else if (category === 'Machinery') navigate('MachineryList');
             }}
           />
         ) : screen === 'ToolsList' ? (
           <ToolsListScreen
             onNavigateBack={goBack}
             onNavigateToAddTool={() => navigate('AddTool')}
+            onNavigateToEditTool={(tool) => {
+              setSelectedToolForEdit(tool);
+              navigate('EditTool');
+            }}
           />
         ) : screen === 'AddTool' ? (
           <AddToolScreen onNavigateBack={goBack} />
+        ) : screen === 'EditTool' ? (
+          <EditToolScreen
+            tool={
+              selectedToolForEdit
+                ? {
+                    id: selectedToolForEdit.id,
+                    name: selectedToolForEdit.name,
+                    purchaseDate: selectedToolForEdit.purchaseDate?.replace('Purchased ', ''),
+                    serviceInterval: selectedToolForEdit.serviceInterval ?? '90',
+                  }
+                : undefined
+            }
+            onNavigateBack={goBack}
+            onSave={() => goBack()}
+            onRemove={() => {
+              setSelectedItemForRemove({
+                id: selectedToolForEdit?.id,
+                name: selectedToolForEdit?.name || 'Knapsack Sprayer',
+                category: 'Tools',
+                dateInfo: `Tools · ${selectedToolForEdit?.purchaseDate || 'Purchased 04 Jan 2025'}`,
+                serviceEntriesCount: 3,
+                recordedCost: 450,
+              });
+              navigate('RemoveItem');
+            }}
+          />
+        ) : screen === 'EquipmentList' ? (
+          <EquipmentListScreen
+            onBack={goBack}
+            onNavigateToAddEquipment={() => navigate('AddEquipment')}
+            onNavigateToEditEquipment={(item) => {
+              setSelectedEquipmentForEdit(item);
+              navigate('EditEquipment');
+            }}
+          />
+        ) : screen === 'AddEquipment' ? (
+          <AddEquipmentScreen onNavigateBack={goBack} onSave={goBack} />
+        ) : screen === 'EditEquipment' ? (
+          <EditEquipmentScreen
+            equipment={
+              selectedEquipmentForEdit
+                ? {
+                    id: selectedEquipmentForEdit.id,
+                    name: selectedEquipmentForEdit.name,
+                    purchaseDate: selectedEquipmentForEdit.purchaseDate?.replace('Purchased ', ''),
+                    coverageArea: selectedEquipmentForEdit.coverageArea ?? '2.5',
+                    serviceInterval: selectedEquipmentForEdit.serviceInterval ?? '120',
+                  }
+                : undefined
+            }
+            onNavigateBack={goBack}
+            onSave={() => goBack()}
+            onRemove={() => {
+              setSelectedItemForRemove({
+                id: selectedEquipmentForEdit?.id,
+                name: selectedEquipmentForEdit?.name || 'Drip Irrigation Kit',
+                category: 'Equipment',
+                dateInfo: `Equipment · ${selectedEquipmentForEdit?.purchaseDate || 'Purchased 22 Feb 2024'}`,
+                serviceEntriesCount: 3,
+                recordedCost: 450,
+              });
+              navigate('RemoveItem');
+            }}
+          />
+        ) : screen === 'TreesList' ? (
+          <TreesListScreen
+            onBack={goBack}
+            onNavigateToAddPlanting={() => navigate('AddPlanting')}
+            onNavigateToEditPlanting={(item) => {
+              setSelectedTreeForEdit(item);
+              navigate('EditPlanting');
+            }}
+          />
+        ) : screen === 'AddPlanting' ? (
+          <AddPlantingScreen onNavigateBack={goBack} onSave={goBack} />
+        ) : screen === 'EditPlanting' ? (
+          <EditPlantingScreen
+            planting={
+              selectedTreeForEdit
+                ? {
+                    id: selectedTreeForEdit.id,
+                    species: selectedTreeForEdit.species ?? selectedTreeForEdit.name.split(' (')[0],
+                    treeCount: selectedTreeForEdit.treeCount ?? 12,
+                    plantedDate: selectedTreeForEdit.plantedDate?.replace('Planted ', ''),
+                    locationZone: selectedTreeForEdit.zoneInfo,
+                    purpose: selectedTreeForEdit.purposeText ?? 'Shade & windbreak',
+                  }
+                : undefined
+            }
+            onNavigateBack={goBack}
+            onSave={() => goBack()}
+            onRemove={() => {
+              setSelectedItemForRemove({
+                id: selectedTreeForEdit?.id,
+                name: selectedTreeForEdit?.name || 'Silver Oak (12 trees)',
+                category: 'Trees',
+                dateInfo: `Trees · ${selectedTreeForEdit?.plantedDate || 'Planted 14 Jun 2019'}`,
+                serviceEntriesCount: 3,
+                recordedCost: 450,
+              });
+              navigate('RemoveItem');
+            }}
+          />
+        ) : screen === 'MachineryList' ? (
+          <MachineryListScreen
+            onBack={goBack}
+            onNavigateToAddMachinery={() => navigate('AddMachinery')}
+            onNavigateToEditMachinery={(item) => {
+              setSelectedMachineryForEdit(item);
+              navigate('EditMachinery');
+            }}
+          />
+        ) : screen === 'AddMachinery' ? (
+          <AddMachineryScreen onNavigateBack={goBack} onSave={goBack} />
+        ) : screen === 'EditMachinery' ? (
+          <EditMachineryScreen
+            machinery={
+              selectedMachineryForEdit
+                ? {
+                    id: selectedMachineryForEdit.id,
+                    name: selectedMachineryForEdit.name,
+                    makeModel: selectedMachineryForEdit.makeModel,
+                    purchaseDate: selectedMachineryForEdit.purchaseDate?.replace('Purchased ', ''),
+                    fuelType: selectedMachineryForEdit.fuelType,
+                    serviceInterval: selectedMachineryForEdit.serviceInterval ?? '60',
+                  }
+                : undefined
+            }
+            onNavigateBack={goBack}
+            onSave={() => goBack()}
+            onRemove={() => {
+              setSelectedItemForRemove({
+                id: selectedMachineryForEdit?.id,
+                name: selectedMachineryForEdit?.name || 'Power Tiller',
+                category: 'Machinery',
+                dateInfo: `Machinery · ${selectedMachineryForEdit?.purchaseDate || 'Purchased 08 Feb 2023'}`,
+                serviceEntriesCount: 3,
+                recordedCost: 450,
+              });
+              navigate('RemoveItem');
+            }}
+          />
+        ) : screen === 'RemoveItem' ? (
+          <RemoveItemScreen
+            item={selectedItemForRemove ?? undefined}
+            onNavigateBack={goBack}
+            onConfirmRemove={() => {
+              if (selectedItemForRemove?.category === 'Tools') {
+                navigate('ToolsList');
+              } else if (selectedItemForRemove?.category === 'Equipment') {
+                navigate('EquipmentList');
+              } else if (selectedItemForRemove?.category === 'Trees') {
+                navigate('TreesList');
+              } else {
+                navigate('MachineryList');
+              }
+            }}
+          />
         ) : screen === 'DailyAttendance' ? (
           <DailyAttendanceScreen onNavigateBack={goBack} />
         ) : screen === 'LearningHub' ? (
@@ -878,10 +1102,22 @@ export default function App(): React.JSX.Element {
             group={selectedGroup ?? undefined}
             onBack={goBack}
           />
+        ) : screen === 'AboutSupport' ? (
+          <AboutSupportScreen onBack={goBack} />
+        ) : screen === 'ChangeMobile' ? (
+          <ChangeMobileScreen
+            onBack={goBack}
+            onNavigateToPassword={() => navigate('ChangePassword')}
+          />
+        ) : screen === 'ChangePassword' ? (
+          <ChangePasswordScreen onBack={goBack} />
         ) : screen === 'Settings' ? (
           <SettingsScreen
             onBack={goBack}
             onNavigateToProfile={() => navigate('PersonalDetails')}
+            onNavigateToChangePassword={() => navigate('ChangePassword')}
+            onNavigateToChangeMobile={() => navigate('ChangeMobile')}
+            onNavigateToAboutSupport={() => navigate('AboutSupport')}
           />
         ) : (
           /* MainTabs layout */
@@ -985,6 +1221,7 @@ export default function App(): React.JSX.Element {
                   onNavigateToFarmRatings={() => navigate('FarmRatings')}
                   onNavigateToSoilTest={() => navigate('SoilTest')}
                   onNavigateToSettings={() => navigate('Settings')}
+                  onNavigateToAboutSupport={() => navigate('AboutSupport')}
                 />
               )}
             </View>

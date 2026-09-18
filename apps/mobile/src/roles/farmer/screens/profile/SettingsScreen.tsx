@@ -157,14 +157,165 @@ function CloseIcon({ size = 20, color = '#374151' }: { size?: number; color?: st
   );
 }
 
+function InfoCircleIcon({ size = 19, color = '#4E8744' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.8" />
+      <Path d="M12 16v-4M12 8h.01" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function CloudRainIcon({ size = 22, color = '#2563EB' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M17.5 16H9a5 5 0 1 1 4.5-7.2A3.5 3.5 0 0 1 19 12.5c0 1.93-1.57 3.5-3.5 3.5"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9.5 18.5l-1 3M13.5 18.5l-1 3M17.5 18.5l-1 3"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function LeafOutlineIcon({ size = 22, color = '#2E7D32' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M19.5 4.5c-4.5-.5-11 2-13.5 8s.5 9 3.5 9c6 0 11.5-6.5 12-13.5-0.5-2-1-3-2-3.5Z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9.5 14.5l5-5"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function PriceTagIcon({ size = 22, color = '#7C3AED' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M19.5 12.5l-6.5 6.5a2 2 0 0 1-2.83 0L3.5 12.33V3.5h8.83l7.17 7.17a2 2 0 0 1 0 2.83Z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx="8" cy="8" r="1.5" fill={color} />
+    </Svg>
+  );
+}
+
+function UsersGroupIcon({ size = 22, color = '#8D5B3A' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M16 19v-1.5a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3V19"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <Circle cx="11" cy="9" r="3" stroke={color} strokeWidth="1.8" />
+      <Path
+        d="M18 19v-1a2.5 2.5 0 0 0-2-2.45M15.5 6.5a2.5 2.5 0 0 1 0 5"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <Path
+        d="M4 19v-1a2.5 2.5 0 0 1 2-2.45M6.5 6.5a2.5 2.5 0 0 0 0 5"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function CommunityChatIcon({ size = 22, color = '#78716C' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M17 14h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v2"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M15 8H5a2 2 0 0 0-2 2v8l3.5-3.5H15a2 2 0 0 0 2-2v-2.5a2 2 0 0 0-2-2Z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CustomToggleSwitch({
+  value,
+  onValueChange,
+  accessibilityLabel,
+}: {
+  value: boolean;
+  onValueChange: (val: boolean) => void;
+  accessibilityLabel?: string;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() => onValueChange(!value)}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      accessibilityLabel={accessibilityLabel}
+      style={[
+        styles.customToggleTrack,
+        value ? styles.customToggleTrackOn : styles.customToggleTrackOff,
+      ]}
+    >
+      <View
+        style={[
+          styles.customToggleThumb,
+          value ? styles.customToggleThumbOn : styles.customToggleThumbOff,
+        ]}
+      />
+    </TouchableOpacity>
+  );
+}
+
 // ── Types & Props ────────────────────────────────────────────────────────────
 
 interface SettingsScreenProps {
   onBack: () => void;
   onNavigateToProfile?: (() => void) | undefined;
+  onNavigateToChangePassword?: (() => void) | undefined;
+  onNavigateToChangeMobile?: (() => void) | undefined;
+  onNavigateToAboutSupport?: (() => void) | undefined;
 }
 
-export function SettingsScreen({ onBack, onNavigateToProfile }: SettingsScreenProps): React.JSX.Element {
+export function SettingsScreen({
+  onBack,
+  onNavigateToProfile,
+  onNavigateToChangePassword,
+  onNavigateToChangeMobile,
+  onNavigateToAboutSupport,
+}: SettingsScreenProps): React.JSX.Element {
   const [selectedLocale, setSelectedLocale] = useState<Locale>('en');
 
   // Interactive modal states
@@ -177,7 +328,7 @@ export function SettingsScreen({ onBack, onNavigateToProfile }: SettingsScreenPr
   const [notifFarm, setNotifFarm] = useState(true);
   const [notifMarket, setNotifMarket] = useState(true);
   const [notifPayroll, setNotifPayroll] = useState(true);
-  const [notifPromo, setNotifPromo] = useState(false);
+  const [notifCommunity, setNotifCommunity] = useState(false);
 
   // Password State
   const [currentPass, setCurrentPass] = useState('');
@@ -194,7 +345,7 @@ export function SettingsScreen({ onBack, onNavigateToProfile }: SettingsScreenPr
     notifFarm,
     notifMarket,
     notifPayroll,
-    notifPromo,
+    notifCommunity,
   ].filter(Boolean).length;
 
   const handleSwitchLanguage = (lang: Locale) => {
@@ -420,7 +571,13 @@ export function SettingsScreen({ onBack, onNavigateToProfile }: SettingsScreenPr
         <TouchableOpacity
           style={styles.settingCard}
           activeOpacity={0.85}
-          onPress={() => setActiveModal('password')}
+          onPress={() => {
+            if (onNavigateToChangePassword) {
+              onNavigateToChangePassword();
+            } else {
+              setActiveModal('password');
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel="Change password"
         >
@@ -439,7 +596,13 @@ export function SettingsScreen({ onBack, onNavigateToProfile }: SettingsScreenPr
         <TouchableOpacity
           style={styles.settingCard}
           activeOpacity={0.85}
-          onPress={() => setActiveModal('mobile')}
+          onPress={() => {
+            if (onNavigateToChangeMobile) {
+              onNavigateToChangeMobile();
+            } else {
+              setActiveModal('mobile');
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel="Change mobile number"
         >
@@ -462,7 +625,13 @@ export function SettingsScreen({ onBack, onNavigateToProfile }: SettingsScreenPr
         <TouchableOpacity
           style={styles.settingCard}
           activeOpacity={0.85}
-          onPress={() => setActiveModal('support')}
+          onPress={() => {
+            if (onNavigateToAboutSupport) {
+              onNavigateToAboutSupport();
+            } else {
+              setActiveModal('support');
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel="About and support"
         >
@@ -483,78 +652,129 @@ export function SettingsScreen({ onBack, onNavigateToProfile }: SettingsScreenPr
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* ── NOTIFICATIONS MODAL ── */}
-      <Modal visible={activeModal === 'notifications'} transparent animationType="slide">
+      {/* ── NOTIFICATIONS BOTTOM SHEET ── */}
+      <Modal
+        visible={activeModal === 'notifications'}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setActiveModal(null)}
+      >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Notification Channels</Text>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={() => setActiveModal(null)}
+          />
+          <View style={styles.notifModalCard}>
+            {/* Sheet Handle */}
+            <View style={styles.sheetDragHandle} />
+
+            {/* Header */}
+            <View style={styles.notifHeaderRow}>
+              <Text style={styles.notifSheetTitle}>Notifications</Text>
               <TouchableOpacity
                 style={styles.modalCloseCircle}
                 onPress={() => setActiveModal(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Close notifications"
+                activeOpacity={0.7}
               >
-                <CloseIcon size={18} color="#374151" />
+                <CloseIcon size={16} color="#6B7280" />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.switchRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.switchLabel}>Weather & Frost Alerts</Text>
-                <Text style={styles.switchSub}>Rain, temperature dips, spraying windows</Text>
+            {/* Disclaimer Info Banner */}
+            <View style={styles.notifAlertCard}>
+              <InfoCircleIcon size={18} color="#2E7D32" />
+              <Text style={styles.notifAlertText}>
+                Turning a category off only stops push alerts for it — reminders, badges and due-dates elsewhere stay untouched.
+              </Text>
+            </View>
+
+            {/* Category Count Heading */}
+            <Text style={styles.notifCountHeader}>
+              {activeNotifCount} of 5 categories on
+            </Text>
+
+            {/* 1. Weather alerts */}
+            <View style={styles.notifRow}>
+              <View style={[styles.notifIconBox, { backgroundColor: '#E8F2FD' }]}>
+                <CloudRainIcon size={22} color="#2563EB" />
               </View>
-              <Switch
+              <View style={styles.notifTextCol}>
+                <Text style={styles.notifTitle}>Weather alerts</Text>
+                <Text style={styles.notifSub}>Frost, heavy rain, heat wave warnings</Text>
+              </View>
+              <CustomToggleSwitch
                 value={notifWeather}
                 onValueChange={setNotifWeather}
-                trackColor={{ false: '#E5E7EB', true: '#C8E6C9' }}
-                thumbColor={notifWeather ? '#1E5E2B' : '#9CA3AF'}
+                accessibilityLabel="Weather alerts toggle"
               />
             </View>
 
-            <View style={styles.switchRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.switchLabel}>Farm Diary & Input Reminders</Text>
-                <Text style={styles.switchSub}>Daily logging due, fertigation checks</Text>
+            {/* 2. Farm reminders */}
+            <View style={styles.notifRow}>
+              <View style={[styles.notifIconBox, { backgroundColor: '#EAF5E7' }]}>
+                <LeafOutlineIcon size={22} color="#2E7D32" />
               </View>
-              <Switch
+              <View style={styles.notifTextCol}>
+                <Text style={styles.notifTitle}>Farm reminders</Text>
+                <Text style={styles.notifSub}>Fertigation, pest checks, vaccinations due</Text>
+              </View>
+              <CustomToggleSwitch
                 value={notifFarm}
                 onValueChange={setNotifFarm}
-                trackColor={{ false: '#E5E7EB', true: '#C8E6C9' }}
-                thumbColor={notifFarm ? '#1E5E2B' : '#9CA3AF'}
+                accessibilityLabel="Farm reminders toggle"
               />
             </View>
 
-            <View style={styles.switchRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.switchLabel}>Market Counter-Offers</Text>
-                <Text style={styles.switchSub}>Admin counter-offers and batch inspections</Text>
+            {/* 3. Marketing updates */}
+            <View style={styles.notifRow}>
+              <View style={[styles.notifIconBox, { backgroundColor: '#F3EEFC' }]}>
+                <PriceTagIcon size={22} color="#7C3AED" />
               </View>
-              <Switch
+              <View style={styles.notifTextCol}>
+                <Text style={styles.notifTitle}>Marketing updates</Text>
+                <Text style={styles.notifSub}>Counter-offers, listing status changes</Text>
+              </View>
+              <CustomToggleSwitch
                 value={notifMarket}
                 onValueChange={setNotifMarket}
-                trackColor={{ false: '#E5E7EB', true: '#C8E6C9' }}
-                thumbColor={notifMarket ? '#1E5E2B' : '#9CA3AF'}
+                accessibilityLabel="Marketing updates toggle"
               />
             </View>
 
-            <View style={styles.switchRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.switchLabel}>Worker Attendance & Payroll</Text>
-                <Text style={styles.switchSub}>Daily check-in and weekly payout summaries</Text>
+            {/* 4. Payroll & workforce */}
+            <View style={styles.notifRow}>
+              <View style={[styles.notifIconBox, { backgroundColor: '#F6EFE5' }]}>
+                <UsersGroupIcon size={22} color="#8D5B3A" />
               </View>
-              <Switch
+              <View style={styles.notifTextCol}>
+                <Text style={styles.notifTitle}>Payroll & workforce</Text>
+                <Text style={styles.notifSub}>Attendance reminders, pay-out confirmations</Text>
+              </View>
+              <CustomToggleSwitch
                 value={notifPayroll}
                 onValueChange={setNotifPayroll}
-                trackColor={{ false: '#E5E7EB', true: '#C8E6C9' }}
-                thumbColor={notifPayroll ? '#1E5E2B' : '#9CA3AF'}
+                accessibilityLabel="Payroll & workforce toggle"
               />
             </View>
 
-            <TouchableOpacity
-              style={styles.modalPrimaryBtn}
-              onPress={() => setActiveModal(null)}
-            >
-              <Text style={styles.modalPrimaryBtnText}>Save Preferences</Text>
-            </TouchableOpacity>
+            {/* 5. Community */}
+            <View style={styles.notifRow}>
+              <View style={[styles.notifIconBox, { backgroundColor: '#F3EFE9' }]}>
+                <CommunityChatIcon size={22} color="#78716C" />
+              </View>
+              <View style={styles.notifTextCol}>
+                <Text style={styles.notifTitle}>Community</Text>
+                <Text style={styles.notifSub}>Learning Hub group posts and new content</Text>
+              </View>
+              <CustomToggleSwitch
+                value={notifCommunity}
+                onValueChange={setNotifCommunity}
+                accessibilityLabel="Community toggle"
+              />
+            </View>
           </View>
         </View>
       </Modal>
@@ -985,6 +1205,115 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  notifModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
+  sheetDragHandle: {
+    width: 44,
+    height: 4.5,
+    borderRadius: 2.5,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  notifHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  notifSheetTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#132514',
+  },
+  notifAlertCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EDF6E8',
+    borderColor: '#D5E9CC',
+    borderWidth: 1,
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+    marginBottom: 16,
+  },
+  notifAlertText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16.5,
+    color: '#3B6334',
+    fontWeight: '500',
+  },
+  notifCountHeader: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#205B28',
+    marginBottom: 12,
+  },
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  notifIconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  notifTextCol: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  notifTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#162616',
+  },
+  notifSub: {
+    fontSize: 12,
+    color: '#7D8C80',
+    marginTop: 2,
+  },
+  customToggleTrack: {
+    width: 52,
+    height: 30,
+    borderRadius: 15,
+    padding: 3,
+    justifyContent: 'center',
+  },
+  customToggleTrackOn: {
+    backgroundColor: '#2E7D32',
+  },
+  customToggleTrackOff: {
+    backgroundColor: '#D1D5DB',
+  },
+  customToggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 2,
+  },
+  customToggleThumbOn: {
+    alignSelf: 'flex-end',
+  },
+  customToggleThumbOff: {
+    alignSelf: 'flex-start',
   },
   switchRow: {
     flexDirection: 'row',
