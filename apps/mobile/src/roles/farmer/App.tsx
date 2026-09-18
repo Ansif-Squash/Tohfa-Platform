@@ -16,6 +16,8 @@ import { WelcomeScreen } from './screens/auth/WelcomeScreen';
 import { AddCertificationScreen } from './screens/certifications/AddCertificationScreen';
 import { CertificationsScreen } from './screens/certifications/CertificationsScreen';
 import { EditCertificationScreen } from './screens/certifications/EditCertificationScreen';
+import { ViewCertificationScreen } from './screens/certifications/ViewCertificationScreen';
+import { RenewCertificationScreen } from './screens/certifications/RenewCertificationScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { WeatherScreen } from './screens/dashboard/WeatherScreen';
 import { ActiveCropsScreen } from './screens/dashboard/ActiveCropsScreen';
@@ -88,6 +90,7 @@ import { CreateListingStep2Screen } from './screens/listings/CreateListingStep2S
 import { ListingDetailScreen } from './screens/listings/ListingDetailScreen';
 import { ListingsScreen } from './screens/listings/ListingsScreen';
 import { MyListingsScreen } from './screens/listings/MyListingsScreen';
+import { RecentListingsScreen } from './screens/listings/RecentListingsScreen';
 import { NotificationsScreen } from './screens/notifications/NotificationsScreen';
 import { AuditsScreen } from './screens/audits/AuditsScreen';
 import { AuditResultScreen } from './screens/audits/AuditResultScreen';
@@ -140,6 +143,8 @@ export type ScreenName =
   | 'Zones'
   | 'AddZone'
   | 'EditCertification'
+  | 'ViewCertification'
+  | 'RenewCertification'
   | 'Notifications'
   | 'PersonalDetails'
   | 'Audits'
@@ -162,6 +167,7 @@ export type ScreenName =
   | 'NewFarmDiaryEntryStep3'
   | 'ActiveCrops'
   | 'MyListings'
+  | 'RecentListings'
   | 'DailyAttendance'
   | 'TohfaCalendar'
   | 'CropPlanningInsight'
@@ -419,17 +425,54 @@ export default function App(): React.JSX.Element {
           </View>
         ) : screen === 'Certifications' ? (
           <CertificationsScreen
-            onBack={goBack}
+            onBack={() => {
+              if (history.length > 0) {
+                goBack();
+              } else {
+                setCurrentTab('Profile');
+                navigate('MainTabs');
+              }
+            }}
             onNavigateToAddCertification={() => navigate('AddCertification')}
             onNavigateToEditCertification={(certification) => {
               setSelectedCertification(certification);
               navigate('EditCertification');
+            }}
+            onNavigateToViewCertification={(certification) => {
+              setSelectedCertification(certification);
+              navigate('ViewCertification');
+            }}
+            onNavigateToRenewCertification={(certification) => {
+              setSelectedCertification(certification);
+              navigate('RenewCertification');
             }}
           />
         ) : screen === 'AddCertification' ? (
           <AddCertificationScreen
             onSuccess={goBack}
             onCancel={goBack}
+          />
+        ) : screen === 'ViewCertification' && selectedCertification ? (
+          <ViewCertificationScreen
+            certification={selectedCertification}
+            onBack={() => navigate('Certifications')}
+            onEdit={(cert) => {
+              setSelectedCertification(cert);
+              navigate('EditCertification');
+            }}
+            onRenew={(cert) => {
+              setSelectedCertification(cert);
+              navigate('RenewCertification');
+            }}
+          />
+        ) : screen === 'RenewCertification' && selectedCertification ? (
+          <RenewCertificationScreen
+            certification={selectedCertification}
+            onCancel={() => navigate('Certifications')}
+            onSave={(updated) => {
+              if (updated) updateCertificationLocally(updated);
+              navigate('Certifications');
+            }}
           />
         ) : screen === 'EditCertification' && selectedCertification ? (
           <EditCertificationScreen
@@ -770,16 +813,11 @@ export default function App(): React.JSX.Element {
         ) : screen === 'NewFarmDiaryEntry' ? (
           <NewFarmDiaryEntryScreen
             crop={selectedCrop}
+            selectedCategory={typeof params['diaryCategory'] === 'string' ? params['diaryCategory'] : 'Crop Care'}
             onBack={goBack}
             onNext={(cat) => {
               setParams((prev) => ({ ...prev, diaryCategory: cat }));
-              if (cat.toLowerCase() === 'nutrients') {
-                navigate('AddInputApplied', { initialInputType: 'Fertigation', fromDiary: '1' });
-              } else if (cat.toLowerCase() === 'crop care') {
-                navigate('AddInputApplied', { initialInputType: 'Pest Treatment', fromDiary: '1' });
-              } else {
-                navigate('NewFarmDiaryEntryStep2', { diaryCategory: cat });
-              }
+              navigate('NewFarmDiaryEntryStep2', { diaryCategory: cat });
             }}
           />
         ) : screen === 'NewFarmDiaryEntryStep2' ? (
@@ -878,10 +916,52 @@ export default function App(): React.JSX.Element {
           <ActiveCropsScreen
             onNavigateBack={goBack}
           />
-        ) : screen === 'MyListings' ? (
-          <MyListingsScreen
+        ) : screen === 'RecentListings' || screen === 'MyListings' ? (
+          <RecentListingsScreen
             onNavigateBack={goBack}
-            onNavigateToListingDetail={() => navigate('ListingDetail')}
+            onNavigateToCreateListing={() => navigate('CreateListing')}
+            onNavigateToListingDetail={(item) => {
+              if (item) {
+                setSelectedListing({
+                  id: item.id,
+                  listingNumber: item.listingNumber,
+                  cropName: `${item.cropName} - ${item.cropVariety}`,
+                  quantityKg: item.quantityKg,
+                  askingPricePerKg: item.askingPricePerKg,
+                  ceilingPricePerKg: item.askingPricePerKg,
+                  status: item.status,
+                  grade: item.grade,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                } as any);
+              }
+              navigate('ListingDetail');
+            }}
+            onNavigateToCounterOffer={(item) => {
+              setSelectedListing({
+                id: item?.id || 'dummy-listing',
+                listingNumber: item?.listingNumber || 'L-9821',
+                cropName: 'Carrot - Ooty - Grade 1',
+                quantityKg: '150',
+                askingPricePerKg: '40',
+                ceilingPricePerKg: '45',
+                status: 'COUNTER_OFFER',
+                grade: 'Grade 1',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                activeCounterOffer: {
+                  id: 'dummy-offer',
+                  pricePerKg: '34',
+                  quantityKg: '150',
+                  message: 'On inspection the batch grades as Grade 2 (minor forking & size variance), not the claimed Grade 1. Counter reflects the Grade 2 ceiling.',
+                  round: 1,
+                  expiresAt: new Date(Date.now() + (22 * 60 * 60 + 30 * 60) * 1000).toISOString(),
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+              } as any);
+              navigate('CounterOffer');
+            }}
           />
         ) : screen === 'TohfaCalendar' ? (
           <TohfaCalendarScreen
@@ -1136,7 +1216,7 @@ export default function App(): React.JSX.Element {
                   onNavigateToWeather={() => navigate('Weather')}
                   onNavigateToActiveCrops={() => navigate('ActiveCrops')}
                   onNavigateToFarmDiary={() => navigate('FarmDiary')}
-                  onNavigateToMyListings={() => navigate('MyListings')}
+                  onNavigateToMyListings={() => navigate('RecentListings')}
                   onNavigateToAttendance={() => navigate('DailyAttendance')}
                   onNavigateToTohfaCalendar={() => navigate('TohfaCalendar')}
                   onNavigateToInventory={() => navigate('FarmInventory')}
@@ -1177,7 +1257,26 @@ export default function App(): React.JSX.Element {
                 />
               ) : currentTab === 'Listings' ? (
                 <ListingsScreen
+                  onNavigateBack={() => setCurrentTab('Home')}
+                  onNavigateToMyListings={() => navigate('RecentListings')}
                   onNavigateToCreateListing={() => navigate('CreateListing')}
+                  onNavigateToListingDetail={(item) => {
+                    if (item) {
+                      setSelectedListing({
+                        id: item.id,
+                        listingNumber: item.listingNumber,
+                        cropName: item.cropName,
+                        quantityKg: item.quantityKg,
+                        askingPricePerKg: item.askingPricePerKg,
+                        ceilingPricePerKg: item.askingPricePerKg,
+                        status: item.status,
+                        grade: item.grade,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      } as any);
+                    }
+                    navigate('ListingDetail');
+                  }}
                   onNavigateToCounterOffer={(item) => {
                     if (item && item.id) {
                       setSelectedListing(item);

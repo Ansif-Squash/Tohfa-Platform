@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Platform,
   SafeAreaView,
@@ -207,16 +207,25 @@ export interface NewFarmDiaryEntryScreenProps {
 
 export function NewFarmDiaryEntryScreen({
   crop: _crop,
-  selectedCategory: initialCategory = 'Crop Care',
+  selectedCategory,
   onBack,
   onNext,
 }: NewFarmDiaryEntryScreenProps): React.JSX.Element {
-  const [selectedCat, setSelectedCat] = useState<string>(initialCategory);
+  const [selectedCat, setSelectedCat] = useState<string>(selectedCategory || 'Crop Care');
+
+  useEffect(() => {
+    if (selectedCategory) {
+      setSelectedCat(selectedCategory);
+    }
+  }, [selectedCategory]);
 
   const handleSelect = (category: CategoryItem) => {
     setSelectedCat(category.label);
+  };
+
+  const handleContinue = () => {
     if (onNext) {
-      onNext(category.label);
+      onNext(selectedCat);
     }
   };
 
@@ -253,7 +262,10 @@ export function NewFarmDiaryEntryScreen({
       >
         <View style={styles.grid}>
           {CATEGORIES.map((cat) => {
-            const isSelected = selectedCat.toLowerCase() === cat.label.toLowerCase();
+            const isSelected =
+              selectedCat.toLowerCase().trim() === cat.label.toLowerCase().trim() ||
+              selectedCat.toLowerCase().trim() === cat.id.toLowerCase().trim() ||
+              selectedCat.toLowerCase().replace(/[\s_-]/g, '') === cat.label.toLowerCase().replace(/[\s_-]/g, '');
             const Icon = cat.IconComponent;
 
             return (
@@ -263,7 +275,7 @@ export function NewFarmDiaryEntryScreen({
                   styles.categoryCard,
                   isSelected ? styles.categoryCardSelected : styles.categoryCardUnselected,
                 ]}
-                activeOpacity={0.85}
+                activeOpacity={0.75}
                 onPress={() => handleSelect(cat)}
                 accessibilityRole="button"
                 accessibilityLabel={`${cat.label}, ${cat.count}`}
@@ -299,6 +311,19 @@ export function NewFarmDiaryEntryScreen({
           })}
         </View>
       </ScrollView>
+
+      {/* ── Bottom Continue Button ── */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.continueBtn}
+          activeOpacity={0.85}
+          onPress={handleContinue}
+          accessibilityRole="button"
+          accessibilityLabel={`Continue with ${selectedCat}`}
+        >
+          <Text style={styles.continueBtnText}>Continue to Step 2 →</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -431,5 +456,29 @@ const styles = StyleSheet.create({
   categoryCountSelected: {
     fontWeight: '600',
     color: P.twGreen700,
+  },
+  footer: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: P.white,
+    borderTopWidth: 1,
+    borderTopColor: P.twGray100,
+  },
+  continueBtn: {
+    backgroundColor: P.deepGreen,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: P.deepGreen,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  continueBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: P.white,
   },
 });

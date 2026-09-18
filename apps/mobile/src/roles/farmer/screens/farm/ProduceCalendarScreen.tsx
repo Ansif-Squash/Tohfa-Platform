@@ -790,10 +790,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) + 12 : 12,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 6 : 4,
+    paddingBottom: 12,
     backgroundColor: P.white,
+    borderBottomWidth: 1,
+    borderBottomColor: P.twGray200,
   },
   backButton: {
     width: 44,

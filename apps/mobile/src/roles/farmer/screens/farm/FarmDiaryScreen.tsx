@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
   Image,
+  Modal,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
 import { authPalette as P, colors } from '../../theme';
@@ -50,7 +51,7 @@ function ChevronUpIcon({ size = 20, color = P.twGray400 }: { size?: number; colo
   );
 }
 
-function WaterDropIcon({ size = 24, color = '#1E40AF' }: { size?: number; color?: string }) {
+function WaterDropIcon({ size = 24, color = P.twBlue800 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -64,7 +65,7 @@ function WaterDropIcon({ size = 24, color = '#1E40AF' }: { size?: number; color?
   );
 }
 
-function BugIcon({ size = 24, color = '#6B21A8' }: { size?: number; color?: string }) {
+function BugIcon({ size = 24, color = P.twPurple600 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -78,7 +79,7 @@ function BugIcon({ size = 24, color = '#6B21A8' }: { size?: number; color?: stri
   );
 }
 
-function LeafIcon({ size = 24, color = '#166534' }: { size?: number; color?: string }) {
+function LeafIcon({ size = 24, color = P.twGreen800 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -93,7 +94,7 @@ function LeafIcon({ size = 24, color = '#166534' }: { size?: number; color?: str
   );
 }
 
-function TractorIcon({ size = 24, color = '#9A3412' }: { size?: number; color?: string }) {
+function TractorIcon({ size = 24, color = P.twOrange700 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx="7" cy="16" r="3" stroke={color} strokeWidth="2" />
@@ -103,7 +104,7 @@ function TractorIcon({ size = 24, color = '#9A3412' }: { size?: number; color?: 
   );
 }
 
-function UsersIcon({ size = 14, color = '#374151' }: { size?: number; color?: string }) {
+function UsersIcon({ size = 14, color = P.twGray700 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -123,8 +124,8 @@ const ENTRIES = [
     zone: 'Zone 2 — Lower Slope',
     time: '07:10 AM',
     duration: '45m',
-    color: '#3B82F6', // twBlue500
-    bg: '#EFF6FF', // twBlue50
+    color: P.twBlue600,
+    bg: P.twBlue50,
     Icon: WaterDropIcon,
     expanded: true,
     details: {
@@ -144,10 +145,19 @@ const ENTRIES = [
     zone: 'Zone 2 — Lower Slope',
     time: '08:30 AM',
     duration: '20m',
-    color: '#9333EA', // twPurple600
-    bg: '#FAF5FF', // twPurple50
+    color: P.twPurple600,
+    bg: P.twPurple100,
     Icon: BugIcon,
     expanded: false,
+    details: {
+      method: 'Visual Leaf Inspection',
+      labour: '1 scout',
+      description: 'Inspected upper and lower leaf canopy. Foliage mostly clear; minor whitefly presence observed near boundary hedge.',
+      images: [
+        'https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400&q=80', // healthy crop leaves
+        'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=400&q=80', // crop field inspection
+      ],
+    },
   },
   {
     id: '3',
@@ -156,10 +166,19 @@ const ENTRIES = [
     zone: 'Zone 3 — Terrace',
     time: '11:00 AM',
     duration: '1h 15m',
-    color: '#166534', // twGreen800
-    bg: '#F0FDF4', // twGreen50
+    color: P.twGreen800,
+    bg: P.twGreen50,
     Icon: LeafIcon,
     expanded: false,
+    details: {
+      method: 'Organic Compost Side-Dress',
+      labour: '3 labour',
+      description: 'Applied well-aged vermicompost along raised beds 1-8. Lightly worked into topsoil prior to scheduled evening watering.',
+      images: [
+        'https://images.unsplash.com/photo-1447175008436-054170c2e979?w=400&q=80', // carrot field soil
+        'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400&q=80', // organic agriculture soil
+      ],
+    },
   },
   {
     id: '4',
@@ -168,12 +187,24 @@ const ENTRIES = [
     zone: 'Zone 1 — Upper Field',
     time: '02:15 PM',
     duration: '1h',
-    color: '#C2410C', // twOrange700
-    bg: '#FFF7ED', // twOrange50
+    color: P.twOrange700,
+    bg: P.twOrange50,
     Icon: TractorIcon,
     expanded: false,
+    details: {
+      method: 'Hand Pick · Grade 1 & 2',
+      labour: '4 labour',
+      description: 'Morning harvest across Zone 1. Total 85 kg harvested, cleaned, and sorted into crates for dispatch weighing.',
+      images: [
+        'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80', // green beans harvest
+        'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=400&q=80', // crates in field
+      ],
+    },
   },
 ];
+
+const FIELDS_OPTIONS = ['All fields', 'Zone 1 — Upper Field', 'Zone 2 — Lower Slope', 'Zone 3 — Terrace'];
+const CROPS_OPTIONS = ['All crops', 'Tomato', 'Carrot', 'Beans'];
 
 // --- Component ---
 interface FarmDiaryScreenProps {
@@ -184,10 +215,24 @@ interface FarmDiaryScreenProps {
 
 export function FarmDiaryScreen({ onBack, onNavigateToNewEntry, onNavigateToCalendar }: FarmDiaryScreenProps): React.JSX.Element {
   const [expandedId, setExpandedId] = useState<string | null>('1');
+  const [selectedField, setSelectedField] = useState<string>('All fields');
+  const [selectedCrop, setSelectedCrop] = useState<string>('All crops');
+  const [filterModalVisible, setFilterModalVisible] = useState<'field' | 'crop' | null>(null);
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
+
+  const filteredEntries = ENTRIES.filter((entry) => {
+    const matchesField =
+      selectedField === 'All fields' ||
+      entry.zone.toLowerCase().includes(selectedField.toLowerCase()) ||
+      selectedField.toLowerCase().includes(entry.zone.toLowerCase());
+    const matchesCrop =
+      selectedCrop === 'All crops' ||
+      entry.crop.toLowerCase() === selectedCrop.toLowerCase();
+    return matchesField && matchesCrop;
+  });
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -222,7 +267,7 @@ export function FarmDiaryScreen({ onBack, onNavigateToNewEntry, onNavigateToCale
         {/* 3 Summary Stats Cards */}
         <View style={styles.summaryStatsRow}>
           <View style={styles.summaryStatCard}>
-            <Text style={styles.summaryStatNumber}>4</Text>
+            <Text style={styles.summaryStatNumber}>{filteredEntries.length}</Text>
             <Text style={styles.summaryStatLabel}>Entries today</Text>
           </View>
           <View style={styles.summaryStatCard}>
@@ -230,7 +275,7 @@ export function FarmDiaryScreen({ onBack, onNavigateToNewEntry, onNavigateToCale
             <Text style={styles.summaryStatLabel}>Time logged</Text>
           </View>
           <View style={styles.summaryStatCard}>
-            <Text style={styles.summaryStatNumber}>3</Text>
+            <Text style={styles.summaryStatNumber}>{new Set(filteredEntries.map((e) => e.zone)).size}</Text>
             <Text style={styles.summaryStatLabel}>Fields covered</Text>
           </View>
         </View>
@@ -239,12 +284,24 @@ export function FarmDiaryScreen({ onBack, onNavigateToNewEntry, onNavigateToCale
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* --- Filters Row --- */}
         <View style={styles.filtersRow}>
-          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
-            <Text style={styles.filterBtnText}>All fields</Text>
+          <TouchableOpacity
+            style={styles.filterBtn}
+            activeOpacity={0.7}
+            onPress={() => setFilterModalVisible('field')}
+            accessibilityRole="button"
+            accessibilityLabel="Filter by field"
+          >
+            <Text style={styles.filterBtnText} numberOfLines={1}>{selectedField}</Text>
             <ChevronDownIcon size={16} color={P.twGray400} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
-            <Text style={styles.filterBtnText}>All crops</Text>
+          <TouchableOpacity
+            style={styles.filterBtn}
+            activeOpacity={0.7}
+            onPress={() => setFilterModalVisible('crop')}
+            accessibilityRole="button"
+            accessibilityLabel="Filter by crop"
+          >
+            <Text style={styles.filterBtnText} numberOfLines={1}>{selectedCrop}</Text>
             <ChevronDownIcon size={16} color={P.twGray400} />
           </TouchableOpacity>
         </View>
@@ -253,63 +310,112 @@ export function FarmDiaryScreen({ onBack, onNavigateToNewEntry, onNavigateToCale
         <Text style={styles.sectionTitle}>TODAY'S ENTRIES</Text>
 
         <View style={styles.entriesList}>
-          {ENTRIES.map((entry) => {
-            const isExpanded = expandedId === entry.id;
-            return (
-              <TouchableOpacity
-                key={entry.id}
-                style={[styles.entryCard, isExpanded && styles.entryCardExpanded]}
-                activeOpacity={0.9}
-                onPress={() => toggleExpand(entry.id)}
-              >
-                <View style={styles.entryHeaderRow}>
-                  <View style={[styles.entryIconBox, { backgroundColor: entry.bg }]}>
-                    <entry.Icon size={24} color={entry.color} />
+          {filteredEntries.length === 0 ? (
+            <View style={styles.emptyEntriesBox}>
+              <Text style={styles.emptyEntriesText}>No entries match the selected filters.</Text>
+            </View>
+          ) : (
+            filteredEntries.map((entry) => {
+              const isExpanded = expandedId === entry.id;
+              return (
+                <TouchableOpacity
+                  key={entry.id}
+                  style={[styles.entryCard, isExpanded && styles.entryCardExpanded]}
+                  activeOpacity={0.9}
+                  onPress={() => toggleExpand(entry.id)}
+                >
+                  <View style={styles.entryHeaderRow}>
+                    <View style={[styles.entryIconBox, { backgroundColor: entry.bg }]}>
+                      <entry.Icon size={24} color={entry.color} />
+                    </View>
+                    <View style={styles.entryTitleCol}>
+                      <Text style={styles.entryTitle}>
+                        {entry.type} · {entry.crop}
+                      </Text>
+                      <Text style={styles.entrySubtitle}>
+                        {entry.zone} · {entry.time}
+                      </Text>
+                    </View>
+                    <View style={styles.entryRightCol}>
+                      <Text style={[styles.entryDuration, isExpanded && styles.entryDurationActive]}>
+                        {entry.duration}
+                      </Text>
+                      {isExpanded ? (
+                        <ChevronUpIcon size={20} color={P.twGray400} />
+                      ) : (
+                        <ChevronDownIcon size={20} color={P.twGray400} />
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.entryTitleCol}>
-                    <Text style={styles.entryTitle}>
-                      {entry.type} · {entry.crop}
-                    </Text>
-                    <Text style={styles.entrySubtitle}>
-                      {entry.zone} · {entry.time}
-                    </Text>
-                  </View>
-                  <View style={styles.entryRightCol}>
-                    <Text style={[styles.entryDuration, isExpanded && styles.entryDurationActive]}>
-                      {entry.duration}
-                    </Text>
-                    {isExpanded ? (
-                      <ChevronUpIcon size={20} color={P.twGray400} />
-                    ) : (
-                      <ChevronDownIcon size={20} color={P.twGray400} />
-                    )}
-                  </View>
-                </View>
 
-                {isExpanded && entry.details && (
-                  <View style={styles.entryDetails}>
-                    <View style={styles.pillsRow}>
-                      <View style={styles.detailPill}>
-                        <Text style={styles.detailPillText}>{entry.details.method}</Text>
+                  {isExpanded && entry.details && (
+                    <View style={styles.entryDetails}>
+                      <View style={styles.pillsRow}>
+                        <View style={styles.detailPill}>
+                          <Text style={styles.detailPillText}>{entry.details.method}</Text>
+                        </View>
+                        <View style={styles.detailPill}>
+                          <UsersIcon size={12} color={P.twGray600} />
+                          <Text style={styles.detailPillText}>{entry.details.labour}</Text>
+                        </View>
                       </View>
-                      <View style={styles.detailPill}>
-                        <UsersIcon size={12} color={P.twGray600} />
-                        <Text style={styles.detailPillText}>{entry.details.labour}</Text>
+                      <Text style={styles.entryDesc}>{entry.details.description}</Text>
+                      <View style={styles.imagesRow}>
+                        {entry.details.images.map((img, idx) => (
+                          <Image key={idx} source={{ uri: img }} style={styles.detailImage} />
+                        ))}
                       </View>
                     </View>
-                    <Text style={styles.entryDesc}>{entry.details.description}</Text>
-                    <View style={styles.imagesRow}>
-                      {entry.details.images.map((img, idx) => (
-                        <Image key={idx} source={{ uri: img }} style={styles.detailImage} />
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
       </ScrollView>
+
+      {/* Filter Modal for Fields / Crops */}
+      <Modal
+        visible={filterModalVisible !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setFilterModalVisible(null)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {filterModalVisible === 'field' ? 'Select Field' : 'Select Crop'}
+            </Text>
+            {(filterModalVisible === 'field' ? FIELDS_OPTIONS : CROPS_OPTIONS).map((opt) => {
+              const isActive = filterModalVisible === 'field' ? selectedField === opt : selectedCrop === opt;
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    if (filterModalVisible === 'field') setSelectedField(opt);
+                    if (filterModalVisible === 'crop') setSelectedCrop(opt);
+                    setFilterModalVisible(null);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      isActive && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* --- FAB --- */}
       <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={onNavigateToNewEntry}>
@@ -554,5 +660,55 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: P.white,
+  },
+  emptyEntriesBox: {
+    backgroundColor: P.white,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: P.twGray100,
+  },
+  emptyEntriesText: {
+    fontSize: 14,
+    color: P.twGray500,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: P.white,
+    borderRadius: 18,
+    padding: 20,
+    shadowColor: P.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: P.twGray900,
+    marginBottom: 14,
+  },
+  modalOption: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: P.twGray100,
+  },
+  modalOptionText: {
+    fontSize: 14,
+    color: P.twGray700,
+  },
+  modalOptionTextActive: {
+    color: colors.brandGreen,
+    fontWeight: '700',
   },
 });

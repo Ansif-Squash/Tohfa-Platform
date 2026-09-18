@@ -177,16 +177,53 @@ export function SoilTypeClassificationScreen({
   const [zone2Type, setZone2Type] = useState<string>('Clay');
   const [zone3Type, setZone3Type] = useState<string | null>(null);
 
-  const [activeEditingZone, setActiveEditingZone] = useState<'zone1' | 'zone2' | 'zone3'>('zone1');
+  const [activeEditingZone, setActiveEditingZone] = useState<'zone1' | 'zone2' | 'zone3' | null>('zone1');
 
-  const handleSelectSoilType = (typeId: string, typeName: string) => {
-    if (activeEditingZone === 'zone1') {
+  const handleSelectSoilType = (zone: 'zone1' | 'zone2' | 'zone3', typeName: string) => {
+    if (zone === 'zone1') {
       setZone1Type(typeName);
-    } else if (activeEditingZone === 'zone2') {
+    } else if (zone === 'zone2') {
       setZone2Type(typeName);
-    } else {
+    } else if (zone === 'zone3') {
       setZone3Type(typeName);
     }
+  };
+
+  const renderSoilCategoryGrid = (
+    zone: 'zone1' | 'zone2' | 'zone3',
+    currentSelectedType: string | null
+  ) => {
+    return (
+      <View style={styles.gridContainer}>
+        {SOIL_CATEGORIES.map((cat) => {
+          const isSelected = currentSelectedType === cat.name;
+          const Icon = cat.IconComponent;
+          return (
+            <TouchableOpacity
+              key={cat.id}
+              style={[
+                styles.categoryTile,
+                isSelected ? styles.categoryTileSelected : styles.categoryTileUnselected,
+              ]}
+              onPress={() => handleSelectSoilType(zone, cat.name)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`${cat.name} soil type`}
+            >
+              <Icon size={24} color={isSelected ? P.forestGreen : P.twGray700} />
+              <Text
+                style={[
+                  styles.categoryName,
+                  isSelected ? styles.categoryNameSelected : styles.categoryNameUnselected,
+                ]}
+              >
+                {cat.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
   };
 
   return (
@@ -222,92 +259,82 @@ export function SoilTypeClassificationScreen({
       >
         {/* ── Zone 1 Card ── */}
         <View style={styles.zoneCard}>
-          <View style={styles.zoneHeader}>
+          <TouchableOpacity
+            style={styles.zoneHeader}
+            onPress={() => setActiveEditingZone(activeEditingZone === 'zone1' ? null : 'zone1')}
+            activeOpacity={0.8}
+          >
             <View>
               <Text style={styles.zoneTitle}>Zone 1 — North Slope</Text>
               <Text style={styles.currentTypeText}>Currently: {zone1Type}</Text>
             </View>
             <TouchableOpacity
-              onPress={() => setActiveEditingZone('zone1')}
+              onPress={() => setActiveEditingZone(activeEditingZone === 'zone1' ? null : 'zone1')}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.changeLinkText}>Change</Text>
+              <Text style={styles.changeLinkText}>
+                {activeEditingZone === 'zone1' ? 'Done' : 'Change'}
+              </Text>
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
 
           {/* 8 Categories Grid */}
-          <View style={styles.gridContainer}>
-            {SOIL_CATEGORIES.map((cat) => {
-              const isSelected = zone1Type === cat.name;
-              const Icon = cat.IconComponent;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[
-                    styles.categoryTile,
-                    isSelected ? styles.categoryTileSelected : styles.categoryTileUnselected,
-                  ]}
-                  onPress={() => handleSelectSoilType(cat.id, cat.name)}
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${cat.name} soil type`}
-                >
-                  <Icon size={24} color={isSelected ? P.forestGreen : P.twGray700} />
-                  <Text
-                    style={[
-                      styles.categoryName,
-                      isSelected ? styles.categoryNameSelected : styles.categoryNameUnselected,
-                    ]}
-                  >
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {activeEditingZone === 'zone1' && renderSoilCategoryGrid('zone1', zone1Type)}
         </View>
 
         {/* ── Zone 2 Card ── */}
-        <View style={styles.zoneCardCompact}>
-          <View style={styles.zoneHeader}>
+        <View style={styles.zoneCard}>
+          <TouchableOpacity
+            style={styles.zoneHeader}
+            onPress={() => setActiveEditingZone(activeEditingZone === 'zone2' ? null : 'zone2')}
+            activeOpacity={0.8}
+          >
             <View>
               <Text style={styles.zoneTitle}>Zone 2 — Terrace Field</Text>
               <Text style={styles.currentTypeText}>Currently: {zone2Type}</Text>
             </View>
             <TouchableOpacity
-              onPress={() => {
-                setActiveEditingZone('zone2');
-                Alert.alert('Zone 2', 'Select soil type from the categories list above to update Zone 2.');
-              }}
+              onPress={() => setActiveEditingZone(activeEditingZone === 'zone2' ? null : 'zone2')}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.changeLinkText}>Change</Text>
+              <Text style={styles.changeLinkText}>
+                {activeEditingZone === 'zone2' ? 'Done' : 'Change'}
+              </Text>
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+
+          {/* 8 Categories Grid */}
+          {activeEditingZone === 'zone2' && renderSoilCategoryGrid('zone2', zone2Type)}
         </View>
 
         {/* ── Zone 3 Card ── */}
-        <View style={styles.zoneCardCompact}>
-          <View style={styles.zoneHeader}>
+        <View style={styles.zoneCard}>
+          <TouchableOpacity
+            style={styles.zoneHeader}
+            onPress={() => setActiveEditingZone(activeEditingZone === 'zone3' ? null : 'zone3')}
+            activeOpacity={0.8}
+          >
             <View>
               <Text style={styles.zoneTitle}>Zone 3 — Lower Basin</Text>
-              <Text style={styles.notRecordedText}>
+              <Text style={zone3Type ? styles.currentTypeText : styles.notRecordedText}>
                 {zone3Type ? `Currently: ${zone3Type}` : 'Not yet recorded'}
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => {
-                setActiveEditingZone('zone3');
-                Alert.alert('Zone 3', 'Select soil type from the categories list above to record for Zone 3.');
-              }}
+              onPress={() => setActiveEditingZone(activeEditingZone === 'zone3' ? null : 'zone3')}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.changeLinkText}>{zone3Type ? 'Change' : 'Set Type'}</Text>
+              <Text style={styles.changeLinkText}>
+                {activeEditingZone === 'zone3' ? 'Done' : (zone3Type ? 'Change' : 'Set Type')}
+              </Text>
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+
+          {/* 8 Categories Grid */}
+          {activeEditingZone === 'zone3' && renderSoilCategoryGrid('zone3', zone3Type)}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -412,8 +439,8 @@ const styles = StyleSheet.create({
   zoneHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
+    alignItems: 'center',
+    marginBottom: 0,
   },
   zoneTitle: {
     fontSize: 15,
@@ -442,6 +469,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     justifyContent: 'space-between',
+    marginTop: 14,
   },
   categoryTile: {
     width: '48%',

@@ -26,7 +26,7 @@ import { authPalette as P } from '../../theme';
 // SVG icons (inline, no extra dep)
 // ─────────────────────────────────────────────
 
-function ChevronLeft({ size = 20, color = P.ink }: { size?: number; color?: string }) {
+function ChevronLeft({ size = 20, color = P.twGreen700 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path d="M15 19L8 12L15 5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -154,11 +154,15 @@ function StatusBadge({ status }: { status: DisplayStatus }) {
 function CertCard({
   item,
   warningThreshold,
+  onView,
   onEdit,
+  onRenew,
 }: {
   item: Certification;
   warningThreshold: number;
+  onView: (cert: Certification) => void;
   onEdit: (cert: Certification) => void;
+  onRenew: (cert: Certification) => void;
 }) {
   const status = displayStatus(item, warningThreshold);
   const active = status === 'active';
@@ -226,7 +230,7 @@ function CertCard({
       <View style={C.actRow}>
         {active && (
           <>
-            <TouchableOpacity style={C.outBtn} activeOpacity={0.75}>
+            <TouchableOpacity style={C.outBtn} activeOpacity={0.75} onPress={() => onView(item)}>
               <Doc />
               <Text style={C.outTxt}>{t('farmer.common.view')}</Text>
             </TouchableOpacity>
@@ -238,11 +242,11 @@ function CertCard({
         )}
         {expiring && (
           <>
-            <TouchableOpacity style={C.primBtn} activeOpacity={0.85} onPress={() => onEdit(item)}>
+            <TouchableOpacity style={C.primBtn} activeOpacity={0.85} onPress={() => onRenew(item)}>
               <Pencil size={15} color={P.white} />
               <Text style={C.primTxt}>{t('farmer.certifications.renewNow')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={C.outBtn} activeOpacity={0.75}>
+            <TouchableOpacity style={C.outBtn} activeOpacity={0.75} onPress={() => onView(item)}>
               <Doc />
               <Text style={C.outTxt}>{t('farmer.common.view')}</Text>
             </TouchableOpacity>
@@ -250,17 +254,17 @@ function CertCard({
         )}
         {expired && (
           <>
-            <TouchableOpacity style={C.outBtn} activeOpacity={0.75}>
+            <TouchableOpacity style={C.outBtn} activeOpacity={0.75} onPress={() => onView(item)}>
               <Doc />
               <Text style={C.outTxt}>{t('farmer.common.view')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[C.outBtn, { borderColor: P.twRed300 }]}
-              activeOpacity={0.75}
-              onPress={() => onEdit(item)}
+              style={C.primBtn}
+              activeOpacity={0.85}
+              onPress={() => onRenew(item)}
             >
-              <Trash />
-              <Text style={[C.outTxt, { color: P.twRed600 }]}>{t('farmer.common.manage')}</Text>
+              <Pencil size={15} color={P.white} />
+              <Text style={C.primTxt}>{t('farmer.certifications.renewNow')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -349,12 +353,16 @@ interface CertificationsScreenProps {
   onBack?: () => void;
   onNavigateToAddCertification?: () => void;
   onNavigateToEditCertification?: (certification: Certification) => void;
+  onNavigateToViewCertification?: (certification: Certification) => void;
+  onNavigateToRenewCertification?: (certification: Certification) => void;
 }
 
 export function CertificationsScreen({
   onBack,
   onNavigateToAddCertification,
   onNavigateToEditCertification,
+  onNavigateToViewCertification,
+  onNavigateToRenewCertification,
 }: CertificationsScreenProps): React.JSX.Element {
   const [certs, setCerts] = useState<Certification[]>([]);
   const [warningThreshold, setWarningThreshold] = useState<number>(30);
@@ -404,6 +412,24 @@ export function CertificationsScreen({
     }
   };
 
+  const handleView = (cert: Certification) => {
+    if (onNavigateToViewCertification) {
+      onNavigateToViewCertification(cert);
+    } else {
+      Alert.alert('Certification Details', `${cert.certType} - ${cert.issuingBody}`);
+    }
+  };
+
+  const handleRenew = (cert: Certification) => {
+    if (onNavigateToRenewCertification) {
+      onNavigateToRenewCertification(cert);
+    } else if (onNavigateToEditCertification) {
+      onNavigateToEditCertification(cert);
+    } else {
+      Alert.alert(t('farmer.certifications.renewNow'), `Renewing ${cert.certType}`);
+    }
+  };
+
   const activeCount = certs.filter((c) => displayStatus(c, warningThreshold) === 'active').length;
   const expiringCount = certs.filter((c) => displayStatus(c, warningThreshold) === 'expiring').length;
   const expiredCount = certs.filter((c) => displayStatus(c, warningThreshold) === 'expired').length;
@@ -416,12 +442,13 @@ export function CertificationsScreen({
       <View style={S.header}>
         <TouchableOpacity
           style={S.backBtn}
-          onPress={onBack}
+          onPress={() => onBack?.()}
           activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
           accessibilityLabel={t('farmer.common.back')}
         >
-          <ChevronLeft />
+          <ChevronLeft size={20} color={P.twGreen700} />
         </TouchableOpacity>
         <View style={S.headerMid}>
           <Text style={S.headerTitle}>{t('farmer.certifications.title')}</Text>
@@ -476,7 +503,14 @@ export function CertificationsScreen({
             <Text style={S.emptyTxt}>{t('farmer.certifications.empty')}</Text>
           ) : (
             certs.map((item) => (
-              <CertCard key={item.id} item={item} warningThreshold={warningThreshold} onEdit={handleEdit} />
+              <CertCard
+                key={item.id}
+                item={item}
+                warningThreshold={warningThreshold}
+                onView={handleView}
+                onEdit={handleEdit}
+                onRenew={handleRenew}
+              />
             ))
           )}
 
@@ -529,9 +563,14 @@ const S = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: P.surfaceMuted,
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    borderWidth: 1, borderColor: P.twGray200, backgroundColor: P.white,
-    alignItems: 'center', justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: P.mintTintBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: P.greenPaleBg,
   },
   headerMid: { flex: 1, paddingLeft: 12 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: P.ink },
