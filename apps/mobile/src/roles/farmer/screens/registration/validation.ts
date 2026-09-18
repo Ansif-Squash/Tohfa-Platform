@@ -31,6 +31,18 @@ export function validateStep(step: number, data: unknown): StepValidationResult 
     if (!aadhaarInput || aadhaarInput.length < 4) {
       errors['aadhaarLast4'] = 'Aadhaar / ID Number is required.';
     }
+    if (!s1.district || s1.district.trim().length === 0) {
+      errors['district'] = 'District is required.';
+    }
+    if (!s1.state || s1.state.trim().length === 0) {
+      errors['state'] = 'State is required.';
+    }
+    if (!s1.country || s1.country.trim().length === 0) {
+      errors['country'] = 'Country is required.';
+    }
+    if (!s1.pincode || !/^[0-9]{6}$/.test(s1.pincode.trim())) {
+      errors['pincode'] = 'A valid 6-digit pincode is required.';
+    }
   } else if (step === 2) {
     const s2 = (data ?? {}) as Step2FarmData;
     if (!s2.farms || s2.farms.length === 0) {

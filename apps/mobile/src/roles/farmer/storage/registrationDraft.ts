@@ -17,6 +17,8 @@ export interface Step1PersonalData {
   village?: string | undefined;
   taluk?: string | undefined;
   district?: string | undefined;
+  state?: string | undefined;
+  country?: string | undefined;
   pincode?: string | undefined;
 }
 
