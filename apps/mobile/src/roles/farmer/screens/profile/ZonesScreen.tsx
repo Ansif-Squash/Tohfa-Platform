@@ -47,8 +47,8 @@ export function ZonesScreen({ onNavigateBack, onNavigateToAddZone, onSave }: Zon
             <Icon name="terrain" size={16} color={colors.brandGreen} />
           </View>
           <View style={styles.farmSelectorText}>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.textSubtle, marginBottom: 2 }}>MARKING ZONES FOR</Text>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textDark }}>Great Earth Organic Farm · 2.5 ac</Text>
+            <Text style={{ fontSize: 11, lineHeight: 15, fontWeight: '800', color: colors.textSubtle, marginBottom: 2 }}>MARKING ZONES FOR</Text>
+            <Text style={{ fontSize: 14, lineHeight: 21, fontWeight: '700', color: colors.textDark }}>Great Earth Organic Farm · 2.5 ac</Text>
           </View>
           <Icon name="expand_more" size={16} color={colors.textSubtle} />
         </View>
@@ -497,8 +497,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   detailCol: { flex: 1 },
-  detailLabel: { fontSize: 10, fontWeight: '800', color: P.grey500, marginBottom: 4 },
-  detailValue: { fontSize: 13, fontWeight: '600', color: P.grey800 },
+  detailLabel: { fontSize: 11, lineHeight: 15, fontWeight: '800', color: P.grey500, marginBottom: 4 },
+  detailValue: { fontSize: 13, lineHeight: 18, fontWeight: '600', color: P.grey800 },
 
   cropPill: {
     alignSelf: 'flex-start',

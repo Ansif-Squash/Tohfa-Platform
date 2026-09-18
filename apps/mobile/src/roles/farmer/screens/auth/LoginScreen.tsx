@@ -13,7 +13,7 @@ import { t, getLocale, setLocale } from '../../../../i18n/farmer';
 import { Button, ErrorState, Icon } from '@tohfa/mobile-ui';
 import { loginWithPassword, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
-import { authPalette as P, typography, weights } from '../../theme';
+import { authPalette as P, fontSizes, typography, weights } from '../../theme';
 import googleIcon from '../../assets/icons/googleee.png';
 import appleIcon from '../../assets/icons/apple.png';
 import facebookIcon from '../../assets/icons/facebook.png';
@@ -388,16 +388,17 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   title: {
-    fontSize: typography.title,
+    fontSize: fontSizes.h1,
+    lineHeight: typography.h1.lineHeight,
     fontWeight: weights.bold,
     color: P.ink,
     textAlign: 'center',
     marginTop: 18,
   },
   subtitle: {
-    fontSize: typography.bodySmall,
+    fontSize: fontSizes.body,
     fontWeight: weights.regular,
-    lineHeight: 19,
+    lineHeight: typography.body.lineHeight,
     color: P.muted,
     textAlign: 'center',
     marginTop: 6,
@@ -444,8 +445,9 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   fieldLabel: {
-    fontSize: typography.caption,
-    fontWeight: weights.bold,
+    fontSize: fontSizes.label,
+    lineHeight: typography.label.lineHeight,
+    fontWeight: weights.semibold,
     color: '#1A2E1A',
     marginBottom: 8,
   },
@@ -481,7 +483,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   prefix: {
-    fontSize: typography.body,
+    fontSize: fontSizes.body,
+    lineHeight: typography.body.lineHeight,
     fontWeight: weights.bold,
     color: '#1A2E1A',
   },
@@ -495,7 +498,8 @@ const styles = StyleSheet.create({
   fieldInput: {
     flex: 1,
     height: '100%',
-    fontSize: typography.body,
+    fontSize: fontSizes.body,
+    lineHeight: typography.body.lineHeight,
     fontWeight: weights.medium,
     color: '#1A2E1A',
     paddingVertical: 0,
@@ -544,12 +548,14 @@ const styles = StyleSheet.create({
     borderColor: P.primary,
   },
   rememberText: {
-    fontSize: typography.caption,
+    fontSize: fontSizes.caption,
+    lineHeight: typography.caption.lineHeight,
     fontWeight: weights.medium,
     color: P.ink,
   },
   forgotText: {
-    fontSize: typography.caption,
+    fontSize: fontSizes.caption,
+    lineHeight: typography.caption.lineHeight,
     fontWeight: weights.bold,
     color: P.primary,
   },
@@ -560,8 +566,9 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   loginButtonText: {
-    fontSize: typography.bodySmall,
-    fontWeight: weights.bold,
+    fontSize: fontSizes.button,
+    lineHeight: typography.button.lineHeight,
+    fontWeight: weights.semibold,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -576,7 +583,8 @@ const styles = StyleSheet.create({
     backgroundColor: P.border,
   },
   dividerText: {
-    fontSize: typography.caption,
+    fontSize: fontSizes.caption,
+    lineHeight: typography.caption.lineHeight,
     fontWeight: weights.semibold,
     color: '#43566B',
   },
@@ -585,7 +593,8 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   registerText: {
-    fontSize: typography.bodySmall,
+    fontSize: fontSizes.body,
+    lineHeight: typography.body.lineHeight,
     fontWeight: weights.regular,
     color: '#43566B',
   },
@@ -606,7 +615,8 @@ const styles = StyleSheet.create({
     backgroundColor: P.lightGreen,
   },
   langPillActiveText: {
-    fontSize: typography.bodySmall,
+    fontSize: fontSizes.caption,
+    lineHeight: typography.caption.lineHeight,
     fontWeight: weights.bold,
     color: P.primary,
   },
@@ -616,7 +626,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   langPillText: {
-    fontSize: typography.bodySmall,
+    fontSize: fontSizes.caption,
+    lineHeight: typography.caption.lineHeight,
     fontWeight: weights.semibold,
     color: '#43566B',
   },
@@ -625,7 +636,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   legalText: {
-    fontSize: typography.caption,
+    fontSize: fontSizes.caption,
+    lineHeight: typography.caption.lineHeight,
     fontWeight: weights.regular,
     color: '#8A9BAE',
   },

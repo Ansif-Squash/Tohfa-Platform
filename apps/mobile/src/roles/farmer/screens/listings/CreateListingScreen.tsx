@@ -349,7 +349,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   gradeBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     color: '#2e7d32',
   },

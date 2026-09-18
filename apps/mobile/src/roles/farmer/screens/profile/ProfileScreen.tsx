@@ -1626,11 +1626,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     marginBottom: 2,
   },
   statLabel: {
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '600',
     color: P.slate400,
     letterSpacing: 0.5,
@@ -1749,7 +1751,8 @@ const styles = StyleSheet.create({
   },
   gpsCoordinatesText: {
     color: colors.white,
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
   },
   fmbMetricsStrip: {
@@ -1767,11 +1770,13 @@ const styles = StyleSheet.create({
   },
   fmbMetricValue: {
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: '700',
     color: P.slate800,
   },
   fmbMetricLabel: {
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '600',
     color: P.slate400,
     marginTop: 2,
@@ -1852,7 +1857,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   certRenewText: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     color: P.slate400,
     marginTop: 2,
   },
@@ -1897,7 +1903,8 @@ const styles = StyleSheet.create({
     color: P.sky600,
   },
   auditProgressDone: {
-    fontSize: 8,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
     color: P.slate500,
   },
@@ -1905,7 +1912,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nextAuditSubLabel: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     color: P.slate500,
   },
   nextAuditDateText: {
@@ -1984,7 +1992,8 @@ const styles = StyleSheet.create({
     color: P.slate800,
   },
   ratingGaugeMax: {
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '600',
     color: P.slate400,
   },
@@ -2052,7 +2061,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   soilDateLabel: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     color: P.twAmber900,
   },
   soilDateValue: {
@@ -2090,7 +2100,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   soilBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
   },
   soilAdvisoryBox: {
@@ -2150,7 +2161,8 @@ const styles = StyleSheet.create({
   },
   menuRedBadgeText: {
     color: colors.white,
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
   },
   menuDivider: {

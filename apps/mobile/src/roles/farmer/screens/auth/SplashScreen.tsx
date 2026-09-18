@@ -233,7 +233,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     textAlign: 'center',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     color: 'rgba(255, 255, 255, 0.5)',
   },
 });

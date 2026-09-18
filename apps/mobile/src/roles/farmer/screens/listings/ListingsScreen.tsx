@@ -65,12 +65,16 @@ interface ListingsScreenProps {
   onNavigateToCreateListing?: () => void;
   onNavigateToCounterOffer?: (listing: any) => void;
   onNavigateBack?: () => void;
+  onNavigateToMyListings?: () => void;
+  onNavigateToListingDetail?: (item?: any) => void;
 }
 
 export function ListingsScreen({
   onNavigateToCreateListing,
   onNavigateToCounterOffer,
-  onNavigateBack
+  onNavigateBack,
+  onNavigateToMyListings,
+  onNavigateToListingDetail,
 }: ListingsScreenProps): React.JSX.Element {
   return (
     <SafeAreaView style={styles.container}>
@@ -156,13 +160,27 @@ export function ListingsScreen({
         {/* Recent Listings */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>RECENT LISTINGS</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={onNavigateToMyListings} activeOpacity={0.7}>
             <Text style={styles.viewAllBtn}>View all</Text>
           </TouchableOpacity>
         </View>
 
         {/* List items */}
-        <View style={styles.listItem}>
+        <TouchableOpacity
+          style={styles.listItem}
+          activeOpacity={0.85}
+          onPress={() =>
+            onNavigateToListingDetail?.({
+              id: '1',
+              listingNumber: 'L-9820',
+              cropName: 'Tomato - Hybrid',
+              quantityKg: '200',
+              askingPricePerKg: '38',
+              status: 'Approved',
+              grade: 'Grade 1',
+            })
+          }
+        >
           <View style={[styles.listIconBox, { backgroundColor: '#e8f5e9' }]}>
             <Image source={require('../../../../assets/images/real_tomato.jpg')} style={styles.realCropImg} />
           </View>
@@ -173,9 +191,9 @@ export function ListingsScreen({
           <View style={[styles.badge, { backgroundColor: '#e8f5e9' }]}>
             <Text style={[styles.badgeText, { color: '#2e7d32' }]}>Approved</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.listItem} onPress={() => onNavigateToCounterOffer?.({})}>
+        <TouchableOpacity style={styles.listItem} activeOpacity={0.85} onPress={() => onNavigateToCounterOffer?.({})}>
           <View style={[styles.listIconBox, { backgroundColor: '#fff3e0' }]}>
             <Image source={require('../../../../assets/images/real_carrot.jpg')} style={styles.realCropImg} />
           </View>
@@ -188,7 +206,21 @@ export function ListingsScreen({
           </View>
         </TouchableOpacity>
 
-        <View style={styles.listItem}>
+        <TouchableOpacity
+          style={styles.listItem}
+          activeOpacity={0.85}
+          onPress={() =>
+            onNavigateToListingDetail?.({
+              id: '3',
+              listingNumber: 'L-9822',
+              cropName: 'French Beans',
+              quantityKg: '80',
+              askingPricePerKg: '55',
+              status: 'Waiting',
+              grade: 'Grade 2',
+            })
+          }
+        >
           <View style={[styles.listIconBox, { backgroundColor: '#e8f5e9' }]}>
             <Image source={require('../../../../assets/images/real_french_beans.jpg')} style={styles.realCropImg} />
           </View>
@@ -199,7 +231,7 @@ export function ListingsScreen({
           <View style={[styles.badge, { backgroundColor: '#fff3e0' }]}>
             <Text style={[styles.badgeText, { color: '#e65100' }]}>Waiting</Text>
           </View>
-        </View>
+        </TouchableOpacity>
         
         <View style={{height: 100}} />
       </ScrollView>
@@ -298,7 +330,8 @@ const styles = StyleSheet.create({
   },
   protoToggleActiveText: {
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
   },
   protoToggleInactive: {
@@ -307,7 +340,8 @@ const styles = StyleSheet.create({
   },
   protoToggleInactiveText: {
     color: '#9e9e9e',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
   },
   alertBanner: {
@@ -328,12 +362,14 @@ const styles = StyleSheet.create({
   },
   alertTitle: {
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: '800',
     color: '#5d4037',
     marginBottom: 4,
   },
   alertSub: {
     fontSize: 13,
+    lineHeight: 18,
     color: '#d84315',
   },
   alertChevron: {
@@ -365,7 +401,8 @@ const styles = StyleSheet.create({
   },
   heroChipText: {
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     letterSpacing: 0.5,
   },

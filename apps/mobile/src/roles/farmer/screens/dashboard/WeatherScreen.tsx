@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   hourlyTemp: { fontSize: 16, fontWeight: 'bold', color: P.slate800 },
 
   scrollbarHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 },
-  scrollbarIcon: { color: P.slate300, fontSize: 10 },
+  scrollbarIcon: { color: P.slate300, fontSize: 11, lineHeight: 15 },
   scrollbarTrack: { height: 6, width: 100, backgroundColor: P.slate200, borderRadius: 3 },
   scrollbarThumb: { height: '100%', width: 40, backgroundColor: P.slate400, borderRadius: 3 },
 

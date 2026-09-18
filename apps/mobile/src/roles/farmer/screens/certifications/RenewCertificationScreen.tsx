@@ -122,6 +122,16 @@ function UploadIcon({ size = 22, color = P.twGreen700 }: { size?: number; color?
   );
 }
 
+function InfoCircleIcon({ size = 18, color = P.twGreen700 }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" />
+      <Line x1="12" y1="8" x2="12" y2="8.5" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <Line x1="12" y1="12" x2="12" y2="16" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 // ─────────────────────────────────────────────
 // Types & Options
 // ─────────────────────────────────────────────
@@ -158,84 +168,53 @@ function formatFileSize(bytes?: number | null, name?: string | null, type?: stri
   return `${mb} MB · ${ext}`;
 }
 
-function formatDateForDisplay(dateStr?: string | null): string {
-  if (!dateStr) return '15/03/24';
-  if (dateStr.includes('/')) return dateStr;
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = d.getDate().toString().padStart(2, '0');
-    const month = (d.getMonth() + 1).toString().padStart(2, '0');
-    const year = d.getFullYear().toString().slice(-2);
-    return `${day}/${month}/${year}`;
-  } catch {
-    return dateStr;
-  }
+function getTodayFormatted(): string {
+  const d = new Date();
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear().toString().slice(-2);
+  return `${day}/${month}/${year}`;
 }
 
-function formatDateForSubtitle(dateStr?: string | null): string {
-  if (!dateStr) return '15 Mar 2024';
-  if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      const day = parts[0];
-      const monthIdx = parseInt(parts[1] || '1', 10) - 1;
-      let year = parts[2];
-      if (year && year.length === 2) year = `20${year}`;
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return `${day} ${months[monthIdx] || 'Mar'} ${year}`;
-    }
-  }
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = d.getDate().toString().padStart(2, '0');
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${day} ${months[d.getMonth()]} ${d.getFullYear()}`;
-  } catch {
-    return dateStr;
-  }
+function getThreeYearsLaterFormatted(): string {
+  const d = new Date();
+  const day = Math.max(1, d.getDate() - 1).toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = (d.getFullYear() + 3).toString().slice(-2);
+  return `${day}/${month}/${year}`;
 }
 
-interface EditCertificationScreenProps {
+interface RenewCertificationScreenProps {
   certification: Certification;
   onCancel?: () => void;
   onSave?: (updated: Certification) => void;
-  onDelete?: (id: string) => void;
 }
 
-export function EditCertificationScreen({
+export function RenewCertificationScreen({
   certification,
   onCancel,
   onSave,
-}: EditCertificationScreenProps): React.JSX.Element {
+}: RenewCertificationScreenProps): React.JSX.Element {
   const [certType, setCertType] = useState<Certification['certType']>(certification.certType || 'PGS');
-  const [customTypeName, setCustomTypeName] = useState<string>('');
   const [showTypeMenu, setShowTypeMenu] = useState<boolean>(false);
   const [certNumber, setCertNumber] = useState<string>(certification.certNumber || 'PGS-IND-2024-8841');
   const [issuingBody, setIssuingBody] = useState<string>(
     certification.issuingBody || 'PGS-India Green Council',
   );
-  const [issuedOn, setIssuedOn] = useState<string>(
-    formatDateForDisplay(certification.issuedOn) || '15/03/24',
-  );
-  const [expiresOn, setExpiresOn] = useState<string>(
-    formatDateForDisplay(certification.expiresOn) || '14/03/27',
-  );
-  const [documentUrl, setDocumentUrl] = useState<string | null>(
-    certification.documentUrl ? certification.documentUrl.split('/').pop() || 'pgs_certificate_2024.pdf' : 'pgs_certificate_2024.pdf',
-  );
+  const [renewedOn, setRenewedOn] = useState<string>(getTodayFormatted());
+  const [newExpiresOn, setNewExpiresOn] = useState<string>(getThreeYearsLaterFormatted());
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [documentSize, setDocumentSize] = useState<string>('1.4 MB · PDF');
-  const [notes, setNotes] = useState<string>(
-    'Renewal application already submitted to regional council on 02 Feb.',
+  const [renewalNotes, setRenewalNotes] = useState<string>(
+    `Renewal application for ${certification.certType} (${certification.certNumber || 'TN-2026'}). Submitted for audit validation.`,
   );
   const [uploading, setUploading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Auto-calculate +3 years on issue date change
-  const handleIssuedOnChange = (val: string) => {
-    setIssuedOn(val);
+  // Auto-calculate +3 years on renewal date change
+  const handleRenewedOnChange = (val: string) => {
+    setRenewedOn(val);
     const parts = val.split('/');
     if (parts.length === 3) {
       const day = parts[0];
@@ -244,7 +223,7 @@ export function EditCertificationScreen({
       if (year && year > 0 && year < 100) {
         const expYear = (year + 3).toString().padStart(2, '0');
         const expDay = (Math.max(1, parseInt(day || '1', 10) - 1)).toString().padStart(2, '0');
-        setExpiresOn(`${expDay}/${month}/${expYear}`);
+        setNewExpiresOn(`${expDay}/${month}/${expYear}`);
       }
     }
   };
@@ -257,7 +236,7 @@ export function EditCertificationScreen({
         type: [DocumentPicker.types.pdf, DocumentPicker.types.images],
       });
 
-      const fileName = result.name || 'pgs_certificate_2024.pdf';
+      const fileName = result.name || `${certification.certType.toLowerCase()}_renewed_cert.pdf`;
       const formattedSize = formatFileSize(result.size, fileName, result.type);
 
       try {
@@ -274,10 +253,9 @@ export function EditCertificationScreen({
       }
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
-        // User cancelled, do nothing
+        // User cancelled
       } else {
-        // Graceful fallback for mock/web environment
-        setDocumentUrl('pgs_certificate_2024.pdf');
+        setDocumentUrl(`${certification.certType.toLowerCase()}_renewed_cert.pdf`);
         setDocumentSize('1.4 MB · PDF');
       }
     } finally {
@@ -285,20 +263,15 @@ export function EditCertificationScreen({
     }
   };
 
-  const handleSave = () => {
-    if (!certType) {
-      setError('Please select a certification type.');
-      return;
-    }
-
+  const handleSubmitRenewal = () => {
     try {
       setSubmitting(true);
       setError(null);
 
-      const resolvedNumber = certNumber.trim() || certification.certNumber || 'PGS-IND-2024-8841';
-      const resolvedIssuer = issuingBody.trim() || certification.issuingBody || 'PGS-India Green Council';
-      const resolvedIssuedOn = issuedOn.trim() || certification.issuedOn || '15/03/24';
-      const resolvedExpiresOn = expiresOn.trim() || certification.expiresOn || '14/03/27';
+      const resolvedNumber = certNumber.trim() || certification.certNumber;
+      const resolvedIssuer = issuingBody.trim() || certification.issuingBody;
+      const resolvedIssuedOn = renewedOn.trim() || getTodayFormatted();
+      const resolvedExpiresOn = newExpiresOn.trim() || getThreeYearsLaterFormatted();
 
       const updated: Certification = {
         ...certification,
@@ -307,14 +280,17 @@ export function EditCertificationScreen({
         issuingBody: resolvedIssuer,
         issuedOn: resolvedIssuedOn,
         expiresOn: resolvedExpiresOn,
-        documentUrl: documentUrl || null,
+        documentUrl: documentUrl || certification.documentUrl || null,
+        daysToExpiry: 1095, // +3 years
+        verificationStatus: 'UNVERIFIED', // submitted for new verification
+        blocksListings: false,
       };
 
       onSave?.(updated);
 
       Alert.alert(
-        t('farmer.common.submit'),
-        'Certification updated successfully.',
+        'Renewal Submitted',
+        'Your certification renewal has been submitted. Status is pending TOHFA audit review.',
         [{ text: 'OK' }],
       );
     } catch {
@@ -325,11 +301,7 @@ export function EditCertificationScreen({
   };
 
   const selectedTypeLabel =
-    certType === 'OTHER' && customTypeName.trim()
-      ? customTypeName
-      : TYPE_OPTIONS.find((t) => t.value === certType)?.label ?? 'PGS Organic';
-
-  const subtitleDate = formatDateForSubtitle(certification.issuedOn || issuedOn);
+    TYPE_OPTIONS.find((t) => t.value === certType)?.label ?? `${certification.certType} Organic`;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -347,9 +319,9 @@ export function EditCertificationScreen({
           <CloseIcon size={18} color={P.twGreen700} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Edit Certification</Text>
+          <Text style={styles.headerTitle}>Renew Certification</Text>
           <Text style={styles.headerSub} numberOfLines={1}>
-            {selectedTypeLabel} · added {subtitleDate}
+            {selectedTypeLabel} · Current expires on {certification.expiresOn}
           </Text>
         </View>
       </View>
@@ -360,6 +332,14 @@ export function EditCertificationScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Notice Banner */}
+        <View style={styles.infoBanner}>
+          <InfoCircleIcon size={18} color={P.twGreen700} />
+          <Text style={styles.infoBannerText}>
+            Submitting a renewal extends your validity period and queues your certificate for TOHFA audit validation.
+          </Text>
+        </View>
+
         {error ? (
           <View style={styles.errorBanner}>
             <Text style={styles.errorBannerText}>{error}</Text>
@@ -383,17 +363,6 @@ export function EditCertificationScreen({
             <Text style={styles.selectInputText}>{selectedTypeLabel}</Text>
             <ChevronDown size={18} color={P.twGray500} />
           </TouchableOpacity>
-          <Text style={styles.helperText}>Choose "Other" to enter a custom certification name.</Text>
-
-          {certType === 'OTHER' && (
-            <TextInput
-              style={[styles.textInput, { marginTop: 8 }]}
-              value={customTypeName}
-              onChangeText={setCustomTypeName}
-              placeholder="Enter custom certification name"
-              placeholderTextColor={P.twGray400}
-            />
-          )}
         </View>
 
         {/* ── 2. Certifying Body ── */}
@@ -409,44 +378,44 @@ export function EditCertificationScreen({
             placeholder="e.g. PGS-India Green Council"
             placeholderTextColor={P.twGray400}
           />
-          <Text style={styles.helperText}>Helps TOHFA admin verify faster during audit prep.</Text>
+          <Text style={styles.helperText}>Certifying agency handling this renewal cycle.</Text>
         </View>
 
-        {/* ── 3. Certified On & Valid Until (2 Columns) ── */}
+        {/* ── 3. New Validity Dates (2 Columns) ── */}
         <View style={styles.fieldSection}>
           <View style={styles.datesRow}>
-            {/* Column 1: Certified On */}
+            {/* Column 1: Renewal Effective Date */}
             <View style={styles.dateCol}>
               <View style={styles.labelRow}>
                 <LabelCalendar size={15} color={P.twGray600} />
-                <Text style={styles.fieldLabel}>Certified On</Text>
+                <Text style={styles.fieldLabel}>Renewed From</Text>
                 <Text style={styles.requiredAsterisk}>*</Text>
               </View>
               <View style={styles.dateInputWrapper}>
                 <TextInput
                   style={styles.dateInputText}
-                  value={issuedOn}
-                  onChangeText={handleIssuedOnChange}
-                  placeholder="15/03/24"
+                  value={renewedOn}
+                  onChangeText={handleRenewedOnChange}
+                  placeholder="DD/MM/YY"
                   placeholderTextColor={P.twGray400}
                 />
                 <LabelCalendar size={18} color={P.twGray400} />
               </View>
             </View>
 
-            {/* Column 2: Valid Until */}
+            {/* Column 2: New Expiry Date */}
             <View style={styles.dateCol}>
               <View style={styles.labelRow}>
                 <LabelCalendar size={15} color={P.twGray600} />
-                <Text style={styles.fieldLabel}>Valid Until</Text>
+                <Text style={styles.fieldLabel}>New Expiry Date</Text>
                 <Text style={styles.requiredAsterisk}>*</Text>
               </View>
               <View style={styles.dateInputWrapper}>
                 <TextInput
                   style={styles.dateInputText}
-                  value={expiresOn}
-                  onChangeText={setExpiresOn}
-                  placeholder="14/03/27"
+                  value={newExpiresOn}
+                  onChangeText={setNewExpiresOn}
+                  placeholder="DD/MM/YY"
                   placeholderTextColor={P.twGray400}
                 />
                 <LabelCalendar size={18} color={P.twGray400} />
@@ -454,15 +423,15 @@ export function EditCertificationScreen({
             </View>
           </View>
           <Text style={styles.helperText}>
-            Auto-suggested as +3 years — edit if your body uses a different validity period.
+            Auto-suggested as +3 years from renewal date — adjust if your cycle differs.
           </Text>
         </View>
 
-        {/* ── 4. Certificate Document ── */}
+        {/* ── 4. Renewed Certificate Document ── */}
         <View style={styles.fieldSection}>
           <View style={styles.labelRow}>
             <LabelDoc size={16} color={P.twGray600} />
-            <Text style={styles.fieldLabel}>Certificate Document</Text>
+            <Text style={styles.fieldLabel}>Renewed Certificate Document</Text>
           </View>
 
           {documentUrl ? (
@@ -495,28 +464,28 @@ export function EditCertificationScreen({
             >
               <UploadIcon size={22} color={P.twGreen700} />
               <Text style={styles.uploadPlaceholderText}>
-                {uploading ? 'Uploading...' : 'Upload Certificate Document'}
+                {uploading ? 'Uploading...' : 'Upload Renewed Certificate'}
               </Text>
-              <Text style={styles.uploadPlaceholderSub}>Tap to browse files</Text>
+              <Text style={styles.uploadPlaceholderSub}>PDF, JPG or PNG · max 10 MB</Text>
             </TouchableOpacity>
           )}
           <Text style={styles.helperText}>
-            PDF, JPG or PNG · max 10 MB · one document per certification.
+            Attach the official renewal approval or new certificate copy.
           </Text>
         </View>
 
-        {/* ── 5. Notes (internal -- for TOHFA admin) ── */}
+        {/* ── 5. Renewal Notes (internal -- for TOHFA admin) ── */}
         <View style={styles.fieldSection}>
           <View style={styles.labelRow}>
             <LabelNotes size={16} color={P.twGray600} />
-            <Text style={styles.fieldLabel}>Notes</Text>
+            <Text style={styles.fieldLabel}>Renewal Notes</Text>
             <Text style={styles.notesInternalLabel}> (internal — for TOHFA admin)</Text>
           </View>
           <TextInput
             style={styles.notesInput}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Renewal application already submitted to regional council on 02 Feb."
+            value={renewalNotes}
+            onChangeText={setRenewalNotes}
+            placeholder="Add any details or application reference numbers..."
             placeholderTextColor={P.twGray400}
             multiline
             textAlignVertical="top"
@@ -539,12 +508,12 @@ export function EditCertificationScreen({
         <TouchableOpacity
           style={styles.saveBtn}
           activeOpacity={0.85}
-          onPress={handleSave}
+          onPress={handleSubmitRenewal}
           disabled={submitting}
         >
           <CheckIcon size={18} color={P.white} />
           <Text style={styles.saveBtnText}>
-            {submitting ? 'Saving...' : 'Save Certification'}
+            {submitting ? 'Submitting...' : 'Submit Renewal'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -640,6 +609,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 20,
+  },
+
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: P.twGreen50,
+    borderWidth: 1,
+    borderColor: P.twGreen300,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  infoBannerText: {
+    flex: 1,
+    fontSize: fontSizes.caption,
+    lineHeight: 16,
+    color: P.twGreen700,
+    fontWeight: '500',
   },
 
   errorBanner: {

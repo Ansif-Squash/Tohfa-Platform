@@ -226,7 +226,7 @@ export function SoilTestScreen({ onNavigateBack, onNavigateToNewSoilTest }: Soil
               <View style={styles.historyHeaderRow}>
                 <Text style={styles.historyDate}>12 Jun 2026</Text>
                 <View style={[styles.badge, { backgroundColor: colors.brandGreenLight, paddingVertical: 2, paddingHorizontal: 6 }]}>
-                  <Text style={[styles.badgeText, { color: P.primary, fontSize: 10 }]}>{t('farmer.profile.soil.badgeLatest')}</Text>
+                  <Text style={[styles.badgeText, { color: P.primary, fontSize: 11, lineHeight: 15 }]}>{t('farmer.profile.soil.badgeLatest')}</Text>
                 </View>
               </View>
               <Text style={styles.historySummary}>
