@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -14,14 +14,21 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Line, Polygon } from 'react-native-svg';
-import { Icon } from '@tohfa/mobile-ui';
+import { Icon, Skeleton } from '@tohfa/mobile-ui';
 import {
+  deriveFarmRatingView,
+  evalCertificateWarning,
+  getMyCertifications,
   getMyFarmerProfile,
+  getMyFarmRating,
+  getSystemConfig,
   maskAadhaar,
   maskMobile,
   updateMyFarmerProfile,
+  type Certification,
+  type FarmRating,
 } from '../../api/farmer';
-import { LOCALES, setLocale, type Locale } from '../../../../i18n/farmer';
+import { LOCALES, setLocale, t, type Locale, type TranslationKey } from '../../../../i18n/farmer';
 import { colors, authPalette as P } from '../../theme';
 import farmerAvatar from '../../assets/farmer-kumar.jpg';
 
@@ -57,6 +64,51 @@ interface FarmDetailsData {
   tags: string[];
 }
 
+/**
+ * Mirrors `displayStatus` in CertificationsScreen deliberately: both screens must
+ * agree on what "expiring" means, and both derive it from the server-computed
+ * `daysToExpiry` plus the `certExpiryWarningDays` threshold from system config --
+ * never a hardcoded window (root CLAUDE.md §2.7).
+ */
+type CertDisplayStatus = 'active' | 'expiring' | 'expired';
+
+function certDisplayStatus(cert: Certification, warningThreshold: number): CertDisplayStatus {
+  const warning = evalCertificateWarning(cert.daysToExpiry, warningThreshold);
+  if (warning.isExpired) return 'expired';
+  if (warning.isWarning) return 'expiring';
+  return 'active';
+}
+
+const CERT_TONE: Record<
+  CertDisplayStatus,
+  { bg: string; border: string; fg: string; labelKey: TranslationKey }
+> = {
+  active: {
+    bg: P.certCardBg,
+    border: P.sageTintBg,
+    fg: colors.brandGreen,
+    labelKey: 'farmer.profile.stats.certValid',
+  },
+  expiring: {
+    bg: P.warnCardBg,
+    border: P.warnCardBorder,
+    fg: P.orange900,
+    labelKey: 'farmer.profile.cert.expiring',
+  },
+  expired: {
+    bg: P.red50,
+    border: P.orange400,
+    fg: P.red800,
+    labelKey: 'farmer.certifications.expired',
+  },
+};
+
+function certTypeKey(certType: Certification['certType']): TranslationKey {
+  if (certType === 'PGS') return 'farmer.profile.cert.pgs';
+  if (certType === 'NPOP') return 'farmer.profile.cert.npop';
+  return 'farmer.certifications.add.type.OTHER';
+}
+
 export function ProfileScreen({
   onNavigateToHome,
   onNavigateToCertifications,
@@ -69,26 +121,41 @@ export function ProfileScreen({
 }: ProfileScreenProps): React.JSX.Element {
   // --- Profile State ---
   const [personalDetails, setPersonalDetails] = useState<PersonalDetailsData>({
-    fullName: 'Kumar',
-    dob: '15 Mar 1985',
-    mobile: '+91 98765 43210',
-    aadhaar: 'XXXX XXXX 4210',
-    yearsInOrganic: '14 years',
-    farmingType: 'Organic',
-    farmName: 'Great Earth Organic Farm',
-    location: 'Kolapatti, Ooty, Nilgiris',
+    fullName: '',
+    dob: '',
+    mobile: '',
+    aadhaar: '',
+    yearsInOrganic: '',
+    farmingType: '',
+    farmName: '',
+    location: '',
   });
 
   const [farmDetails, setFarmDetails] = useState<FarmDetailsData>({
-    acres: '2.5',
-    zones: '3',
-    farms: '1',
-    fmbPts: '8',
-    waterSource: 'Borewell + Rainwater',
-    tags: ['Forest boundary', 'Upper hill', 'Wildlife zone'],
+    acres: '—',
+    zones: '—',
+    farms: '—',
+    fmbPts: '—',
+    waterSource: '—',
+    tags: [],
   });
 
-  const farmerId = 'TOFHA-F-2024-0417';
+  // Real TOHFA farmer id from GET /v1/farmers/me; empty until first fetch.
+  const [farmerId, setFarmerId] = useState<string>('');
+
+  // Real certifications: GET /v1/farmers/me/certifications + the expiry-warning
+  // threshold from system config. Loaded independently of the profile fetch so a
+  // failure on one does not blank the other (same shape as WalletScreen).
+  const [certs, setCerts] = useState<Certification[]>([]);
+  const [certWarningDays, setCertWarningDays] = useState<number>(30);
+  const [certsLoading, setCertsLoading] = useState<boolean>(true);
+  const [certsError, setCertsError] = useState<string | null>(null);
+
+  // Real farm rating: GET /v1/farmers/me/rating (BR-06), loaded independently
+  // of the profile/certs fetches (same shape as those) so a failure here
+  // doesn't blank the rest of the screen.
+  const [farmRating, setFarmRating] = useState<FarmRating | null>(null);
+  const [ratingLoading, setRatingLoading] = useState<boolean>(true);
 
   // --- Modal States ---
   const [isEditPersonalModalVisible, setIsEditPersonalModalVisible] = useState(false);
@@ -122,6 +189,9 @@ export function ProfileScreen({
       try {
         const res = await getMyFarmerProfile();
         if (res) {
+          if (res.tohfaFarmerId) {
+            setFarmerId(res.tohfaFarmerId);
+          }
           setPersonalDetails((prev) => ({
             ...prev,
             fullName: res.fullName || prev.fullName,
@@ -143,6 +213,57 @@ export function ProfileScreen({
     void fetchProfile();
   }, []);
 
+  const loadCerts = useCallback(async () => {
+    try {
+      setCertsError(null);
+      const [certsRes, configRes] = await Promise.all([getMyCertifications(), getSystemConfig()]);
+      setCerts(certsRes.items);
+      setCertWarningDays(configRes.certExpiryWarningDays);
+    } catch {
+      setCertsError(t('error.generic'));
+    } finally {
+      setCertsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCerts();
+  }, [loadCerts]);
+
+  const loadRating = useCallback(async () => {
+    try {
+      const res = await getMyFarmRating();
+      setFarmRating(res);
+    } catch {
+      // Leave farmRating null -- deriveFarmRatingView(null) already renders
+      // the same "not yet rated" empty state, so no separate error UI is
+      // needed for this summary card.
+    } finally {
+      setRatingLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadRating();
+  }, [loadRating]);
+
+  const ratingView = deriveFarmRatingView(farmRating);
+
+  const certSummary = certs.map((cert) => ({
+    cert,
+    status: certDisplayStatus(cert, certWarningDays),
+  }));
+  const worstCert =
+    certSummary.find((c) => c.status === 'expired') ??
+    certSummary.find((c) => c.status === 'expiring') ??
+    null;
+  const certStatTone = worstCert ? CERT_TONE[worstCert.status] : CERT_TONE.active;
+  const certStatLabel = certsLoading
+    ? '—'
+    : certSummary.length === 0
+      ? t('farmer.dashboard.header.certNone')
+      : t(certStatTone.labelKey);
+
   const handleShareProfile = async () => {
     try {
       await Share.share({
@@ -156,7 +277,7 @@ export function ProfileScreen({
   const openPersonalEdit = () => {
     setTempFullName(personalDetails.fullName);
     setTempDob(personalDetails.dob);
-    setTempYearsInOrganic(personalDetails.yearsInOrganic.replace(/\D/g, '') || '14');
+    setTempYearsInOrganic(personalDetails.yearsInOrganic.replace(/\D/g, '') || '');
     setTempFarmingType(personalDetails.farmingType);
     setTempFarmName(personalDetails.farmName);
     setTempLocation(personalDetails.location);
@@ -166,23 +287,23 @@ export function ProfileScreen({
   const handleSavePersonalDetails = async () => {
     setSaving(true);
     try {
-      const expNumber = parseInt(tempYearsInOrganic, 10) || 14;
+      const expNumber = parseInt(tempYearsInOrganic, 10) || 0;
       await updateMyFarmerProfile({
         fullName: tempFullName.trim(),
         farmingExperienceYears: expNumber,
         address: tempLocation.trim(),
       }).catch(() => {
-        // If mock backend fails, proceed with local update
+        // Backend unavailable — local update only
       });
 
       setPersonalDetails({
         ...personalDetails,
-        fullName: tempFullName.trim() || 'Kumar',
-        dob: tempDob.trim() || '15 Mar 1985',
-        yearsInOrganic: `${expNumber} years`,
+        fullName: tempFullName.trim(),
+        dob: tempDob.trim(),
+        yearsInOrganic: expNumber > 0 ? `${expNumber} years` : '',
         farmingType: tempFarmingType,
-        farmName: tempFarmName.trim() || 'Great Earth Organic Farm',
-        location: tempLocation.trim() || 'Kolapatti, Ooty, Nilgiris',
+        farmName: tempFarmName.trim(),
+        location: tempLocation.trim(),
       });
 
       setIsEditPersonalModalVisible(false);
@@ -299,11 +420,15 @@ export function ProfileScreen({
 
           {/* 4 Quick Stat Cards Overlapping Header */}
           <View style={styles.quickStatsRow}>
-            <View style={styles.quickStatCard}>
-              <Icon name="shield" size={18} color={colors.brandGreen} style={styles.statEmoji} />
-              <Text style={[styles.statValue, { color: colors.brandGreen }]}>Valid</Text>
-              <Text style={styles.statLabel}>CERT</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.quickStatCard}
+              onPress={() => onNavigateToCertifications?.()}
+              activeOpacity={0.8}
+            >
+              <Icon name="shield" size={18} color={certStatTone.fg} style={styles.statEmoji} />
+              <Text style={[styles.statValue, { color: certStatTone.fg }]}>{certStatLabel}</Text>
+              <Text style={styles.statLabel}>{t('farmer.profile.stats.cert')}</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.quickStatCard}
@@ -311,8 +436,14 @@ export function ProfileScreen({
               activeOpacity={0.8}
             >
               <Icon name="star" size={18} color={P.deepGreen} style={styles.statEmoji} />
-              <Text style={[styles.statValue, { color: P.deepGreen }]}>82</Text>
-              <Text style={styles.statLabel}>RATING</Text>
+              <Text style={[styles.statValue, { color: P.deepGreen }]}>
+                {ratingLoading
+                  ? '—'
+                  : ratingView.isRated
+                    ? String(ratingView.overallRating)
+                    : t('farmer.profile.rating.notRatedShort')}
+              </Text>
+              <Text style={styles.statLabel}>{t('farmer.profile.stats.rating')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -396,6 +527,7 @@ export function ProfileScreen({
           </View>
         </View>
 
+        {/* MOCK: GET /v1/farmers/me returns no farm name, survey number, area/acres, zones, FMB point count, water source or boundary geometry. The farms/plots tables exist (db/migrations/0003) but have no farmer-facing read endpoint; farms.boundary is documented as deferred. */}
         {/* ================= CARD 2: FARM & FMB ================= */}
         <View style={styles.cardContainer}>
           <View style={styles.cardHeaderRow}>
@@ -411,29 +543,32 @@ export function ProfileScreen({
             </TouchableOpacity>
           </View>
 
-          {/* FMB Interactive / Vector Map Preview */}
+          {/* FMB Map Preview — ESRI World Imagery satellite tile */}
           <View style={styles.fmbMapContainer}>
-            <Svg width="100%" height="135" viewBox="0 0 320 135">
-              {/* Background Grid Lines */}
-              <Line x1="0" y1="67" x2="320" y2="67" stroke={P.slate200} strokeWidth="1" strokeDasharray="4,4" />
-              <Line x1="160" y1="0" x2="160" y2="135" stroke={P.slate200} strokeWidth="1" strokeDasharray="4,4" />
-
-              {/* FMB Cadastral Boundary Polygon */}
+            <Image
+              source={{
+                uri:
+                  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export' +
+                  '?bbox=76.6882,11.4034,76.7002,11.4114&bboxSR=4326&size=640,270&format=jpg&transparent=false&f=image',
+              }}
+              style={StyleSheet.absoluteFillObject}
+              resizeMode="cover"
+            />
+            {/* FMB polygon overlay on satellite tile */}
+            <Svg width="100%" height="135" viewBox="0 0 320 135" style={StyleSheet.absoluteFillObject}>
               <Polygon
                 points="45,40 270,30 250,110 65,115"
-                fill="rgba(165, 214, 167, 0.55)"
+                fill="rgba(165, 214, 167, 0.45)"
                 stroke={colors.brandGreen}
                 strokeWidth="2.5"
                 strokeLinejoin="round"
               />
-
-              {/* Inner Center Plot Marker */}
               <Circle cx="158" cy="68" r="7" fill={P.orange600} stroke={colors.white} strokeWidth="2.5" />
             </Svg>
 
             {/* GPS Tag */}
             <View style={styles.gpsCoordinatesBadge}>
-              <Text style={styles.gpsCoordinatesText}>11.4064° N, 76.6932° E</Text>
+              <Text style={styles.gpsCoordinatesText}>GPS boundary pending</Text>
             </View>
           </View>
 
@@ -466,21 +601,17 @@ export function ProfileScreen({
             <Text style={styles.detailValue}>{farmDetails.waterSource}</Text>
           </View>
 
-          {/* Land Context Pills */}
-          <View style={styles.tagPillContainer}>
-            <View style={[styles.tagPill, styles.iconTextRow, { backgroundColor: colors.brandGreenLight }]}>
-              <Icon name="park" size={11} color={colors.brandGreen} />
-              <Text style={[styles.tagPillText, { color: colors.brandGreen }]}>Forest boundary</Text>
+          {/* Land Context Pills — only shown once tags are available */}
+          {farmDetails.tags.length > 0 && (
+            <View style={styles.tagPillContainer}>
+              {farmDetails.tags.map((tag, i) => (
+                <View key={i} style={[styles.tagPill, styles.iconTextRow, { backgroundColor: colors.brandGreenLight }]}>
+                  <Icon name="park" size={11} color={colors.brandGreen} />
+                  <Text style={[styles.tagPillText, { color: colors.brandGreen }]}>{tag}</Text>
+                </View>
+              ))}
             </View>
-            <View style={[styles.tagPill, styles.iconTextRow, { backgroundColor: colors.brandGreenLight }]}>
-              <Icon name="terrain" size={11} color={colors.brandGreen} />
-              <Text style={[styles.tagPillText, { color: colors.brandGreen }]}>Upper hill</Text>
-            </View>
-            <View style={[styles.tagPill, styles.iconTextRow, { backgroundColor: P.red50 }]}>
-              <Icon name="eco" size={11} color={P.red800} />
-              <Text style={[styles.tagPillText, { color: P.red800 }]}>Wildlife zone</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* ================= CARD 3: CERTIFICATIONS ================= */}
@@ -501,52 +632,88 @@ export function ProfileScreen({
             </TouchableOpacity>
           </View>
 
-          {/* 2 Certification Badges side-by-side */}
-          <View style={styles.certCardsRow}>
-            {/* PGS Card */}
+          {/* Real certification summary -- GET /v1/farmers/me/certifications via
+              getMyCertifications(), with expiry derived by the shared
+              evalCertificateWarning helper (BR-01/BR-02). */}
+          {certsLoading ? (
+            <View style={styles.certCardsRow}>
+              <Skeleton height={112} width="48%" style={styles.certSkeleton} />
+              <Skeleton height={112} width="48%" style={styles.certSkeleton} />
+            </View>
+          ) : certsError ? (
             <TouchableOpacity
-              style={[styles.certSubCard, { backgroundColor: P.certCardBg, borderColor: P.sageTintBg }]}
-              onPress={() => onNavigateToCertifications?.()}
-              activeOpacity={0.8}
+              onPress={() => {
+                setCertsLoading(true);
+                void loadCerts();
+              }}
+              activeOpacity={0.7}
             >
-              <View style={styles.certCardTop}>
-                <Icon name="eco" size={22} color={colors.brandGreen} />
-                <View style={styles.greenCheckmarkCircle}>
-                  <Icon name="check" size={11} color={colors.white} />
-                </View>
-              </View>
-              <Text style={styles.certTitle}>PGS Organic</Text>
-              <Text style={[styles.certStatusText, { color: colors.brandGreen }]}>Valid</Text>
-              <Text style={styles.certRenewText}>Renews in 214 days</Text>
+              <Text style={styles.certNoticeText}>{certsError}</Text>
+              <Text style={styles.cardActionLink}>{t('farmer.common.retry')}</Text>
             </TouchableOpacity>
+          ) : certSummary.length === 0 ? (
+            <Text style={styles.certNoticeText}>{t('farmer.certifications.empty')}</Text>
+          ) : (
+            <View style={styles.certCardsRow}>
+              {certSummary.slice(0, 2).map(({ cert, status }) => {
+                const tone = CERT_TONE[status];
+                return (
+                  <TouchableOpacity
+                    key={cert.id}
+                    style={[
+                      styles.certSubCard,
+                      { backgroundColor: tone.bg, borderColor: tone.border },
+                    ]}
+                    onPress={() => onNavigateToCertifications?.()}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.certCardTop}>
+                      <Icon
+                        name={cert.certType === 'PGS' ? 'eco' : 'storefront'}
+                        size={22}
+                        color={tone.fg}
+                      />
+                      {status === 'active' ? (
+                        <View style={styles.greenCheckmarkCircle}>
+                          <Icon name="check" size={11} color={colors.white} />
+                        </View>
+                      ) : (
+                        <View style={styles.orangeExclamationCircle}>
+                          <Text style={styles.orangeExclamationText}>!</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.certTitle}>{t(certTypeKey(cert.certType))}</Text>
+                    <Text style={[styles.certStatusText, { color: tone.fg }]}>
+                      {t(tone.labelKey)}
+                    </Text>
+                    <Text style={styles.certRenewText}>
+                      {status === 'expired'
+                        ? t('farmer.certifications.overdueBy', {
+                            days: Math.abs(cert.daysToExpiry),
+                          })
+                        : t('farmer.profile.cert.renewsIn', { days: cert.daysToExpiry })}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
-            {/* NPOP Card */}
-            <TouchableOpacity
-              style={[styles.certSubCard, { backgroundColor: P.warnCardBg, borderColor: P.warnCardBorder }]}
-              onPress={() => onNavigateToCertifications?.()}
-              activeOpacity={0.8}
-            >
-              <View style={styles.certCardTop}>
-                <Icon name="storefront" size={22} color={P.orange900} />
-                <View style={styles.orangeExclamationCircle}>
-                  <Text style={styles.orangeExclamationText}>!</Text>
-                </View>
-              </View>
-              <Text style={styles.certTitle}>NPOP</Text>
-              <Text style={[styles.certStatusText, { color: P.orange900 }]}>Expiring</Text>
-              <Text style={styles.certRenewText}>Renews in 24 days</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Expiry Warning Notice */}
-          <View style={styles.warningNoticeBox}>
-            <Icon name="warning" size={16} color={P.amberDeep} />
-            <Text style={styles.warningNoticeText}>
-              NPOP certificate expires soon. Renew to keep market listings active.
-            </Text>
-          </View>
+          {/* Shown only when a real certificate is actually expiring or expired. */}
+          {worstCert ? (
+            <View style={styles.warningNoticeBox}>
+              <Icon name="warning" size={16} color={P.amberDeep} />
+              <Text style={styles.warningNoticeText}>
+                {worstCert.status === 'expired'
+                  ? t('farmer.profile.cert.expiredNotice', { type: worstCert.cert.certType })
+                  : t('farmer.profile.cert.expiringNotice', { type: worstCert.cert.certType })}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
+        {/* MOCK: no audits resource exists in apps/api or docs/openapi.yaml. */}
         {/* ================= CARD 4: AUDITS ================= */}
         <View style={styles.cardContainer}>
           <View style={styles.cardHeaderRow}>
@@ -609,6 +776,11 @@ export function ProfileScreen({
         </View>
 
         {/* ================= CARD 5: FARM RATING ================= */}
+        {/* Real data: GET /v1/farmers/me/rating (BR-06) via getMyFarmRating(),
+            shaped for display by the shared deriveFarmRatingView(). Shows the
+            first 5 of the 10 canonical categories inline; "Details" opens the
+            full FarmRatingsScreen breakdown, matching this card's existing
+            space constraints. */}
         <View style={styles.cardContainer}>
           <View style={styles.cardHeaderRow}>
             <View style={[styles.cardIconBox, { backgroundColor: colors.brandGreenLight }]}>
@@ -616,7 +788,7 @@ export function ProfileScreen({
             </View>
             <View style={styles.cardHeaderTitleBox}>
               <Text style={styles.cardTitle}>Farm Rating</Text>
-              <Text style={styles.cardSubtitle}>10-category framework</Text>
+              <Text style={styles.cardSubtitle}>{t('farmer.profile.rating.subtitle')}</Text>
             </View>
             <TouchableOpacity onPress={() => (onNavigateToFarmRatings ? onNavigateToFarmRatings() : setIsRatingModalVisible(true))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.cardActionLink}>Details</Text>
@@ -627,89 +799,86 @@ export function ProfileScreen({
           <View style={styles.ratingHeroRow}>
             <View style={styles.ratingGaugeContainer}>
               <Svg width="86" height="86" viewBox="0 0 100 100">
-                <Circle cx="50" cy="50" r="40" stroke={colors.brandGreenLight} strokeWidth="8" fill="none" />
                 <Circle
                   cx="50"
                   cy="50"
                   r="40"
-                  stroke={colors.brandGreen}
+                  stroke={ratingView.isRated ? colors.brandGreenLight : P.slate200}
+                  strokeWidth="8"
+                  fill="none"
+                />
+                <Circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  stroke={ratingView.isRated ? colors.brandGreen : P.slate300}
                   strokeWidth="8"
                   fill="none"
                   strokeDasharray={2 * Math.PI * 40}
-                  strokeDashoffset={2 * Math.PI * 40 * (1 - 0.82)}
+                  strokeDashoffset={
+                    2 * Math.PI * 40 * (1 - (ratingView.isRated ? (ratingView.overallRating as number) / 100 : 0))
+                  }
                   strokeLinecap="round"
                   transform="rotate(-90 50 50)"
                 />
               </Svg>
               <View style={styles.ratingGaugeCenterText}>
-                <Text style={styles.ratingGaugeScore}>82</Text>
+                <Text style={styles.ratingGaugeScore}>{ratingView.isRated ? ratingView.overallRating : '—'}</Text>
                 <Text style={styles.ratingGaugeMax}>/100</Text>
               </View>
             </View>
 
             <View style={styles.ratingStatusDetails}>
-              <Text style={styles.ratingStatusTitle}>Excellent</Text>
-              <View style={[styles.ratingDeltaPill, styles.iconTextRow]}>
-                <Icon name="trending_up" size={11} color={colors.brandGreen} />
-                <Text style={styles.ratingDeltaText}>+4 this month</Text>
-              </View>
+              <Text style={styles.ratingStatusTitle}>
+                {ratingLoading
+                  ? '—'
+                  : ratingView.isRated && ratingView.tierLabelKey
+                    ? t(ratingView.tierLabelKey as TranslationKey)
+                    : t('farmer.profile.rating.notRatedTitle')}
+              </Text>
             </View>
           </View>
 
-          {/* Rating Category Progress Bars */}
+          {/* Rating Category Progress Bars -- first 5 of the 10 canonical
+              categories, each with its own "not yet rated" state when the
+              server hasn't scored it yet. */}
           <View style={styles.ratingBarsList}>
-            <View style={styles.barItem}>
-              <View style={styles.barHeader}>
-                <Text style={styles.barTitle}>Certification & Compliance</Text>
-                <Text style={[styles.barScore, { color: colors.brandGreen }]}>9/10</Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: '90%', backgroundColor: colors.brandGreen }]} />
-              </View>
-            </View>
-
-            <View style={styles.barItem}>
-              <View style={styles.barHeader}>
-                <Text style={styles.barTitle}>Environmental Sustainability</Text>
-                <Text style={[styles.barScore, { color: colors.brandGreen }]}>9/10</Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: '90%', backgroundColor: colors.brandGreen }]} />
-              </View>
-            </View>
-
-            <View style={styles.barItem}>
-              <View style={styles.barHeader}>
-                <Text style={styles.barTitle}>Farming Practices</Text>
-                <Text style={[styles.barScore, { color: colors.brandGreen }]}>8/10</Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: '80%', backgroundColor: P.green700 }]} />
-              </View>
-            </View>
-
-            <View style={styles.barItem}>
-              <View style={styles.barHeader}>
-                <Text style={styles.barTitle}>Market & Buyer Relations</Text>
-                <Text style={[styles.barScore, { color: P.orange900 }]}>6/10</Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: '60%', backgroundColor: P.orange700 }]} />
-              </View>
-            </View>
-
-            <View style={styles.barItem}>
-              <View style={styles.barHeader}>
-                <Text style={styles.barTitle}>Innovation & Improvement</Text>
-                <Text style={[styles.barScore, { color: P.red700 }]}>5/10</Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: '50%', backgroundColor: P.red600 }]} />
-              </View>
-            </View>
+            {ratingView.modules.slice(0, 5).map((mod) => {
+              const barColor =
+                mod.score === null
+                  ? P.slate300
+                  : mod.score >= 8
+                    ? colors.brandGreen
+                    : mod.score >= 6
+                      ? P.green700
+                      : mod.score >= 4
+                        ? P.orange700
+                        : P.red600;
+              return (
+                <View key={mod.categoryCode} style={styles.barItem}>
+                  <View style={styles.barHeader}>
+                    <Text style={styles.barTitle}>{t(mod.nameKey as TranslationKey)}</Text>
+                    <Text style={[styles.barScore, { color: barColor }]}>
+                      {mod.isRated
+                        ? t('farmer.profile.rating.score', { score: mod.score ?? 0 })
+                        : t('farmer.profile.rating.notRatedShort')}
+                    </Text>
+                  </View>
+                  <View style={styles.barTrack}>
+                    <View
+                      style={[
+                        styles.barFill,
+                        { width: `${(mod.score ?? 0) * 10}%`, backgroundColor: barColor },
+                      ]}
+                    />
+                  </View>
+                </View>
+              );
+            })}
           </View>
         </View>
 
+        {/* MOCK: no soil-test resource exists in apps/api or docs/openapi.yaml. */}
         {/* ================= CARD 6: SOIL TEST ================= */}
         <View style={styles.cardContainer}>
           <View style={styles.cardHeaderRow}>
@@ -1049,6 +1218,7 @@ export function ProfileScreen({
         </View>
       </Modal>
 
+      {/* MOCK: farmer documents (docType/fileUrl) are only reachable via GET /v1/admin/farmer-applications/:id, permission farmer.application.view, which docs/rbac.json grants FARMER: none. There is no farmer-facing "my documents" GET. */}
       {/* ================= MODAL: MY DOCUMENTS ================= */}
       <Modal
         visible={isDocumentsModalVisible}
@@ -1129,6 +1299,7 @@ export function ProfileScreen({
         </View>
       </Modal>
 
+      {/* MOCK: farmer_bank_accounts (db/migrations/0007) has no route, service or repo anywhere in apps/api, no path in docs/openapi.yaml, and FARMER holds "none" on payout.dues.view / payout.farmer.initiate / payout.approve_above_10k in docs/rbac.json. */}
       {/* ================= MODAL: BANK & PAYMENTS ================= */}
       <Modal
         visible={isBankModalVisible}
@@ -1327,7 +1498,7 @@ export function ProfileScreen({
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Farm Rating Framework</Text>
+              <Text style={styles.modalTitle}>{t('farmer.profile.rating.modalTitle')}</Text>
               <TouchableOpacity onPress={() => setIsRatingModalVisible(false)}>
                 <Icon name="close" size={18} color={P.slate400} style={styles.modalCloseText} />
               </TouchableOpacity>
@@ -1335,58 +1506,45 @@ export function ProfileScreen({
 
             <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
               <Text style={{ fontSize: 13, color: P.slate500, marginBottom: 14 }}>
-                The TOHFA 10-category framework ranks organic purity, land management, and fair marketplace behavior.
+                {t('farmer.profile.rating.intro')}
               </Text>
 
-              <View style={styles.barItem}>
-                <View style={styles.barHeader}>
-                  <Text style={styles.barTitle}>Certification & Compliance</Text>
-                  <Text style={[styles.barScore, { color: colors.brandGreen }]}>9/10</Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: '90%', backgroundColor: colors.brandGreen }]} />
-                </View>
-              </View>
+              {!ratingView.isRated ? (
+                <Text style={styles.certNoticeText}>{t('farmer.profile.rating.notRatedBody')}</Text>
+              ) : null}
 
-              <View style={styles.barItem}>
-                <View style={styles.barHeader}>
-                  <Text style={styles.barTitle}>Environmental Sustainability</Text>
-                  <Text style={[styles.barScore, { color: colors.brandGreen }]}>9/10</Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: '90%', backgroundColor: colors.brandGreen }]} />
-                </View>
-              </View>
-
-              <View style={styles.barItem}>
-                <View style={styles.barHeader}>
-                  <Text style={styles.barTitle}>Farming Practices & Soil Health</Text>
-                  <Text style={[styles.barScore, { color: colors.brandGreen }]}>8/10</Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: '80%', backgroundColor: P.green700 }]} />
-                </View>
-              </View>
-
-              <View style={styles.barItem}>
-                <View style={styles.barHeader}>
-                  <Text style={styles.barTitle}>Market & Buyer Relations</Text>
-                  <Text style={[styles.barScore, { color: P.orange900 }]}>6/10</Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: '60%', backgroundColor: P.orange700 }]} />
-                </View>
-              </View>
-
-              <View style={styles.barItem}>
-                <View style={styles.barHeader}>
-                  <Text style={styles.barTitle}>Innovation & Water Conservation</Text>
-                  <Text style={[styles.barScore, { color: P.red700 }]}>5/10</Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: '50%', backgroundColor: P.red600 }]} />
-                </View>
-              </View>
+              {ratingView.modules.map((mod) => {
+                const barColor =
+                  mod.score === null
+                    ? P.slate300
+                    : mod.score >= 8
+                      ? colors.brandGreen
+                      : mod.score >= 6
+                        ? P.green700
+                        : mod.score >= 4
+                          ? P.orange700
+                          : P.red600;
+                return (
+                  <View key={mod.categoryCode} style={styles.barItem}>
+                    <View style={styles.barHeader}>
+                      <Text style={styles.barTitle}>{t(mod.nameKey as TranslationKey)}</Text>
+                      <Text style={[styles.barScore, { color: barColor }]}>
+                        {mod.isRated
+                          ? t('farmer.profile.rating.score', { score: mod.score ?? 0 })
+                          : t('farmer.profile.rating.notRatedShort')}
+                      </Text>
+                    </View>
+                    <View style={styles.barTrack}>
+                      <View
+                        style={[
+                          styles.barFill,
+                          { width: `${(mod.score ?? 0) * 10}%`, backgroundColor: barColor },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -1849,6 +2007,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: P.slate400,
     marginTop: 2,
+  },
+  certSkeleton: {
+    borderRadius: 14,
+  },
+  certNoticeText: {
+    fontSize: 13,
+    color: P.slate500,
+    lineHeight: 19,
   },
   warningNoticeBox: {
     backgroundColor: P.amber50,

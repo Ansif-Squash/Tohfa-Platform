@@ -1,15 +1,20 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { type RoleCode } from '@tohfa/shared-types';
-import { signTokenPair, verifyRefreshToken } from '../../auth/jwt.js';
+import { signOAuthLinkToken, signTokenPair, verifyOAuthLinkToken, verifyRefreshToken } from '../../auth/jwt.js';
 import type { Actor } from '../../auth/requireAuth.js';
+import { writeAuditLog } from '../../audit/auditLog.js';
 import { config } from '../../config.js';
 import { pool, withTransaction } from '../../db/pool.js';
 import { AppError } from '../../http/problem.js';
-import { authRepo, type AuthRepo } from './auth.repo.js';
+import { authRepo, type AuthRepo, type OAuthIdentityRow } from './auth.repo.js';
+import { oauthProviderClient, type OAuthProfile, type OAuthProviderClient } from './oauth.providers.js';
 import type {
   ForgotPasswordBody,
   LoginBody,
+  OAuthLinkBody,
+  OAuthLoginBody,
+  OAuthProviderCode,
   RegisterCustomerBody,
   ResetPasswordBody,
   SendOtpBody,
@@ -18,6 +23,21 @@ import type {
 
 function hashValue(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function toProviderCode(provider: OAuthProviderCode): 'GOOGLE' | 'FACEBOOK' {
+  return provider === 'google' ? 'GOOGLE' : 'FACEBOOK';
+}
+
+/**
+ * Translate the UNIQUE(provider, provider_subject_id) / UNIQUE(user_id,
+ * provider) violation into a domain error. Mirrors the same pattern in
+ * counter-offers.service.ts: the database is the backstop against a
+ * concurrent double-link, the service turns its 23505 into a 409 instead of
+ * a 500.
+ */
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { code?: string }).code === '23505';
 }
 
 export interface AuthService {
@@ -31,9 +51,20 @@ export interface AuthService {
   resetPassword(input: ResetPasswordBody): Promise<void>;
   terminateSession(actor: Actor, sessionId: string): Promise<void>;
   getMe(actor: Actor): Promise<unknown>;
+  loginWithOAuth(
+    provider: OAuthProviderCode,
+    input: OAuthLoginBody,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<unknown>;
+  linkOAuthIdentity(actor: Actor, input: OAuthLinkBody): Promise<unknown>;
+  unlinkOAuthIdentity(actor: Actor, provider: OAuthProviderCode): Promise<void>;
 }
 
-export function createAuthService(repo: AuthRepo = authRepo): AuthService {
+export function createAuthService(
+  repo: AuthRepo = authRepo,
+  oauthClient: OAuthProviderClient = oauthProviderClient,
+): AuthService {
   return {
     async registerCustomer(input) {
       const existingMobile = await repo.findUserByMobile(pool, input.mobile);
@@ -181,17 +212,131 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
       // Mark challenge consumed
       await repo.consumeOtp(pool, challenge.id);
 
+      // BR-39: verify the linkToken (if any) up front — a bad/expired/tampered
+      // token must fail loudly (OAUTH_LINK_TOKEN_INVALID) rather than silently
+      // skipping the link the client asked for.
+      const linkedIdentity = input.linkToken !== undefined ? verifyOAuthLinkToken(input.linkToken) : null;
+
       // Find or activate user
       let user = challenge.user_id !== null ? await repo.findUserById(pool, challenge.user_id) : null;
       if (user === null) {
         user = await repo.findUserByMobile(pool, challenge.mobile);
       }
 
+      let oauthProfile: Omit<OAuthProfile, 'subjectId'> | undefined;
+
       if (user === null) {
-        return {
-          verified: true,
-          mobile: challenge.mobile,
-          purpose: challenge.purpose,
+        if (linkedIdentity === null) {
+          return {
+            verified: true,
+            mobile: challenge.mobile,
+            purpose: challenge.purpose,
+          };
+        }
+
+        // BR-39: brand-new mobile number + a verified OAuth profile — create
+        // the account and link the identity atomically (same transaction),
+        // so a crash between the two steps can never leave an unlinked
+        // orphan account or a linked identity with no user behind it. The
+        // account goes straight to ACTIVE: the OTP that proves the phone
+        // number just succeeded in this very call, so there is no separate
+        // activation step left to run.
+        const created = linkedIdentity;
+        user = await withTransaction(async (tx) => {
+          const newUser = await repo.createCustomerUser(tx, {
+            mobile: challenge.mobile,
+            // Whatever of these Google/Facebook actually gave us. Falling
+            // back to the email (then a generic label) rather than leaving
+            // full_name blank keeps the NOT NULL column happy; the client
+            // still collects/edits the real name on Step 1 of registration.
+            fullName: created.fullName ?? created.email ?? 'TOHFA User',
+            email: created.email,
+            passwordHash: null,
+            preferredLocale: 'en',
+            status: 'ACTIVE',
+          });
+
+          try {
+            await repo.createOAuthIdentity(tx, {
+              userId: newUser.id,
+              provider: created.provider,
+              providerSubjectId: created.providerSubjectId,
+              email: created.email,
+            });
+          } catch (error) {
+            if (isUniqueViolation(error)) {
+              throw new AppError('OAUTH_IDENTITY_ALREADY_LINKED', {
+                detail: 'This social account is already linked to a different TOHFA account.',
+              });
+            }
+            throw error;
+          }
+
+          await writeAuditLog(tx, {
+            actorId: newUser.id,
+            actionCode: 'auth.oauth.link',
+            entityType: 'oauth_identity',
+            entityId: null,
+            after: { provider: created.provider, viaOtpVerify: true, newAccount: true },
+          });
+
+          return newUser;
+        });
+
+        oauthProfile = {
+          fullName: linkedIdentity.fullName,
+          email: linkedIdentity.email,
+          photoUrl: linkedIdentity.photoUrl,
+        };
+      } else if (linkedIdentity !== null) {
+        // BR-39: an existing account — link the identity to IT rather than
+        // creating a duplicate account.
+        const existingLink = await repo.findOAuthIdentity(
+          pool,
+          linkedIdentity.provider,
+          linkedIdentity.providerSubjectId,
+        );
+
+        if (existingLink !== null && existingLink.user_id !== user.id) {
+          throw new AppError('OAUTH_IDENTITY_ALREADY_LINKED', {
+            detail: 'This social account is already linked to a different TOHFA account.',
+          });
+        }
+
+        if (existingLink === null) {
+          const targetUserId = user.id;
+          await withTransaction(async (tx) => {
+            let row: OAuthIdentityRow;
+            try {
+              row = await repo.createOAuthIdentity(tx, {
+                userId: targetUserId,
+                provider: linkedIdentity.provider,
+                providerSubjectId: linkedIdentity.providerSubjectId,
+                email: linkedIdentity.email,
+              });
+            } catch (error) {
+              if (isUniqueViolation(error)) {
+                throw new AppError('OAUTH_IDENTITY_ALREADY_LINKED', {
+                  detail: 'This social account is already linked to a different TOHFA account.',
+                });
+              }
+              throw error;
+            }
+
+            await writeAuditLog(tx, {
+              actorId: targetUserId,
+              actionCode: 'auth.oauth.link',
+              entityType: 'oauth_identity',
+              entityId: row.id,
+              after: { provider: linkedIdentity.provider, viaOtpVerify: true, newAccount: false },
+            });
+          });
+        }
+
+        oauthProfile = {
+          fullName: linkedIdentity.fullName,
+          email: linkedIdentity.email,
+          photoUrl: linkedIdentity.photoUrl,
         };
       }
 
@@ -292,6 +437,10 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
           roles: roleAssignments,
           preferredLocale: user.preferred_locale,
         },
+        // BR-39: additive/optional — lets the mobile client prefill Step 1 of
+        // its registration stepper without a second API call. Absent on a
+        // plain mobile+OTP verify (no linkToken was presented).
+        ...(oauthProfile !== undefined ? { oauthProfile } : {}),
       };
     },
 
@@ -601,6 +750,232 @@ export function createAuthService(repo: AuthRepo = authRepo): AuthService {
         })),
         permissions,
       };
+    },
+
+    async loginWithOAuth(provider, input, ip, userAgent) {
+      const providerCode = toProviderCode(provider);
+      const profile =
+        provider === 'google'
+          ? await oauthClient.verifyGoogleToken(input.token)
+          : await oauthClient.verifyFacebookToken(input.token);
+
+      const identity = await repo.findOAuthIdentity(pool, providerCode, profile.subjectId);
+
+      if (identity === null) {
+        // BR-39: never create or activate an account from an OAuth token
+        // alone. Mint a linkToken and hand back the verified profile; the
+        // client runs the normal mobile+OTP flow and passes the linkToken to
+        // `/auth/otp/verify` to complete the link.
+        const linkToken = signOAuthLinkToken({
+          provider: providerCode,
+          providerSubjectId: profile.subjectId,
+          email: profile.email,
+          fullName: profile.fullName,
+          photoUrl: profile.photoUrl,
+        });
+
+        return {
+          status: 'NOT_LINKED' as const,
+          profile: {
+            fullName: profile.fullName,
+            email: profile.email,
+            photoUrl: profile.photoUrl,
+          },
+          linkToken,
+        };
+      }
+
+      const user = await repo.findUserById(pool, identity.user_id);
+      if (user === null || user.status === 'DISABLED') {
+        throw new AppError('UNAUTHENTICATED', { detail: 'Account is inactive or disabled.' });
+      }
+
+      // From here down this mirrors `login`'s role-resolution and
+      // session-issuance exactly (same multi-role-selection behaviour,
+      // same token pair), just entered via a verified OAuth identity instead
+      // of a password.
+      const roles = await repo.getUserRoles(pool, user.id);
+      const roleAssignments = roles.map((r) => ({
+        code: r.role_code,
+        warehouseId: r.warehouse_id ?? undefined,
+        zoneId: r.zone_id ?? undefined,
+      }));
+
+      if (roleAssignments.length > 1 && input.roleCode === undefined) {
+        return {
+          requiresRoleSelection: true,
+          availableRoles: roleAssignments,
+        };
+      }
+
+      let effectiveRoles = roleAssignments;
+      if (input.roleCode !== undefined) {
+        const filtered = roleAssignments.filter((r) => r.code === input.roleCode);
+        if (filtered.length > 0) {
+          effectiveRoles = filtered;
+        } else if (user.user_type === input.roleCode) {
+          effectiveRoles = [
+            {
+              code: input.roleCode as RoleCode,
+              warehouseId: undefined,
+              zoneId: undefined,
+            },
+          ];
+        } else {
+          throw new AppError('UNAUTHENTICATED', {
+            detail: `User does not hold the ${input.roleCode} role.`,
+          });
+        }
+      } else if (effectiveRoles.length === 0) {
+        effectiveRoles = [
+          {
+            code: (user.user_type === 'FARMER' ? 'FARMER' : 'CUSTOMER') as RoleCode,
+            warehouseId: undefined,
+            zoneId: undefined,
+          },
+        ];
+      }
+
+      let farmerId: string | null = null;
+      let customerId: string | null = null;
+      if (user.user_type === 'FARMER' || effectiveRoles.some((r) => r.code === 'FARMER')) {
+        const farmerRes = await pool.query<{ id: string }>(
+          `SELECT id FROM farmers WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1`,
+          [user.id],
+        );
+        farmerId = farmerRes.rows[0]?.id ?? null;
+      }
+      if (user.user_type === 'CUSTOMER' || effectiveRoles.some((r) => r.code === 'CUSTOMER')) {
+        const customerRes = await pool.query<{ id: string }>(
+          `SELECT id FROM customers WHERE user_id = $1 LIMIT 1`,
+          [user.id],
+        );
+        customerId = customerRes.rows[0]?.id ?? null;
+      }
+
+      const sessionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const session = await repo.createSession(pool, {
+        userId: user.id,
+        deviceId: input.deviceId,
+        platform: input.platform,
+        ip,
+        userAgent,
+        expiresAt: sessionExpiresAt,
+      });
+
+      const tokenPair = signTokenPair(
+        {
+          sub: user.id,
+          roles: effectiveRoles,
+          farmerId,
+          customerId,
+        },
+        {
+          sub: user.id,
+          jti: session.id,
+        },
+      );
+
+      const refreshTokenHash = hashValue(tokenPair.refreshToken);
+      await repo.createRefreshToken(pool, {
+        sessionId: session.id,
+        userId: user.id,
+        tokenHash: refreshTokenHash,
+        expiresAt: sessionExpiresAt,
+      });
+
+      await repo.updateUserLastLogin(pool, user.id);
+
+      return {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        tokenType: 'Bearer',
+        expiresIn: 900,
+        requiresRoleSelection: false,
+        user: {
+          id: user.id,
+          fullName: user.full_name,
+          userType: user.user_type,
+          roles: effectiveRoles,
+          preferredLocale: user.preferred_locale,
+        },
+      };
+    },
+
+    async linkOAuthIdentity(actor, input) {
+      const providerCode = toProviderCode(input.provider);
+      const profile =
+        input.provider === 'google'
+          ? await oauthClient.verifyGoogleToken(input.token)
+          : await oauthClient.verifyFacebookToken(input.token);
+
+      const existing = await repo.findOAuthIdentity(pool, providerCode, profile.subjectId);
+      if (existing !== null && existing.user_id !== actor.userId) {
+        throw new AppError('OAUTH_IDENTITY_ALREADY_LINKED', {
+          detail: `This ${input.provider} account is already linked to a different TOHFA account.`,
+        });
+      }
+      if (existing !== null) {
+        // Idempotent: already linked to this same account, nothing to do.
+        return {
+          provider: input.provider,
+          email: existing.email ?? undefined,
+          linkedAt: existing.linked_at.toISOString(),
+        };
+      }
+
+      const created = await withTransaction(async (tx) => {
+        let row: OAuthIdentityRow;
+        try {
+          row = await repo.createOAuthIdentity(tx, {
+            userId: actor.userId,
+            provider: providerCode,
+            providerSubjectId: profile.subjectId,
+            email: profile.email,
+          });
+        } catch (error) {
+          if (isUniqueViolation(error)) {
+            throw new AppError('OAUTH_IDENTITY_ALREADY_LINKED', {
+              detail: `This ${input.provider} account is already linked to a different TOHFA account.`,
+            });
+          }
+          throw error;
+        }
+
+        await writeAuditLog(tx, {
+          actorId: actor.userId,
+          actionCode: 'auth.oauth.link',
+          entityType: 'oauth_identity',
+          entityId: row.id,
+          after: { provider: providerCode, email: profile.email },
+        });
+
+        return row;
+      });
+
+      return {
+        provider: input.provider,
+        email: created.email ?? undefined,
+        linkedAt: created.linked_at.toISOString(),
+      };
+    },
+
+    async unlinkOAuthIdentity(actor, provider) {
+      const providerCode = toProviderCode(provider);
+      await withTransaction(async (tx) => {
+        const deleted = await repo.deleteOAuthIdentity(tx, actor.userId, providerCode);
+        if (deleted === null) {
+          throw new AppError('NOT_FOUND', { detail: 'No linked identity for that provider.' });
+        }
+
+        await writeAuditLog(tx, {
+          actorId: actor.userId,
+          actionCode: 'auth.oauth.unlink',
+          entityType: 'oauth_identity',
+          entityId: deleted.id,
+          before: { provider: providerCode },
+        });
+      });
     },
   };
 }

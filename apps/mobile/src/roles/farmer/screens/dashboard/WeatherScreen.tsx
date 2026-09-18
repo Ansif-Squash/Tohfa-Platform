@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Pressable,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -8,54 +9,76 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
-import { Icon } from '@tohfa/mobile-ui';
-import { t } from '../../../../i18n/farmer';
-import { authPalette as P } from '../../theme';
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import { ErrorState, Skeleton } from '@tohfa/mobile-ui';
+import { t, type TranslationKey } from '../../../../i18n/farmer';
+import { authPalette as P, colors } from '../../theme';
+import {
+  getFarmWeather,
+  type FarmWeather,
+  type FarmWeatherAlert,
+  type FarmWeatherDaily,
+  type WeatherCondition,
+} from '../../api/weather';
+import { AnimatedWeatherHero } from './AnimatedWeatherHero';
 
 // ─────────────────────────────────────────────
-// Small inline weather glyphs -- Material Symbols' subsetted font (see
-// packages/mobile-ui/src/iconCodepoints.ts) has no cloud/moon/rain-drop
-// weather glyphs, so these five conditions are drawn directly rather than
-// falling back to the `Icon` component's "?" placeholder or (per this app's
-// hard no-emoji rule, enforced by foundation.test.ts) raw emoji characters.
+// Weather Glyphs -- Clean vector SVGs for conditions
+// Strictly zero raw emoji characters (enforced by foundation.test.ts)
 // ─────────────────────────────────────────────
 
-type WeatherKind = 'sunny' | 'partlyCloudy' | 'cloudy' | 'rain' | 'lightRain' | 'night';
+type WeatherKind = 'sunny' | 'partlyCloudy' | 'cloudy' | 'rain' | 'lightRain' | 'night' | 'frost';
 
 function WeatherGlyph({ kind, size = 24 }: { kind: WeatherKind; size?: number }) {
   const sun = (
     <>
-      <Circle cx="12" cy="12" r="4.5" fill={P.orange400} />
-      <Line x1="12" y1="2" x2="12" y2="4.5" stroke={P.orange400} strokeWidth="1.6" strokeLinecap="round" />
-      <Line x1="12" y1="19.5" x2="12" y2="22" stroke={P.orange400} strokeWidth="1.6" strokeLinecap="round" />
-      <Line x1="2" y1="12" x2="4.5" y2="12" stroke={P.orange400} strokeWidth="1.6" strokeLinecap="round" />
-      <Line x1="19.5" y1="12" x2="22" y2="12" stroke={P.orange400} strokeWidth="1.6" strokeLinecap="round" />
+      <Circle cx="12" cy="12" r="4.5" fill={P.amberAccent} />
+      <Line x1="12" y1="2" x2="12" y2="4.5" stroke={P.amberAccent} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="12" y1="19.5" x2="12" y2="22" stroke={P.amberAccent} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="2" y1="12" x2="4.5" y2="12" stroke={P.amberAccent} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="19.5" y1="12" x2="22" y2="12" stroke={P.amberAccent} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="4.93" y1="4.93" x2="6.7" y2="6.7" stroke={P.amberAccent} strokeWidth="1.6" strokeLinecap="round" />
+      <Line x1="17.3" y1="17.3" x2="19.07" y2="19.07" stroke={P.amberAccent} strokeWidth="1.6" strokeLinecap="round" />
+      <Line x1="4.93" y1="19.07" x2="6.7" y2="17.3" stroke={P.amberAccent} strokeWidth="1.6" strokeLinecap="round" />
+      <Line x1="17.3" y1="6.7" x2="19.07" y2="4.93" stroke={P.amberAccent} strokeWidth="1.6" strokeLinecap="round" />
     </>
   );
+
   const cloud = (
     <Path
       d="M7 18h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.9-1A4.5 4.5 0 0 0 7 18z"
       fill={P.slate300}
       stroke={P.slate400}
-      strokeWidth="1"
+      strokeWidth="1.2"
     />
   );
+
   const rain = (
     <>
-      <Line x1="9" y1="19" x2="7.5" y2="22" stroke={P.blue700} strokeWidth="1.6" strokeLinecap="round" />
-      <Line x1="13" y1="19" x2="11.5" y2="22" stroke={P.blue700} strokeWidth="1.6" strokeLinecap="round" />
-      <Line x1="17" y1="19" x2="15.5" y2="22" stroke={P.blue700} strokeWidth="1.6" strokeLinecap="round" />
+      <Line x1="9" y1="19" x2="7.5" y2="22" stroke={P.rainAlertIcon} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="13" y1="19" x2="11.5" y2="22" stroke={P.rainAlertIcon} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="17" y1="19" x2="15.5" y2="22" stroke={P.rainAlertIcon} strokeWidth="1.8" strokeLinecap="round" />
     </>
   );
+
   const moon = <Path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill={P.blueGrey600} />;
+
+  const frost = (
+    <>
+      <Line x1="12" y1="3" x2="12" y2="21" stroke={P.frostAlertBorder} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="3" y1="12" x2="21" y2="12" stroke={P.frostAlertBorder} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="5.64" y1="5.64" x2="18.36" y2="18.36" stroke={P.frostAlertBorder} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="5.64" y1="18.36" x2="18.36" y2="5.64" stroke={P.frostAlertBorder} strokeWidth="1.8" strokeLinecap="round" />
+      <Circle cx="12" cy="12" r="2.2" fill={P.frostAlertBorder} />
+    </>
+  );
 
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {kind === 'sunny' && sun}
       {kind === 'partlyCloudy' && (
         <>
-          <Circle cx="8" cy="8" r="3.2" fill={P.orange400} />
+          <Circle cx="8" cy="8" r="3.2" fill={P.amberAccent} />
           {cloud}
         </>
       )}
@@ -69,27 +92,174 @@ function WeatherGlyph({ kind, size = 24 }: { kind: WeatherKind; size?: number })
       {kind === 'lightRain' && (
         <>
           {cloud}
-          <Line x1="10" y1="19" x2="9" y2="21.5" stroke={P.blue700} strokeWidth="1.4" strokeLinecap="round" />
-          <Line x1="14" y1="19" x2="13" y2="21.5" stroke={P.blue700} strokeWidth="1.4" strokeLinecap="round" />
+          <Line x1="10" y1="19" x2="9" y2="21.5" stroke={P.rainAlertIcon} strokeWidth="1.5" strokeLinecap="round" />
+          <Line x1="14" y1="19" x2="13" y2="21.5" stroke={P.rainAlertIcon} strokeWidth="1.5" strokeLinecap="round" />
         </>
       )}
       {kind === 'night' && moon}
+      {kind === 'frost' && frost}
     </Svg>
   );
 }
 
-function ThermometerIcon({ size = 18, color = P.red600 }: { size?: number; color?: string }) {
+// Chevron Icons for expandable alerts
+function ChevronDownIcon({ size = 20, color = P.stoneMuted }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 9l6 6 6-6" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function ChevronUpIcon({ size = 20, color = P.frostAlertBorder }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M18 15l-6-6-6 6" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function SnowflakeAlertIcon({ size = 24, color = P.frostAlertBorder }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M14 14.76V4a2 2 0 0 0-4 0v10.76a4 4 0 1 0 4 0z"
+        d="M12 2v20M2 12h20M5 5l14 14M5 19L19 5"
         stroke={color}
-        strokeWidth="1.8"
+        strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <Path
+        d="M12 6l2-2M12 6l-2-2M12 18l2 2M12 18l-2 2M6 12l-2 2M6 12l-2-2M18 12l2 2M18 12l2-2"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </Svg>
   );
+}
+
+function RainAlertIcon({ size = 24, color = P.rainAlertIcon }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M7 16h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.9-1A4.5 4.5 0 0 0 7 16z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function ShieldCheckIcon({ size = 20, color = P.primary }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M9 12l2 2 4-4" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/**
+ * Maps the API's weather taxonomy onto this screen's illustrated glyph set.
+ */
+export function glyphForCondition(condition: WeatherCondition): WeatherKind {
+  switch (condition) {
+    case 'CLEAR':
+      return 'sunny';
+    case 'CLEAR_NIGHT':
+      return 'night';
+    case 'PARTLY_CLOUDY':
+      return 'partlyCloudy';
+    case 'CLOUDY':
+    case 'FOG':
+      return 'cloudy';
+    case 'LIGHT_RAIN':
+      return 'lightRain';
+    case 'RAIN':
+    case 'THUNDERSTORM':
+      return 'rain';
+    default:
+      return 'cloudy';
+  }
+}
+
+function conditionLabelKey(condition: WeatherCondition): TranslationKey {
+  return `farmer.weather.condition.${condition}` as TranslationKey;
+}
+
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+const MONTH_KEYS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
+
+function parseDateOnly(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1);
+}
+
+function formatClockTime(date: Date): string {
+  const hours = date.getHours();
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  const minutes = date.getMinutes();
+  const paddedMinutes = minutes < 10 ? `0${minutes}` : String(minutes);
+  return `${hour12}:${paddedMinutes} ${period}`;
+}
+
+function formatHourLabel(date: Date): string {
+  const hours = date.getHours();
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  return `${hour12} ${period}`;
+}
+
+function formatHeroDate(observedAt: string): string {
+  const date = new Date(observedAt);
+  const weekdayKey = WEEKDAY_KEYS[date.getDay()] ?? 'sun';
+  const monthKey = MONTH_KEYS[date.getMonth()] ?? 'jan';
+  return t('farmer.weather.heroDateFormat', {
+    weekday: t(`farmer.weather.dayFull.${weekdayKey}` as TranslationKey),
+    day: date.getDate(),
+    month: t(`farmer.weather.month.${monthKey}` as TranslationKey),
+    time: formatClockTime(date),
+  });
+}
+
+function dayShortLabel(dateStr: string): string {
+  const date = parseDateOnly(dateStr);
+  const weekdayKey = WEEKDAY_KEYS[date.getDay()] ?? 'sun';
+  return t(`farmer.weather.dayShort.${weekdayKey}` as TranslationKey);
+}
+
+function forecastSummary(day: FarmWeatherDaily): string {
+  const conditionLabel = t(conditionLabelKey(day.condition));
+  if (day.precipitationMm > 0) {
+    return t('farmer.weather.forecastSummaryRain', {
+      condition: conditionLabel,
+      mm: Math.round(day.precipitationMm),
+    });
+  }
+  return conditionLabel;
+}
+
+function minutesSince(observedAt: string): number {
+  const diffMs = Date.now() - new Date(observedAt).getTime();
+  return Math.max(0, Math.floor(diffMs / 60000));
 }
 
 interface WeatherScreenProps {
@@ -97,223 +267,258 @@ interface WeatherScreenProps {
 }
 
 export function WeatherScreen({ onNavigateBack }: WeatherScreenProps): React.JSX.Element {
-  const [expandedAlert, setExpandedAlert] = useState<string | null>('frost');
+  const [weather, setWeather] = useState<FarmWeather | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedAlerts, setExpandedAlerts] = useState<Record<string, boolean>>({
+    'alert-frost': true,
+  });
 
   const toggleAlert = (id: string) => {
-    setExpandedAlert((prev) => (prev === id ? null : id));
+    setExpandedAlerts((prev) => ({ ...prev, [id]: !prev[id] }));
   };
+
+  const loadWeather = useCallback(async () => {
+    try {
+      setError(null);
+      const res = await getFarmWeather();
+      setWeather(res);
+    } catch {
+      setError(t('error.generic'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadWeather();
+  }, [loadWeather]);
+
+  // Header matching Screen 33 from requirement specification
+  const header = (
+    <View style={styles.header}>
+      <TouchableOpacity
+        style={styles.navCircleButton}
+        onPress={onNavigateBack}
+        accessibilityRole="button"
+        accessibilityLabel={t('farmer.common.back')}
+        activeOpacity={0.7}
+      >
+        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M19 12H5M5 12L12 19M5 12L12 5"
+            stroke={P.primary}
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </TouchableOpacity>
+      <View style={styles.headerTitleBox}>
+        <Text style={styles.headerTitle}>{t('farmer.weather.title')}</Text>
+        <Text style={styles.headerSubtitle}>
+          {weather
+            ? t('farmer.weather.subtitleUpdated', {
+                location: weather.location.village ?? weather.location.farmName,
+                minutes: minutesSince(weather.observedAt),
+              })
+            : t('farmer.common.loading')}
+        </Text>
+      </View>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <StatusBar barStyle="dark-content" backgroundColor={P.white} />
+        {header}
+        <View style={styles.scrollContent}>
+          <Skeleton height={240} width="100%" style={styles.skeletonHero} />
+          <Skeleton height={110} width="100%" style={styles.skeletonBlock} />
+          <Skeleton height={260} width="100%" style={styles.skeletonBlock} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !weather) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <StatusBar barStyle="dark-content" backgroundColor={P.white} />
+        {header}
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            setLoading(true);
+            void loadWeather();
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Read real alerts from weather API response
+  const activeAlerts: FarmWeatherAlert[] = weather.alerts ?? [];
 
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor={P.white} />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.navCircleButton} onPress={onNavigateBack}>
-          <Text style={styles.navBackIcon}>‹</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitleBox}>
-          <Text style={styles.headerTitle}>{t('farmer.weather.title')}</Text>
-          <Text style={styles.headerSubtitle}>
-            {t('farmer.weather.subtitleUpdated', { location: t('farmer.dashboard.weather.location'), minutes: 20 })}
-          </Text>
-        </View>
-      </View>
+      {header}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Weather Hero Card */}
-        <View style={styles.heroCard}>
-          <Text style={styles.heroDate}>Thursday, 17 July · 12:40 PM</Text>
-          <View style={styles.heroMain}>
-            <View>
-              <Text style={styles.heroTemp}>19°</Text>
-              <Text style={styles.heroCondition}>{t('farmer.weather.partlyCloudy')}</Text>
-            </View>
-            <WeatherGlyph kind="partlyCloudy" size={64} />
+        {/* 1. HERO ANIMATED WEATHER CARD WITH AUTOMATIC SCENE CHANGE */}
+        <AnimatedWeatherHero
+          current={weather.current}
+          observedAt={weather.observedAt}
+          formattedDate={formatHeroDate(weather.observedAt)}
+          conditionLabel={t(conditionLabelKey(weather.current.condition))}
+          humidityLabel={t('farmer.dashboard.weather.humidity')}
+          windLabel={t('farmer.dashboard.weather.wind')}
+          feelsLikeLabel={t('farmer.weather.feelsLike')}
+        />
+
+        {/* 2. ACTIVE ALERTS (REAL DATA FROM WEATHER API) */}
+        <Text style={styles.sectionHeading}>ACTIVE ALERTS</Text>
+        {activeAlerts.length > 0 ? (
+          <View style={styles.alertsContainer}>
+            {activeAlerts.map((alert) => {
+              const isExpanded = expandedAlerts[alert.id] ?? false;
+              const isFrost = alert.type === 'FROST';
+              const isRain = alert.type === 'HEAVY_RAIN';
+
+              return (
+                <View
+                  key={alert.id}
+                  style={[
+                    styles.alertCard,
+                    isFrost ? styles.alertCardFrost : styles.alertCardRain,
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={styles.alertHeaderRow}
+                    onPress={() => toggleAlert(alert.id)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={alert.title}
+                  >
+                    <View style={styles.alertIconBox}>
+                      {isFrost ? (
+                        <SnowflakeAlertIcon size={24} color={P.frostAlertBorder} />
+                      ) : (
+                        <RainAlertIcon size={24} color={P.rainAlertIcon} />
+                      )}
+                    </View>
+                    <View style={styles.alertTextBox}>
+                      <Text
+                        style={[
+                          styles.alertTitle,
+                          isFrost ? styles.alertTitleFrost : styles.alertTitleRain,
+                        ]}
+                      >
+                        {alert.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.alertSubtitle,
+                          isFrost ? styles.alertSubtitleFrost : styles.alertSubtitleRain,
+                        ]}
+                      >
+                        {alert.subtitle}
+                      </Text>
+                    </View>
+                    <View style={styles.chevronBox}>
+                      {isExpanded ? (
+                        <ChevronUpIcon size={20} color={isFrost ? P.frostAlertBorder : P.stoneMuted} />
+                      ) : (
+                        <ChevronDownIcon size={20} color={isFrost ? P.frostAlertBorder : P.stoneMuted} />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  {isExpanded && alert.advisory ? (
+                    <View
+                      style={[
+                        styles.alertDetailsBox,
+                        isFrost ? styles.alertDetailsBoxFrost : styles.alertDetailsBoxRain,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.alertAdvisoryText,
+                          isFrost ? styles.alertAdvisoryTextFrost : styles.alertAdvisoryTextRain,
+                        ]}
+                      >
+                        {alert.advisory}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
-
-          <View style={styles.heroStatsRow}>
-            <View style={styles.heroStatItem}>
-              <Icon name="water_drop" size={18} color={P.white} style={styles.heroStatEmoji} />
-              <Text style={styles.heroStatValue}>78%</Text>
-              <Text style={styles.heroStatLabel}>{t('farmer.dashboard.weather.humidity')}</Text>
-            </View>
-            <View style={styles.heroStatItem}>
-              <Icon name="air" size={18} color={P.white} style={styles.heroStatEmoji} />
-              <Text style={styles.heroStatValue}>12 km/h</Text>
-              <Text style={styles.heroStatLabel}>{t('farmer.dashboard.weather.wind')}</Text>
-            </View>
-            <View style={styles.heroStatItem}>
-              <ThermometerIcon size={18} color={P.white} />
-              <Text style={styles.heroStatValue}>17°</Text>
-              <Text style={styles.heroStatLabel}>{t('farmer.weather.feelsLike')}</Text>
-            </View>
+        ) : (
+          <View style={styles.noAlertsCard}>
+            <ShieldCheckIcon size={22} color={P.primary} />
+            <Text style={styles.noAlertsText}>
+              No active severe weather warnings for your farm. Conditions optimal for current field activities.
+            </Text>
           </View>
-        </View>
+        )}
 
-        <Text style={styles.sectionHeading}>{t('farmer.weather.activeAlerts')}</Text>
-
-        {/* Alerts List */}
-        <View style={styles.alertsList}>
-          {/* Frost Alert */}
-          <TouchableOpacity
-            style={[styles.alertCard, { backgroundColor: P.orange100, borderColor: P.orange300 }]}
-            onPress={() => toggleAlert('frost')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.alertHeaderRow}>
-              <Text style={[styles.alertIcon, { color: P.orange900 }]}>❄️</Text>
-              <View style={styles.alertTitleBox}>
-                <Text style={[styles.alertTitle, { color: P.deepOrange900 }]}>{t('farmer.weather.frostAlertTitle')}</Text>
-                <Text style={[styles.alertSubtitle, { color: P.deepOrange800 }]}>
-                  {t('farmer.weather.frostAlertSubtitle', { time: '6:00 AM', temp: '2°C' })}
-                </Text>
+        {/* 3. NEXT 24 HOURS (REAL HOURLY DATA) */}
+        <Text style={styles.sectionHeading}>NEXT 24 HOURS</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.hourlyScroll}
+          contentContainerStyle={styles.hourlyScrollContent}
+        >
+          {weather.hourly.map((hour, index) => (
+            <View key={hour.at} style={styles.hourlyCard}>
+              <Text style={styles.hourlyTime}>
+                {index === 0 ? t('farmer.weather.now') : formatHourLabel(new Date(hour.at))}
+              </Text>
+              <View style={styles.hourlyIconBox}>
+                <WeatherGlyph kind={glyphForCondition(hour.condition)} size={24} />
               </View>
-              <Text style={[styles.chevron, { color: P.deepOrange800 }]}>{expandedAlert === 'frost' ? '⌃' : '⌄'}</Text>
+              <Text style={styles.hourlyTemp}>
+                {`${Math.round(hour.temperatureC)}°`}
+              </Text>
             </View>
-            {expandedAlert === 'frost' && (
-              <View style={styles.alertDetailsBox}>
-                <Text style={[styles.alertDetailsText, { color: P.deepOrange900 }]}>{t('farmer.weather.frostAlertDetails')}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Rain Alert */}
-          <TouchableOpacity
-            style={[styles.alertCard, { backgroundColor: P.white, borderColor: P.slate200 }]}
-            onPress={() => toggleAlert('rain')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.alertHeaderRow}>
-              <WeatherGlyph kind="rain" size={24} />
-              <View style={styles.alertTitleBox}>
-                <Text style={[styles.alertTitle, { color: P.slate800 }]}>{t('farmer.weather.rainAlertTitle')}</Text>
-                <Text style={[styles.alertSubtitle, { color: P.slate500 }]}>{t('farmer.weather.rainAlertSubtitle')}</Text>
-              </View>
-              <Text style={[styles.chevron, { color: P.slate500 }]}>{expandedAlert === 'rain' ? '⌃' : '⌄'}</Text>
-            </View>
-            {expandedAlert === 'rain' && (
-              <View style={styles.alertDetailsBox}>
-                <Text style={[styles.alertDetailsText, { color: P.slate600 }]}>{t('farmer.weather.rainAlertDetails')}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.sectionHeading}>{t('farmer.weather.next24Hours')}</Text>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hourlyScroll} contentContainerStyle={styles.hourlyScrollContent}>
-          <View style={styles.hourlyBox}>
-            <Text style={styles.hourlyTime}>{t('farmer.weather.now')}</Text>
-            <WeatherGlyph kind="partlyCloudy" size={24} />
-            <Text style={styles.hourlyTemp}>19°</Text>
-          </View>
-          <View style={styles.hourlyBox}>
-            <Text style={styles.hourlyTime}>2 PM</Text>
-            <WeatherGlyph kind="sunny" size={24} />
-            <Text style={styles.hourlyTemp}>21°</Text>
-          </View>
-          <View style={styles.hourlyBox}>
-            <Text style={styles.hourlyTime}>4 PM</Text>
-            <WeatherGlyph kind="cloudy" size={24} />
-            <Text style={styles.hourlyTemp}>20°</Text>
-          </View>
-          <View style={styles.hourlyBox}>
-            <Text style={styles.hourlyTime}>6 PM</Text>
-            <WeatherGlyph kind="rain" size={24} />
-            <Text style={styles.hourlyTemp}>16°</Text>
-          </View>
-          <View style={styles.hourlyBox}>
-            <Text style={styles.hourlyTime}>8 PM</Text>
-            <WeatherGlyph kind="night" size={24} />
-            <Text style={styles.hourlyTemp}>12°</Text>
-          </View>
-          <View style={styles.hourlyBox}>
-            <Text style={styles.hourlyTime}>10 PM</Text>
-            <WeatherGlyph kind="night" size={24} />
-            <Text style={styles.hourlyTemp}>9°</Text>
-          </View>
+          ))}
         </ScrollView>
-        <View style={styles.scrollbarHint}>
-          <Text style={styles.scrollbarIcon}>◀</Text>
-          <View style={styles.scrollbarTrack}>
-            <View style={styles.scrollbarThumb} />
-          </View>
-          <Text style={styles.scrollbarIcon}>▶</Text>
-        </View>
 
-        <Text style={styles.sectionHeading}>{t('farmer.weather.sevenDayForecast')}</Text>
-
-        <View style={styles.forecastList}>
-          <View style={styles.forecastRow}>
-            <Text style={styles.forecastDay}>{t('farmer.weather.today')}</Text>
-            <WeatherGlyph kind="partlyCloudy" size={20} />
-            <Text style={styles.forecastSummary}>{t('farmer.weather.partlyCloudyFrost')}</Text>
-            <View style={styles.forecastTemps}>
-              <Text style={styles.forecastHigh}>21°</Text>
-              <Text style={styles.forecastLow}>2°</Text>
-            </View>
-          </View>
-
-          <View style={styles.forecastRow}>
-            <Text style={styles.forecastDay}>Fri</Text>
-            <WeatherGlyph kind="sunny" size={20} />
-            <Text style={styles.forecastSummary}>{t('farmer.dashboard.weather.sunny')}</Text>
-            <View style={styles.forecastTemps}>
-              <Text style={styles.forecastHigh}>23°</Text>
-              <Text style={styles.forecastLow}>9°</Text>
-            </View>
-          </View>
-
-          <View style={styles.forecastRow}>
-            <Text style={styles.forecastDay}>Sat</Text>
-            <WeatherGlyph kind="rain" size={20} />
-            <Text style={styles.forecastSummary}>{t('farmer.weather.heavyRainMm', { range: '40–60' })}</Text>
-            <View style={styles.forecastTemps}>
-              <Text style={styles.forecastHigh}>17°</Text>
-              <Text style={styles.forecastLow}>11°</Text>
-            </View>
-          </View>
-
-          <View style={styles.forecastRow}>
-            <Text style={styles.forecastDay}>Sun</Text>
-            <WeatherGlyph kind="lightRain" size={20} />
-            <Text style={styles.forecastSummary}>{t('farmer.weather.lightShowers')}</Text>
-            <View style={styles.forecastTemps}>
-              <Text style={styles.forecastHigh}>18°</Text>
-              <Text style={styles.forecastLow}>10°</Text>
-            </View>
-          </View>
-
-          <View style={styles.forecastRow}>
-            <Text style={styles.forecastDay}>Mon</Text>
-            <WeatherGlyph kind="cloudy" size={20} />
-            <Text style={styles.forecastSummary}>{t('farmer.weather.cloudy')}</Text>
-            <View style={styles.forecastTemps}>
-              <Text style={styles.forecastHigh}>20°</Text>
-              <Text style={styles.forecastLow}>10°</Text>
-            </View>
-          </View>
-
-          <View style={styles.forecastRow}>
-            <Text style={styles.forecastDay}>Tue</Text>
-            <WeatherGlyph kind="partlyCloudy" size={20} />
-            <Text style={styles.forecastSummary}>{t('farmer.weather.partlyCloudy')}</Text>
-            <View style={styles.forecastTemps}>
-              <Text style={styles.forecastHigh}>22°</Text>
-              <Text style={styles.forecastLow}>11°</Text>
-            </View>
-          </View>
-
-          <View style={[styles.forecastRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.forecastDay}>Wed</Text>
-            <WeatherGlyph kind="sunny" size={20} />
-            <Text style={styles.forecastSummary}>{t('farmer.dashboard.weather.sunny')}</Text>
-            <View style={styles.forecastTemps}>
-              <Text style={styles.forecastHigh}>24°</Text>
-              <Text style={styles.forecastLow}>12°</Text>
-            </View>
-          </View>
+        {/* 4. 7-DAY FORECAST (REAL DAILY DATA) */}
+        <Text style={styles.sectionHeading}>7-DAY FORECAST</Text>
+        <View style={styles.forecastContainer}>
+          {weather.daily.map((day, index) => {
+            const isLast = index === weather.daily.length - 1;
+            return (
+              <View
+                key={day.date}
+                style={[styles.forecastRow, isLast && styles.forecastRowLast]}
+              >
+                <Text style={styles.forecastDay}>
+                  {index === 0 ? t('farmer.weather.today') : dayShortLabel(day.date)}
+                </Text>
+                <View style={styles.forecastIconBox}>
+                  <WeatherGlyph kind={glyphForCondition(day.condition)} size={22} />
+                </View>
+                <Text style={styles.forecastSummary} numberOfLines={1}>
+                  {forecastSummary(day)}
+                </Text>
+                <View style={styles.forecastTempsBox}>
+                  <Text style={styles.forecastHigh}>
+                    {`${Math.round(day.maxTempC)}°`}
+                  </Text>
+                  <Text style={styles.forecastLow}>
+                    {`${Math.round(day.minTempC)}°`}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -321,143 +526,262 @@ export function WeatherScreen({ onNavigateBack }: WeatherScreenProps): React.JSX
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: P.slate50 },
+  screen: {
+    flex: 1,
+    backgroundColor: P.bg,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     backgroundColor: P.white,
     borderBottomWidth: 1,
-    borderBottomColor: P.slate100,
+    borderBottomColor: P.border,
   },
   navCircleButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: P.white,
-    borderWidth: 1,
-    borderColor: P.slate200,
+    borderWidth: 1.5,
+    borderColor: colors.borderMedium,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navBackIcon: { color: P.primary, fontSize: 24, lineHeight: 28, marginRight: 2 },
-  headerTitleBox: { flex: 1, marginLeft: 16 },
-  headerTitle: { color: P.deepGreen, fontSize: 20, fontWeight: 'bold' },
-  headerSubtitle: { color: P.slate500, fontSize: 13, marginTop: 2 },
+  headerTitleBox: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  headerTitle: {
+    color: P.ink,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  headerSubtitle: {
+    color: P.stoneMuted,
+    fontSize: 11.5,
+    marginTop: 1,
+  },
 
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 18,
+    paddingTop: 16,
     paddingBottom: 40,
   },
 
-  heroCard: {
-    backgroundColor: P.blue600,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: P.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+  skeletonHero: {
+    borderRadius: 22,
+    marginBottom: 20,
   },
-  heroDate: { color: P.white, fontSize: 13, fontWeight: '600', marginBottom: 16 },
-  heroMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  heroTemp: { color: P.white, fontSize: 56, fontWeight: '900', letterSpacing: -2, lineHeight: 60 },
-  heroCondition: { color: P.white, fontSize: 18, fontWeight: '600' },
-  heroIconBig: { fontSize: 72 },
-  heroStatsRow: { flexDirection: 'row', gap: 12 },
-  heroStatItem: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
+  skeletonBlock: {
+    borderRadius: 16,
+    marginBottom: 18,
   },
-  heroStatEmoji: { fontSize: 18, marginBottom: 4 },
-  heroStatValue: { color: P.white, fontSize: 14, fontWeight: 'bold', marginBottom: 2 },
-  heroStatLabel: { color: P.blue50, fontSize: 11 },
 
   sectionHeading: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: P.placeholderGrey,
-    marginBottom: 12,
-    marginLeft: 4,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    color: P.stoneMuted,
     textTransform: 'uppercase',
+    marginTop: 14,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
 
-  alertsList: { gap: 12, marginBottom: 24 },
+  // Alerts styling
+  alertsContainer: {
+    gap: 10,
+    marginBottom: 10,
+  },
   alertCard: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 13,
+  },
+  alertCardFrost: {
+    backgroundColor: P.frostAlertBg,
+    borderLeftWidth: 4,
+    borderLeftColor: P.frostAlertBorder,
+  },
+  alertCardRain: {
+    backgroundColor: P.white,
+    borderLeftWidth: 4,
+    borderLeftColor: P.rainAlertBorder,
     borderWidth: 1,
+    borderColor: P.borderLight,
     shadowColor: P.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  alertHeaderRow: { flexDirection: 'row', alignItems: 'center' },
-  alertIcon: { fontSize: 24, marginRight: 12 },
-  alertTitleBox: { flex: 1 },
-  alertTitle: { fontSize: 15, fontWeight: 'bold', marginBottom: 2 },
-  alertSubtitle: { fontSize: 13 },
-  chevron: { fontSize: 20, marginLeft: 8 },
-  alertDetailsBox: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-  },
-  alertDetailsText: { fontSize: 13, lineHeight: 20 },
-
-  hourlyScroll: { marginHorizontal: -16, marginBottom: 8 },
-  hourlyScrollContent: { paddingHorizontal: 16, gap: 12 },
-  hourlyBox: {
-    backgroundColor: P.white,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+  alertHeaderRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: P.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
   },
-  hourlyTime: { fontSize: 12, fontWeight: 'bold', color: P.slate500, marginBottom: 8 },
-  hourlyIcon: { fontSize: 24, marginBottom: 8 },
-  hourlyTemp: { fontSize: 16, fontWeight: 'bold', color: P.slate800 },
+  alertIconBox: {
+    marginRight: 11,
+    flexShrink: 0,
+  },
+  alertTextBox: {
+    flex: 1,
+    minWidth: 0,
+  },
+  alertTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  alertTitleFrost: {
+    color: P.frostAlertText,
+  },
+  alertTitleRain: {
+    color: P.ink,
+  },
+  alertSubtitle: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  alertSubtitleFrost: {
+    color: P.frostAlertSub,
+  },
+  alertSubtitleRain: {
+    color: P.stoneMuted,
+  },
+  chevronBox: {
+    marginLeft: 8,
+  },
+  alertDetailsBox: {
+    marginTop: 11,
+    paddingTop: 11,
+    borderTopWidth: 1,
+  },
+  alertDetailsBoxFrost: {
+    borderTopColor: 'rgba(240, 86, 42, 0.22)',
+  },
+  alertDetailsBoxRain: {
+    borderTopColor: colors.borderSoft,
+  },
+  alertAdvisoryText: {
+    fontSize: 11.5,
+    lineHeight: 18,
+  },
+  alertAdvisoryTextFrost: {
+    color: P.frostAlertDetail,
+  },
+  alertAdvisoryTextRain: {
+    color: colors.textBody,
+  },
+  noAlertsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: P.white,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: P.borderLight,
+    marginBottom: 10,
+  },
+  noAlertsText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textBody,
+    lineHeight: 18,
+  },
 
-  scrollbarHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 },
-  scrollbarIcon: { color: P.slate300, fontSize: 10 },
-  scrollbarTrack: { height: 6, width: 100, backgroundColor: P.slate200, borderRadius: 3 },
-  scrollbarThumb: { height: '100%', width: 40, backgroundColor: P.slate400, borderRadius: 3 },
+  // Hourly horizontal scroll
+  hourlyScroll: {
+    marginHorizontal: -18,
+    marginBottom: 8,
+  },
+  hourlyScrollContent: {
+    paddingHorizontal: 18,
+    paddingBottom: 4,
+    gap: 9,
+  },
+  hourlyCard: {
+    width: 64,
+    backgroundColor: P.white,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: P.borderLight,
+    shadowColor: P.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  hourlyTime: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.stoneMuted,
+  },
+  hourlyIconBox: {
+    marginVertical: 8,
+  },
+  hourlyTemp: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: P.ink,
+  },
 
-  forecastList: {
+  // 7-day forecast
+  forecastContainer: {
     backgroundColor: P.white,
     borderRadius: 16,
-    padding: 16,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: P.borderLight,
     shadowColor: P.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   forecastRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: P.slate100,
+    borderBottomColor: colors.borderSoft,
   },
-  forecastDay: { width: 50, fontSize: 14, fontWeight: 'bold', color: P.slate800 },
-  forecastIcon: { width: 30, fontSize: 18, textAlign: 'center' },
-  forecastSummary: { flex: 1, fontSize: 13, color: P.slate500, marginLeft: 8 },
-  forecastTemps: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  forecastHigh: { fontSize: 15, fontWeight: 'bold', color: P.slate800, width: 24, textAlign: 'right' },
-  forecastLow: { fontSize: 14, color: P.slate400, width: 24, textAlign: 'right' },
+  forecastRowLast: {
+    borderBottomWidth: 0,
+  },
+  forecastDay: {
+    width: 44,
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: P.ink,
+  },
+  forecastIconBox: {
+    width: 28,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  forecastSummary: {
+    flex: 1,
+    fontSize: 12,
+    color: P.stoneMuted,
+    marginRight: 8,
+  },
+  forecastTempsBox: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  forecastHigh: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: P.ink,
+  },
+  forecastLow: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    color: P.legal,
+  },
 });

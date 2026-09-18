@@ -211,6 +211,51 @@ const GRANT_CASES: readonly GrantCase[] = [
     expected: ScopeLevel.NONE,
     because: 'Farmer Admin has no fiscal tag authority.',
   },
+
+  // --- Farm rating (BR-06): edit is conditional/own-zone for Farmer Admin, ---
+  // --- everyone else gets all/view/own/none per rbac.json exactly.        ---
+  {
+    permission: 'farmer.rating.edit',
+    role: RoleCode.FARMER_ADMIN,
+    expected: ScopeLevel.CONDITIONAL,
+    because: 'Farmer Admin may edit a farm rating only within their own zone (OWN_ZONE_ONLY).',
+  },
+  {
+    permission: 'farmer.rating.edit',
+    role: RoleCode.MAIN_WH_ADMIN,
+    expected: ScopeLevel.NONE,
+    because: 'Warehouse admins may view farm ratings but never edit them.',
+  },
+  {
+    permission: 'farmer.rating.edit',
+    role: RoleCode.FARMER,
+    expected: ScopeLevel.NONE,
+    because: 'A farmer cannot score their own farm rating.',
+  },
+  {
+    permission: 'farmer.rating.view',
+    role: RoleCode.FARMER,
+    expected: ScopeLevel.OWN,
+    because: 'A farmer may see their own farm rating.',
+  },
+  {
+    permission: 'farmer.rating.view',
+    role: RoleCode.CUSTOMER,
+    expected: ScopeLevel.NONE,
+    because: 'The customer view is farm-anonymous (BR-16); customers never see a farm rating.',
+  },
+  {
+    permission: 'farmer.rating.configure_tiers',
+    role: RoleCode.SUPER_ADMIN,
+    expected: ScopeLevel.ALL,
+    because: 'Only the Super Admin may edit rating_tier_config bands (BR-04).',
+  },
+  {
+    permission: 'farmer.rating.configure_tiers',
+    role: RoleCode.TOHFA_ADMIN,
+    expected: ScopeLevel.NONE,
+    because: 'TOHFA Admin cannot configure rating tier thresholds.',
+  },
 ];
 
 describe('docs/rbac.json grants', () => {

@@ -3,4 +3,13 @@
          flavor, see src/farmer|customer|admin/AndroidManifest.xml) but AGP's
          default template expects an app_name resource to exist. -->
     <string name="app_name">TohfaMobile</string>
+
+    <!-- PLACEHOLDER — Facebook Login (farmer OAuth, see auth/oauth wiring in
+         roles/farmer/screens/auth/LoginScreen.tsx). Replace with the real
+         values from the Facebook Developer Console for TOHFA's app once it
+         exists; the app cannot complete a real Facebook sign-in until then.
+         Do not ship YOUR_FACEBOOK_APP_ID to production. -->
+    <string name="facebook_app_id">YOUR_FACEBOOK_APP_ID</string>
+    <string name="facebook_client_token">YOUR_FACEBOOK_CLIENT_TOKEN</string>
+    <string name="fb_login_protocol_scheme">fbYOUR_FACEBOOK_APP_ID</string>
 </resources>

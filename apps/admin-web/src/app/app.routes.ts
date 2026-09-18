@@ -83,6 +83,14 @@ export const routes: Routes = [
       },
 
       {
+        path: 'farmers/:id/rating',
+        canActivate: [permissionGuard('farmer.rating.view')],
+        loadComponent: async () =>
+          (await import('./features/farm-rating/farm-rating-detail.component'))
+            .FarmRatingDetailComponent,
+      },
+
+      {
         path: 'inventory',
         canActivate: [permissionGuard('inventory.stock_ledger.view_own')],
         loadComponent: async () =>

@@ -50,29 +50,20 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
           return;
         }
 
-        // Initialize new draft application
-        const appRes = await createFarmerApplication({
-          mobile: '+919876543210',
-          fullName: 'New Farmer',
-          preferredLocale: 'en',
-        });
-
-        const newDraft: RegistrationDraft = {
-          applicationId: appRes.id,
+        const initialDraft: RegistrationDraft = {
+          applicationId: 'draft-temp',
           currentStep: 1,
         };
-        await saveRegistrationDraft(newDraft);
+        await saveRegistrationDraft(initialDraft);
         if (active) {
-          setDraft(newDraft);
+          setDraft(initialDraft);
           setLoading(false);
         }
       } catch {
-        // Fallback for offline or local preview
         const fallbackDraft: RegistrationDraft = {
-          applicationId: `app-${Date.now().toString(36)}`,
+          applicationId: 'draft-temp',
           currentStep: 1,
         };
-        await saveRegistrationDraft(fallbackDraft);
         if (active) {
           setDraft(fallbackDraft);
           setLoading(false);
@@ -87,9 +78,29 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
   }, []);
 
   async function updateStepAndAdvance(step: number, payload: unknown) {
+    let currentAppId = draft.applicationId;
+
+    // When step 1 completes, create the real application draft on server with farmer's actual mobile & name
+    if (step === 1 && (currentAppId === 'draft-temp' || currentAppId.startsWith('app-'))) {
+      const step1 = payload as Record<string, unknown>;
+      try {
+        const appRes = await createFarmerApplication({
+          mobile: String(step1['mobile'] || '+919876543210'),
+          fullName: String(step1['fullName'] || 'New Farmer'),
+          preferredLocale: 'en',
+        });
+        if (appRes?.id) {
+          currentAppId = appRes.id;
+        }
+      } catch (err) {
+        console.warn('createFarmerApplication caught:', err);
+      }
+    }
+
     const nextStep = Math.min(5, step + 1);
     const updatedDraft: RegistrationDraft = {
       ...draft,
+      applicationId: currentAppId,
       currentStep: nextStep,
       [`step${step}` as keyof RegistrationDraft]: payload,
     };
@@ -97,11 +108,13 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
     setDraft(updatedDraft);
     await saveRegistrationDraft(updatedDraft);
 
-    // Persist to server in background
-    try {
-      await saveFarmerApplicationStep(draft.applicationId, step, payload);
-    } catch {
-      // Offline: changes safely saved to device draft
+    // Persist step to server in background if valid app ID
+    if (currentAppId !== 'draft-temp' && !currentAppId.startsWith('app-')) {
+      try {
+        await saveFarmerApplicationStep(currentAppId, step, payload);
+      } catch (err) {
+        console.warn(`saveFarmerApplicationStep ${step} caught:`, err);
+      }
     }
   }
 
@@ -212,6 +225,7 @@ export const RegistrationFlowScreen: React.FC<RegistrationFlowProps> = ({ onNavi
               onNavigate('ApplicationStatus', { applicationId: appId })
             }
             onBack={handleBack}
+            onEditStep={(step) => setDraft((d) => ({ ...d, currentStep: step }))}
           />
         )}
       </View>

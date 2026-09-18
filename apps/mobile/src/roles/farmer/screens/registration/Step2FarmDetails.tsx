@@ -33,7 +33,7 @@ export const Step2FarmDetails: React.FC<Step2Props> = ({ initialData, onSave, on
   );
   
   const [numberOfFarms, setNumberOfFarms] = useState(
-    existingFarm?.numberOfFarms ? String(existingFarm.numberOfFarms) : '2'
+    existingFarm?.numberOfFarms ? String(existingFarm.numberOfFarms) : '1'
   );
   const [showFarmsMenu, setShowFarmsMenu] = useState(false);
 

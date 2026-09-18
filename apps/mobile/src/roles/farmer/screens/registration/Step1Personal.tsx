@@ -25,13 +25,13 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
   const { colors } = theme;
 
   // Extract or default values from initial data
-  const [fullName, setFullName] = useState(initialData?.fullName ?? 'Kumar');
+  const [fullName, setFullName] = useState(initialData?.fullName ?? '');
   
-  const initialDobStr = initialData?.dob ?? '12 / 06 / 1985';
+  const initialDobStr = initialData?.dob ?? '';
   const initialDobParts = initialDobStr.split(' / ');
   const initialDate = initialDobParts.length === 3 
     ? new Date(parseInt(initialDobParts[2]!), parseInt(initialDobParts[1]!) - 1, parseInt(initialDobParts[0]!))
-    : new Date(1985, 5, 12);
+    : new Date();
     
   const [dateValue, setDateValue] = useState<Date>(initialDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -39,21 +39,21 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
 
   const dob = `${dateValue.getDate().toString().padStart(2, '0')} / ${(dateValue.getMonth() + 1).toString().padStart(2, '0')} / ${dateValue.getFullYear()}`;
 
-  const [gender, setGender] = useState(initialData?.gender ?? 'Male');
+  const [gender, setGender] = useState(initialData?.gender ?? '');
   const [showGenderMenu, setShowGenderMenu] = useState(false);
 
   // Clean initial mobile number (strip +91 prefix if already saved)
-  const rawMobile = initialData?.mobile ?? '98765 43210';
+  const rawMobile = initialData?.mobile ?? '';
   const cleanMobile = rawMobile.replace(/^\+91\s?/, '');
   const [mobileNumber, setMobileNumber] = useState(cleanMobile);
 
-  const rawAadhaar = initialData?.aadhaarNumber ?? initialData?.aadhaarLast4 ?? '3782 4591 0023';
+  const rawAadhaar = initialData?.aadhaarNumber ?? initialData?.aadhaarLast4 ?? '';
   const [aadhaarNumber, setAadhaarNumber] = useState(rawAadhaar);
 
   const fallbackAddress =
     [initialData?.village, initialData?.taluk, initialData?.district]
       .filter(Boolean)
-      .join(', ') || 'Kotagiri Village, Kotagiri Taluk, The Nilgiris';
+      .join(', ') || '';
   const initialAddress = initialData?.address ?? fallbackAddress;
   const [address, setAddress] = useState(initialAddress);
 

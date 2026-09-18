@@ -51,6 +51,16 @@ export interface RefreshTokenRow {
   replaced_by: string | null;
 }
 
+export interface OAuthIdentityRow {
+  id: string;
+  user_id: string;
+  provider: 'GOOGLE' | 'FACEBOOK';
+  provider_subject_id: string;
+  email: string | null;
+  linked_at: Date;
+  created_at: Date;
+}
+
 export interface OtpVerificationRow {
   id: string;
   user_id: string | null;
@@ -79,7 +89,9 @@ export interface AuthRepo {
       mobile: string;
       fullName: string;
       email?: string | undefined;
-      passwordHash: string;
+      // Nullable: an account created mid `/auth/otp/verify` off the back of a
+      // BR-39 OAuth linkToken has no password — it logs in via OTP or OAuth.
+      passwordHash: string | null;
       preferredLocale: 'en' | 'ta';
       status?: 'PENDING' | 'ACTIVE' | undefined;
     },
@@ -137,6 +149,31 @@ export interface AuthRepo {
   findOtpById(db: Executor, id: string): Promise<OtpVerificationRow | null>;
   incrementOtpAttempts(db: Executor, id: string, lock: boolean): Promise<OtpVerificationRow | null>;
   consumeOtp(db: Executor, id: string): Promise<void>;
+  findOAuthIdentity(
+    db: Executor,
+    provider: 'GOOGLE' | 'FACEBOOK',
+    providerSubjectId: string,
+  ): Promise<OAuthIdentityRow | null>;
+  findOAuthIdentityByUserAndProvider(
+    db: Executor,
+    userId: string,
+    provider: 'GOOGLE' | 'FACEBOOK',
+  ): Promise<OAuthIdentityRow | null>;
+  createOAuthIdentity(
+    db: Executor,
+    params: {
+      userId: string;
+      provider: 'GOOGLE' | 'FACEBOOK';
+      providerSubjectId: string;
+      email?: string | undefined;
+    },
+  ): Promise<OAuthIdentityRow>;
+  /** Returns the deleted row, or `null` when that user had no identity for that provider. */
+  deleteOAuthIdentity(
+    db: Executor,
+    userId: string,
+    provider: 'GOOGLE' | 'FACEBOOK',
+  ): Promise<OAuthIdentityRow | null>;
 }
 
 export const authRepo: AuthRepo = {
@@ -426,5 +463,47 @@ export const authRepo: AuthRepo = {
         WHERE id = $1`,
       [id],
     );
+  },
+
+  async findOAuthIdentity(db, provider, providerSubjectId) {
+    const result = await db.query<OAuthIdentityRow>(
+      `SELECT id, user_id, provider, provider_subject_id, email, linked_at, created_at
+         FROM oauth_identities
+        WHERE provider = $1 AND provider_subject_id = $2
+        LIMIT 1`,
+      [provider, providerSubjectId],
+    );
+    return result.rows[0] ?? null;
+  },
+
+  async findOAuthIdentityByUserAndProvider(db, userId, provider) {
+    const result = await db.query<OAuthIdentityRow>(
+      `SELECT id, user_id, provider, provider_subject_id, email, linked_at, created_at
+         FROM oauth_identities
+        WHERE user_id = $1 AND provider = $2
+        LIMIT 1`,
+      [userId, provider],
+    );
+    return result.rows[0] ?? null;
+  },
+
+  async createOAuthIdentity(db, params) {
+    const result = await db.query<OAuthIdentityRow>(
+      `INSERT INTO oauth_identities (user_id, provider, provider_subject_id, email)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, user_id, provider, provider_subject_id, email, linked_at, created_at`,
+      [params.userId, params.provider, params.providerSubjectId, params.email ?? null],
+    );
+    return result.rows[0]!;
+  },
+
+  async deleteOAuthIdentity(db, userId, provider) {
+    const result = await db.query<OAuthIdentityRow>(
+      `DELETE FROM oauth_identities
+        WHERE user_id = $1 AND provider = $2
+        RETURNING id, user_id, provider, provider_subject_id, email, linked_at, created_at`,
+      [userId, provider],
+    );
+    return result.rows[0] ?? null;
   },
 };

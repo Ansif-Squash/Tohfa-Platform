@@ -53,6 +53,22 @@ const envSchema = z.object({
   FCM_SERVER_KEY: z.string().default(''),
   SENTRY_DSN: z.string().default(''),
 
+  // OAuth social login (BR-39). Alternate login/prefill only — see
+  // apps/api/src/modules/auth/oauth.providers.ts. Real console credentials do
+  // not exist yet, so these default to '' like the other not-yet-provisioned
+  // provider keys above; an empty GOOGLE_OAUTH_CLIENT_ID or missing
+  // FACEBOOK_APP_SECRET makes the corresponding verifier fail closed with
+  // OAUTH_TOKEN_INVALID at request time rather than the app refusing to boot.
+  GOOGLE_OAUTH_CLIENT_ID: z.string().default(''),
+  FACEBOOK_APP_ID: z.string().default(''),
+  FACEBOOK_APP_SECRET: z.string().default(''),
+
+  // No mock/no-op fallback by design — an empty key makes the weather
+  // gateway fail closed with WEATHER_PROVIDER_ERROR at request time (see
+  // apps/api/src/weather/openweathermap.weather.ts) rather than the app
+  // refusing to boot, so the rest of the API stays usable without one.
+  OPENWEATHERMAP_API_KEY: z.string().default(''),
+
   OTP_LENGTH: intFromEnv(4, 8).default(6),
   OTP_TTL_SECONDS: intFromEnv(30, 3600).default(300),
   OTP_MAX_ATTEMPTS: intFromEnv(1, 20).default(3),

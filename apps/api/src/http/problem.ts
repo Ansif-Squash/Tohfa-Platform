@@ -71,6 +71,10 @@ const DEFAULT_STATUS: Record<ProblemCode, number> = {
   FIELD_LOCKED: 403,
   INVALID_STATE_TRANSITION: 409,
   IDEMPOTENCY_KEY_REUSED: 409,
+  WEATHER_PROVIDER_ERROR: 502,
+  OAUTH_TOKEN_INVALID: 401,
+  OAUTH_IDENTITY_ALREADY_LINKED: 409,
+  OAUTH_LINK_TOKEN_INVALID: 401,
 };
 
 /** Short, stable, human-readable titles. Localisation happens client-side. */
@@ -113,6 +117,10 @@ const DEFAULT_TITLE: Record<ProblemCode, string> = {
   FIELD_LOCKED: 'That field is locked',
   INVALID_STATE_TRANSITION: 'Invalid state transition',
   IDEMPOTENCY_KEY_REUSED: 'Idempotency key reused with a different body',
+  WEATHER_PROVIDER_ERROR: 'Weather provider unavailable',
+  OAUTH_TOKEN_INVALID: 'Social login token is invalid',
+  OAUTH_IDENTITY_ALREADY_LINKED: 'Social account already linked elsewhere',
+  OAUTH_LINK_TOKEN_INVALID: 'Link token is invalid or expired',
 };
 
 /**

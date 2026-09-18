@@ -57,6 +57,7 @@ function mockFarmerApplicationsRepo(initialApp?: Partial<FarmerApplicationRow>):
     kyc_status: 'VERIFIED',
     application_status: 'APPROVED',
     overall_rating: 4.8,
+    rating_tier_code: null,
     is_market_blocked: false,
     market_block_reason: null,
     created_at: new Date(),

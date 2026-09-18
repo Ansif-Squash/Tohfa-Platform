@@ -44,11 +44,11 @@ export function ZonesScreen({ onNavigateBack, onNavigateToAddZone, onSave }: Zon
         {/* FARM SELECTOR */}
         <View style={[styles.farmSelector, { borderColor: colors.borderLight }]}>
           <View style={[styles.farmIconBox, { backgroundColor: colors.brandGreenLight }]}>
-            <Icon name="terrain" size={16} color={colors.brandGreen} />
+            <Icon name="place" size={16} color={colors.brandGreen} />
           </View>
           <View style={styles.farmSelectorText}>
             <Text style={{ fontSize: 10, fontWeight: '800', color: colors.textSubtle, marginBottom: 2 }}>MARKING ZONES FOR</Text>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textDark }}>Great Earth Organic Farm · 2.5 ac</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textDark }}>Your Farm</Text>
           </View>
           <Icon name="expand_more" size={16} color={colors.textSubtle} />
         </View>

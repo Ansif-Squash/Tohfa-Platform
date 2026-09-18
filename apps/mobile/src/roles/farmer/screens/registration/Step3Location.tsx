@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   Text,
   TouchableOpacity,
-  ImageBackground,
 } from 'react-native';
-import { Icon } from '@tohfa/mobile-ui';
 import Svg, { Path, Circle as SvgCircle, Line } from 'react-native-svg';
+import {
+  FarmBoundaryMap,
+  type FarmBoundaryMapHandle,
+  type FarmBoundaryMapMode,
+} from '@tohfa/mobile-ui';
 
 const ChevronLeft = ({ size = 24, color = "currentColor" }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -32,12 +35,6 @@ const PenIcon = ({ size = 24, color = "currentColor" }) => (
   </Svg>
 );
 
-const PlusIcon = ({ size = 24, color = "currentColor" }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M5 12h14"/><Path d="M12 5v14"/>
-  </Svg>
-);
-
 const LeafIcon = ({ size = 24, color = "currentColor" }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2v1c0 5.6-4.5 11.2-11 11.2V20Z"/>
@@ -58,6 +55,8 @@ const SolidDot = ({ size = 10, color = "currentColor" }) => (
 import { colors, useTheme } from '../../theme';
 import { authPalette as P } from '../../theme';
 import type { Step3LocationData } from '../../storage/registrationDraft';
+import { calculatePolygonMetrics } from '../../utils/geo';
+import { t } from '../../../../i18n/farmer';
 
 interface Step3Props {
   initialData?: Step3LocationData | undefined;
@@ -69,28 +68,75 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
   const theme = useTheme();
   const { colors } = theme;
 
-  const [isEditing, setIsEditing] = useState(false);
+  const mapRef = useRef<FarmBoundaryMapHandle>(null);
+  const [mode, setMode] = useState<FarmBoundaryMapMode>('view');
+  const isEditing = mode !== 'view';
 
-  // Use dummy coordinates matching the screenshot
-  const lat = '11.4064';
-  const lng = '76.6932';
+  const initialRing = initialData?.fmbPolygon?.coordinates?.[0];
+  const [coords, setCoords] = useState<number[][]>(initialRing ?? []);
+
+  const metrics = calculatePolygonMetrics(coords);
+  const lat = (metrics.centroid.latitude || 11.4064).toFixed(4);
+  const lng = (metrics.centroid.longitude || 76.6932).toFixed(4);
+
+  // Real GPS-grounded center: reuse the farm's already-saved boundary centroid
+  // if one exists, otherwise let FarmBoundaryMap fall back to the device's
+  // current location (see its own `initialCenter` docs) — never the old
+  // hardcoded "somewhere in the Nilgiris" DEFAULT_RING this screen used to ship.
+  const [mapInitialCenter] = useState<[number, number] | null>(
+    initialRing && initialRing.length >= 3
+      ? [metrics.centroid.longitude, metrics.centroid.latitude]
+      : null,
+  );
+  const [mapInitialPolygon] = useState<[number, number][] | null>(
+    initialRing && initialRing.length >= 3 ? (initialRing as [number, number][]) : null,
+  );
+
+  function handlePolygonChange(next: [number, number][]) {
+    setCoords(next);
+  }
+
+  function handleLocateMe() {
+    void mapRef.current?.locateMe();
+  }
+
+  /** Top pill: (re)draws the boundary from scratch. */
+  function handleDrawBoundary() {
+    if (mode === 'draw') {
+      mapRef.current?.finish();
+      return;
+    }
+    mapRef.current?.clear();
+    mapRef.current?.startDrawing();
+  }
+
+  /** Bottom card: adjusts the existing boundary's vertices — only meaningful once one exists. */
+  function handleEditBoundary() {
+    if (mode === 'edit') {
+      mapRef.current?.finish();
+      return;
+    }
+    mapRef.current?.startEditing();
+  }
 
   function handleNextOrSkip() {
-    // Both Next and Skip move forward with the current or default payload
     const payload: Step3LocationData = {
       gpsCaptured: true,
-      latitude: parseFloat(lat),
-      longitude: parseFloat(lng),
-      village: initialData?.village ?? 'Ooty Rural',
-      taluk: initialData?.taluk ?? 'Ooty',
-      district: initialData?.district ?? 'Nilgiris',
+      latitude: metrics.centroid.latitude || parseFloat(lat),
+      longitude: metrics.centroid.longitude || parseFloat(lng),
+      areaAcres: metrics.areaAcres || 0,
+      calculatedAreaAcres: metrics.areaAcres || 0,
+      calculatedAreaHectares: metrics.areaHectares || 0,
+      fmbPolygon: {
+        type: 'Polygon',
+        coordinates: [coords],
+      },
+      village: initialData?.village ?? '',
+      taluk: initialData?.taluk ?? '',
+      district: initialData?.district ?? '',
     };
     onSave(payload);
   }
-
-  // The map image from the prototype
-  const mapImageUri =
-    'https://i.pinimg.com/1200x/3b/8d/6a/3b8d6a9fe84f73cd5bd9f7d86cb6556b.jpg';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgLight }]}>
@@ -149,195 +195,142 @@ export const Step3Location: React.FC<Step3Props> = ({ initialData, onSave, onBac
         </View>
       </View>
 
-      {/* MAP AREA */}
+      {/* MAP AREA — real satellite map + polygon boundary editor (see
+          packages/mobile-ui/src/FarmBoundaryMap.tsx). Replaces the fake
+          ESRI-static-image + react-native-svg hand-drawn canvas this screen
+          used to render. */}
       <View style={styles.mapArea}>
-        <ImageBackground
-          source={{ uri: mapImageUri }}
-          style={styles.mapBackground}
-          resizeMode="cover"
-        >
-          {/* Overlay Darkening */}
-          <View style={styles.mapOverlay} />
+        <FarmBoundaryMap
+          ref={mapRef}
+          initialCenter={mapInitialCenter}
+          initialPolygon={mapInitialPolygon}
+          onPolygonChange={handlePolygonChange}
+          onModeChange={setMode}
+          searchPlaceholder={t('farmer.map.searchPlaceholder')}
+          testID="step3-farm-boundary-map"
+        />
 
-          {/* Top Floating Badges */}
-          <View style={styles.topMapControls}>
-            <View style={styles.coordsBadge}>
-              <Text style={styles.coordsText}>
-                <Crosshair size={12} color={colors.white} />  {lat}, {lng}
-              </Text>
-            </View>
-
-            <View style={styles.rightControls}>
-              {isEditing && (
-                <View style={styles.editingBadge}>
-                  <Text style={styles.editingText}>
-                    <PenIcon size={13} color={P.black} /> Editing boundary
-                  </Text>
-                </View>
-              )}
-
-              <TouchableOpacity activeOpacity={0.8} style={styles.actionPill}>
-                <Text style={styles.actionPillText}>
-                  <Crosshair size={14} color={P.nearBlack} />  Locate Me
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.actionPill,
-                  isEditing && { backgroundColor: colors.brandGreen, borderWidth: 0 },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.actionPillText,
-                    isEditing && { color: colors.white },
-                  ]}
-                >
-                  <PenIcon size={14} color={isEditing ? colors.white : P.nearBlack} />  Draw Boundary
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity activeOpacity={0.8} style={styles.actionPill}>
-                <Text style={styles.actionPillText}>
-                  <PlusIcon size={14} color={P.nearBlack} />  Add Zone
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {/* Top Floating Badges */}
+        <View style={styles.topMapControls} pointerEvents="box-none">
+          <View style={styles.coordsBadge} pointerEvents="none">
+            <Text style={styles.coordsText}>
+              <Crosshair size={12} color={colors.white} />  {lat}, {lng}
+            </Text>
           </View>
 
-          {/* Simulated Polygon Overlay based on state */}
-          <View style={styles.polygonSimulation}>
-            <View
+          <View style={styles.rightControls}>
+            {isEditing && (
+              <View style={styles.editingBadge} pointerEvents="none">
+                <Text style={styles.editingText}>
+                  <PenIcon size={13} color={P.black} /> {t('farmer.map.editingBadge')}
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity activeOpacity={0.8} style={styles.actionPill} onPress={handleLocateMe}>
+              <Text style={styles.actionPillText}>
+                <Crosshair size={14} color={P.nearBlack} />  {t('farmer.map.locateMe')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleDrawBoundary}
               style={[
-                styles.mockPolygon,
-                {
-                  borderColor: isEditing ? P.orange500 : colors.brandGreen,
-                  backgroundColor: isEditing
-                    ? 'rgba(255, 152, 0, 0.15)'
-                    : 'rgba(46, 125, 50, 0.15)',
-                  borderStyle: isEditing ? 'dashed' : 'solid',
-                },
+                styles.actionPill,
+                mode === 'draw' && { backgroundColor: colors.brandGreen, borderWidth: 0 },
               ]}
             >
-              <View style={[styles.dragPoint, { top: -6, left: -6 }]} />
-              <View style={[styles.dragPoint, { top: 120, left: -6 }]} />
-              <View style={[styles.dragPoint, { bottom: -6, left: 10 }]} />
-              <View style={[styles.dragPoint, { bottom: -6, right: 30 }]} />
-              <View style={[styles.dragPoint, { top: -6, right: -6 }]} />
-              <View style={[styles.dragPoint, { top: 120, right: 10 }]} />
-
-              {/* Zone Markers */}
-              <View style={[styles.zoneBadge, { top: 20, left: 20 }]}>
-                <SolidDot size={10} color="#F44336" />
-                <View style={{ marginLeft: 6 }}>
-                  <Text style={styles.zoneBadgeTitle}>Zone A</Text>
-                  <Text style={styles.zoneBadgeSub}>Tomato</Text>
-                </View>
-              </View>
-
-              <View style={[styles.zoneBadge, { top: 130, left: 15 }]}>
-                <SolidDot size={10} color="#FF9800" />
-                <View style={{ marginLeft: 6 }}>
-                  <Text style={styles.zoneBadgeTitle}>Zone B</Text>
-                  <Text style={styles.zoneBadgeSub}>Carrot</Text>
-                </View>
-              </View>
-
-              <View style={[styles.zoneBadge, { bottom: 10, left: 25 }]}>
-                <SolidDot size={10} color="#4CAF50" />
-                <View style={{ marginLeft: 6 }}>
-                  <Text style={styles.zoneBadgeTitle}>Zone C</Text>
-                  <Text style={styles.zoneBadgeSub}>Cabbage</Text>
-                </View>
-              </View>
-
-              {/* Area Badge in center */}
-              <View style={styles.areaBadge}>
-                <Text style={styles.areaBadgeTitle}>2.45 Acres</Text>
-                <Text style={styles.areaBadgeSub}>1.02 Hectares</Text>
-              </View>
-            </View>
+              <Text
+                style={[
+                  styles.actionPillText,
+                  mode === 'draw' && { color: colors.white },
+                ]}
+              >
+                <PenIcon size={14} color={mode === 'draw' ? colors.white : P.nearBlack} />
+                {'  '}
+                {mode === 'draw' ? t('farmer.map.doneDrawing') : t('farmer.map.drawBoundary')}
+              </Text>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Scale Bar */}
-          <View style={styles.scaleBarContainer}>
-            <Text style={styles.scaleBarText}>50 m</Text>
-            <View style={styles.scaleBarLine} />
-          </View>
-
-          {/* Bottom Card */}
-          <View style={styles.bottomCardContainer}>
-            <View style={styles.farmCard}>
-              <View style={styles.farmCardHeader}>
-                <View style={styles.farmTitleRow}>
-                  <View style={styles.farmIconWrapper}>
-                    {isEditing ? (
-                      <PenIcon size={18} color={colors.brandGreen} />
-                    ) : (
-                      <LeafIcon size={18} color={colors.brandGreen} />
-                    )}
-                  </View>
-                  <Text style={styles.farmName}>Great Earth Organic Farm</Text>
+        {/* Bottom Card */}
+        <View style={styles.bottomCardContainer} pointerEvents="box-none">
+          <View style={styles.farmCard}>
+            <View style={styles.farmCardHeader}>
+              <View style={styles.farmTitleRow}>
+                <View style={styles.farmIconWrapper}>
+                  {isEditing ? (
+                    <PenIcon size={18} color={colors.brandGreen} />
+                  ) : (
+                    <LeafIcon size={18} color={colors.brandGreen} />
+                  )}
                 </View>
-                {isEditing ? (
-                  <View style={styles.badgeEditing}>
-                    <Text style={styles.badgeEditingText}>
-                      <SolidDot size={9} color={P.orange900} />  Editing
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.badgeLive}>
-                    <Text style={styles.badgeLiveText}>
-                      <SolidDot size={9} color={colors.brandGreen} />  Live GPS
-                    </Text>
-                  </View>
-                )}
+                <Text style={styles.farmName}>{initialData?.village ? `${initialData.village} Farm` : 'Your Farm'}</Text>
               </View>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statCol}>
-                  <Text style={styles.statLabel}>TOTAL AREA</Text>
-                  <Text style={styles.statValue}>2.45 ac</Text>
-                  <Text style={styles.statSub}>1.02 ha</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statLabel}>ZONES</Text>
-                  <Text style={styles.statValue}>3</Text>
-                  <Text style={styles.statSub}>A · B · C</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statLabel}>GPS ACCURACY</Text>
-                  <Text style={[styles.statValue, { color: colors.brandGreen }]}>±8 m</Text>
-                  <Text style={styles.statSub}>High</Text>
-                </View>
-              </View>
-
               {isEditing ? (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={styles.doneBtn}
-                  onPress={() => setIsEditing(false)}
-                >
-                  <Text style={styles.doneBtnText}>
-                    <CheckIcon size={15} color={colors.white} />  Done Editing
+                <View style={styles.badgeEditing}>
+                  <Text style={styles.badgeEditingText}>
+                    <SolidDot size={9} color={P.orange900} />  Editing
                   </Text>
-                </TouchableOpacity>
+                </View>
               ) : (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={styles.editBtn}
-                  onPress={() => setIsEditing(true)}
-                >
-                  <Text style={styles.editBtnText}>
-                    <PenIcon size={15} color={colors.brandGreen} />  Edit Boundary
+                <View style={styles.badgeLive}>
+                  <Text style={styles.badgeLiveText}>
+                    <SolidDot size={9} color={colors.brandGreen} />  Live GPS
                   </Text>
-                </TouchableOpacity>
+                </View>
               )}
             </View>
+
+            <View style={styles.statsRow}>
+              <View style={styles.statCol}>
+                <Text style={styles.statLabel}>TOTAL AREA</Text>
+                <Text style={styles.statValue}>
+                  {metrics.areaAcres > 0 ? `${metrics.areaAcres.toFixed(2)} ac` : '—'}
+                </Text>
+                <Text style={styles.statSub}>
+                  {metrics.areaHectares > 0 ? `${metrics.areaHectares.toFixed(2)} ha` : ''}
+                </Text>
+              </View>
+              <View style={styles.statCol}>
+                <Text style={styles.statLabel}>FMB PTS</Text>
+                <Text style={styles.statValue}>
+                  {coords.length > 1 ? coords.length - 1 : coords.length}
+                </Text>
+                <Text style={styles.statSub}>boundary pts</Text>
+              </View>
+              <View style={styles.statCol}>
+                <Text style={styles.statLabel}>GPS ACCURACY</Text>
+                <Text style={[styles.statValue, { color: colors.brandGreen }]}>±8 m</Text>
+                <Text style={styles.statSub}>High</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={mode === 'edit' ? styles.doneBtn : styles.editBtn}
+              onPress={handleEditBoundary}
+              disabled={mode === 'view' && coords.length < 3}
+            >
+              {mode === 'edit' ? (
+                <Text style={styles.doneBtnText}>
+                  <CheckIcon size={15} color={colors.white} />  {t('farmer.map.doneEditing')}
+                </Text>
+              ) : (
+                <Text
+                  style={[
+                    styles.editBtnText,
+                    mode === 'view' && coords.length < 3 && { opacity: 0.5 },
+                  ]}
+                >
+                  <PenIcon size={15} color={colors.brandGreen} />  {t('farmer.map.editBoundary')}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
-        </ImageBackground>
+        </View>
       </View>
 
       {/* Sticky Bottom Footer */}
@@ -425,17 +418,13 @@ const styles = StyleSheet.create({
   },
   mapArea: {
     flex: 1,
-  },
-  mapBackground: {
-    flex: 1,
-    width: '100%',
     position: 'relative',
   },
-  mapOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
   topMapControls: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 16,
@@ -490,34 +479,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  polygonSimulation: {
-    position: 'absolute',
-    top: 150,
-    left: 40,
-    right: 40,
-    bottom: 240,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mockPolygon: {
-    width: '100%',
-    height: '100%',
-    borderWidth: 3,
-  },
-  dragPoint: {
-    position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colors.white,
-    borderWidth: 3,
-    borderColor: P.orange500,
-  },
   bottomCardContainer: {
     position: 'absolute',
     bottom: 20,
     left: 16,
     right: 16,
+    zIndex: 10,
   },
   farmCard: {
     backgroundColor: colors.white,
@@ -545,6 +512,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: P.nearBlack,
   },
+  farmIconWrapper: {
+    backgroundColor: colors.brandGreenLight,
+    padding: 8,
+    borderRadius: 10,
+  },
   badgeLive: {
     backgroundColor: colors.brandGreenLight,
     paddingHorizontal: 8,
@@ -566,77 +538,6 @@ const styles = StyleSheet.create({
     color: P.orange900,
     fontSize: 11,
     fontWeight: '700',
-  },
-  zoneBadge: {
-    position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    shadowColor: P.black,
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  zoneBadgeTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: P.nearBlack,
-  },
-  zoneBadgeSub: {
-    fontSize: 9,
-    color: P.grey600,
-  },
-  areaBadge: {
-    position: 'absolute',
-    top: '55%',
-    left: '35%',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  areaBadgeTitle: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  areaBadgeSub: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 10,
-    marginTop: 2,
-  },
-  scaleBarContainer: {
-    position: 'absolute',
-    bottom: 230,
-    right: 20,
-    alignItems: 'flex-end',
-  },
-  scaleBarText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: '700',
-    marginBottom: 2,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  scaleBarLine: {
-    width: 40,
-    height: 4,
-    borderBottomWidth: 1.5,
-    borderLeftWidth: 1.5,
-    borderRightWidth: 1.5,
-    borderColor: colors.white,
-  },
-  farmIconWrapper: {
-    backgroundColor: colors.brandGreenLight,
-    padding: 8,
-    borderRadius: 10,
   },
   statsRow: {
     flexDirection: 'row',

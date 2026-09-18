@@ -100,8 +100,9 @@ export const ICON_CODEPOINTS: Readonly<Record<string, number>> = {
  * the bug-fix report for these two):
  * - `gps_fixed` (used in Step3Location.tsx, FieldContextScreen.tsx,
  *   FMBSketchScreen.tsx)
- * - `terrain` (used in ProfileScreen.tsx, ZonesScreen.tsx, AddZoneScreen.tsx)
  */
 export const ICON_ALIASES: Readonly<Record<string, string>> = {
   error_outline: 'error',
+  terrain: 'park',
 };
+

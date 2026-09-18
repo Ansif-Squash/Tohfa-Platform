@@ -295,6 +295,7 @@ export default function App(): React.JSX.Element {
             purpose={
               (params['purpose'] as 'LOGIN' | 'PASSWORD_RESET') ?? 'LOGIN'
             }
+            linkToken={typeof params['linkToken'] === 'string' ? params['linkToken'] : undefined}
             onNavigate={(s, p) => navigate(s, p)}
           />
         ) : screen === 'ForgotPassword' ? (
@@ -652,36 +653,10 @@ export default function App(): React.JSX.Element {
                   onNavigateToWeather={() => navigate('Weather')}
                   onNavigateToActiveCrops={() => navigate('ActiveCrops')}
                   onNavigateToFarmDiary={() => navigate('FarmDiary')}
-                  onNavigateToMyListings={() => navigate('MyListings')}
+                  onNavigateToMyListings={() => setCurrentTab('Listings')}
                   onNavigateToAttendance={() => navigate('DailyAttendance')}
                   onNavigateToTohfaCalendar={() => navigate('TohfaCalendar')}
-                  onNavigateToInventory={() => navigate('FarmInventory')}
                   onNavigateToLearningHub={() => navigate('LearningHub')}
-                  onNavigateToReviewOffer={() => {
-                    setSelectedListing({
-                      id: 'dummy-listing',
-                      listingNumber: 'L-9821',
-                      cropName: 'Carrot - Ooty - Grade 1', // combining subtitle for display
-                      quantityKg: '150',
-                      askingPricePerKg: '40',
-                      ceilingPricePerKg: '45',
-                      status: 'COUNTER_OFFER',
-                      grade: 'Grade 1',
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                      activeCounterOffer: {
-                        id: 'dummy-offer',
-                        pricePerKg: '34',
-                        quantityKg: '150',
-                        message: 'On inspection the batch grades as Grade 2 (minor forking & size variance), not the claimed Grade 1. Counter reflects the Grade 2 ceiling.',
-                        round: 1,
-                        expiresAt: new Date(Date.now() + (22 * 60 * 60 + 30 * 60) * 1000).toISOString(),
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                      },
-                    } as any);
-                    navigate('CounterOffer');
-                  }}
                 />
               ) : currentTab === 'Listings' ? (
                 <ListingsScreen

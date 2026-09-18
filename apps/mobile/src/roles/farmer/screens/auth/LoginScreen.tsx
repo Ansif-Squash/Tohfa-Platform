@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,8 +12,22 @@ import {
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { t, getLocale, setLocale } from '../../../../i18n/farmer';
 import { Button, ErrorState, Icon } from '@tohfa/mobile-ui';
-import { loginWithPassword, resolveRouteAfterAuth, fetchMe } from '../../api/auth';
+import {
+  loginWithPassword,
+  loginWithOAuth,
+  isOAuthNotLinked,
+  requestOtp,
+  resolveRouteAfterAuth,
+  fetchMe,
+  isRoleSelectionRequired,
+  type OAuthProviderCode,
+} from '../../api/auth';
 import { ApiError } from '../../api/client';
+import {
+  signInWithGoogle,
+  signInWithFacebook,
+  SocialSignInCancelledError,
+} from '../../native/socialSignIn';
 import { authPalette as P, typography, weights } from '../../theme';
 import googleIcon from '../../assets/icons/googleee.png';
 import appleIcon from '../../assets/icons/apple.png';
@@ -110,6 +125,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<OAuthProviderCode | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [locale, setLocaleState] = useState(getLocale());
   const [isMobileFocused, setIsMobileFocused] = useState(false);
@@ -123,13 +139,89 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
   const cleanMobile = () => (mobile.startsWith('+') ? mobile.trim() : `+91${mobile.trim()}`);
 
   /**
-   * Social sign-in. The design shows Google / Apple / Facebook, but the TOHFA
-   * API has no social OAuth endpoints yet — tapping is a safe no-op until the
-   * backend flow lands.
+   * Social sign-in (BR-39). Apple is left as a no-op — out of scope for this
+   * change, the button stays but does nothing, same as before.
+   *
+   * Google/Facebook: get a verified provider token from the native SDK, then
+   * hand it to the same `/auth/oauth/{provider}` endpoint password login
+   * uses via `/auth/login`. Three outcomes, mirrored from `handlePasswordLogin`
+   * where the shape overlaps:
+   *  - success -> same post-login navigation as a password login.
+   *  - requiresRoleSelection -> same deterministic first-role resolution as
+   *    `handlePasswordLogin` (see the comment there: this app has no
+   *    role-picker UI for an existing login).
+   *  - NOT_LINKED -> BR-39: this identity has no TOHFA account yet, and OAuth
+   *    is never allowed to create one by itself. The farmer must still prove
+   *    a real mobile number via OTP. Rather than adding a new "enter your
+   *    mobile" screen, this reuses the mobile number field already on this
+   *    same form — if it's empty, ask for it and stop (a defensible minimal
+   *    choice; see the sub-agent report for why a dedicated screen wasn't
+   *    built here without a design reference).
    */
-  const onSocialLogin = (_provider: 'GOOGLE' | 'APPLE' | 'FACEBOOK') => {
-    // TODO: wire to OAuth flow once the API supports social sign-in.
-  };
+  async function onSocialLogin(provider: 'GOOGLE' | 'APPLE' | 'FACEBOOK') {
+    if (provider === 'APPLE') {
+      // TODO: wire to OAuth flow once Apple sign-in is in scope.
+      return;
+    }
+
+    setSocialLoading(provider);
+    setErrorMsg(null);
+
+    try {
+      const providerToken =
+        provider === 'GOOGLE' ? await signInWithGoogle() : await signInWithFacebook();
+
+      let outcome = await loginWithOAuth(provider, providerToken);
+
+      if (isRoleSelectionRequired(outcome)) {
+        const firstRole = outcome.availableRoles[0]?.code;
+        if (!firstRole) {
+          setErrorMsg(t('error.generic'));
+          return;
+        }
+        outcome = await loginWithOAuth(provider, providerToken, { roleCode: firstRole });
+      }
+
+      if (isOAuthNotLinked(outcome)) {
+        if (!mobile.trim()) {
+          setErrorMsg(t('farmer.auth.login.socialLinkMobileRequired'));
+          return;
+        }
+        const targetMobile = cleanMobile();
+        const otpRes = await requestOtp({ mobile: targetMobile, purpose: 'LOGIN' });
+        onNavigate('Otp', {
+          mobile: targetMobile,
+          challengeId: otpRes.challengeId,
+          resendAvailableAt: otpRes.resendAvailableAt,
+          attemptsRemaining: otpRes.attemptsRemaining,
+          purpose: 'LOGIN',
+          linkToken: outcome.linkToken,
+        });
+        return;
+      }
+
+      if (isRoleSelectionRequired(outcome)) {
+        setErrorMsg(t('error.generic'));
+        return;
+      }
+
+      const me = await fetchMe();
+      const route = resolveRouteAfterAuth(me);
+      onNavigate(route.name, route.params);
+    } catch (err: unknown) {
+      if (err instanceof SocialSignInCancelledError) {
+        // The farmer closed the native sheet — not an error worth surfacing.
+        return;
+      }
+      if (err instanceof ApiError) {
+        setErrorMsg(t(`error.${err.problem.code}` as unknown as Parameters<typeof t>[0]) || t('error.generic'));
+      } else {
+        setErrorMsg(t('error.generic'));
+      }
+    } finally {
+      setSocialLoading(null);
+    }
+  }
 
   async function handlePasswordLogin() {
     if (!mobile.trim() || !password.trim()) return;
@@ -143,10 +235,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       // has no role-picker UI for an existing login (RoleSelectionScreen is
       // a *sign-up* "how do you want to join" screen, a different concept),
       // so resolve deterministically to the first role rather than block --
-      if ('requiresRoleSelection' in outcome && outcome.requiresRoleSelection === true) {
-        // We know availableRoles exists when requiresRoleSelection is true
-        const rolesObj = outcome as { availableRoles?: { code: string }[] };
-        const firstRole = rolesObj.availableRoles?.[0]?.code;
+      // real-world accounts holding both FARMER and CUSTOMER are an open
+      // product question, not something to invent a screen for here.
+      // Must be `isRoleSelectionRequired`, never `'requiresRoleSelection' in
+      // outcome`: a *successful* login also carries that key, with the value
+      // `false`, so the `in` form sent every single-role farmer down the
+      // role-selection branch and crashed on the absent `availableRoles`.
+      if (isRoleSelectionRequired(outcome)) {
+        const firstRole = outcome.availableRoles[0]?.code;
         if (!firstRole) {
           setErrorMsg(t('error.generic'));
           return;
@@ -154,7 +250,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
         outcome = await loginWithPassword({ mobile: cleanMobile(), password, roleCode: firstRole });
       }
 
-      if ('requiresRoleSelection' in outcome && outcome.requiresRoleSelection === true) {
+      if (isRoleSelectionRequired(outcome)) {
         setErrorMsg(t('error.generic'));
         return;
       }
@@ -293,27 +389,38 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
       <View style={styles.socialRow}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Continue with Google"
+          accessibilityLabel={t('farmer.auth.login.continueWithGoogle')}
           style={styles.socialButton}
           onPress={() => onSocialLogin('GOOGLE')}
+          disabled={socialLoading !== null}
         >
-          <Image source={googleIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          {socialLoading === 'GOOGLE' ? (
+            <ActivityIndicator size="small" color={P.primary} />
+          ) : (
+            <Image source={googleIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Continue with Apple"
+          accessibilityLabel={t('farmer.auth.login.continueWithApple')}
           style={styles.socialButton}
           onPress={() => onSocialLogin('APPLE')}
+          disabled={socialLoading !== null}
         >
           <Image source={appleIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
         </TouchableOpacity>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Continue with Facebook"
+          accessibilityLabel={t('farmer.auth.login.continueWithFacebook')}
           style={styles.socialButton}
           onPress={() => onSocialLogin('FACEBOOK')}
+          disabled={socialLoading !== null}
         >
-          <Image source={facebookIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          {socialLoading === 'FACEBOOK' ? (
+            <ActivityIndicator size="small" color={P.primary} />
+          ) : (
+            <Image source={facebookIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          )}
         </TouchableOpacity>
       </View>
 

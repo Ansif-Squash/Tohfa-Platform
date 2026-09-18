@@ -246,6 +246,7 @@ export function PersonalDetailsScreen({
         {/* ── Profile Hero ── */}
         <View style={styles.profileHero}>
           <View style={styles.avatarWrap}>
+            {/* eslint-disable-next-line @typescript-eslint/no-require-imports -- RN's bundler special-cases require() for static image assets; there is no ESM equivalent. */}
             <Image source={require('../../assets/farmer-kumar.jpg')} style={styles.avatar} resizeMode="cover" />
             <TouchableOpacity style={styles.cameraBadge} activeOpacity={0.8} accessibilityLabel={t('farmer.profile.a11y.editPhoto')}>
               <CameraIcon />

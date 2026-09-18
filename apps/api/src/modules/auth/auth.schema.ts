@@ -23,8 +23,36 @@ export type SendOtpBody = z.infer<typeof sendOtpBody>;
 export const verifyOtpBody = z.object({
   challengeId: z.string().uuid(),
   code: z.string().regex(otpCodeRegex, { message: 'Code must be 6 digits' }),
+  // BR-39: identifies which verified (provider, subject, email, fullName,
+  // photoUrl) tuple — minted by `POST /auth/oauth/{provider}`'s NOT_LINKED
+  // response — to link once this OTP verification succeeds. Optional: a plain
+  // mobile+OTP verify never sends one.
+  linkToken: z.string().optional(),
 });
 export type VerifyOtpBody = z.infer<typeof verifyOtpBody>;
+
+export const oauthProviders = ['google', 'facebook'] as const;
+export type OAuthProviderCode = (typeof oauthProviders)[number];
+
+export const oauthProviderParams = z.object({
+  provider: z.enum(oauthProviders),
+});
+export type OAuthProviderParams = z.infer<typeof oauthProviderParams>;
+
+export const oauthLoginBody = z.object({
+  // A Google ID token or a Facebook access token, depending on `:provider`.
+  token: z.string().min(1),
+  deviceId: z.string().optional(),
+  platform: z.enum(['ios', 'android', 'web']).optional(),
+  roleCode: z.string().optional(),
+});
+export type OAuthLoginBody = z.infer<typeof oauthLoginBody>;
+
+export const oauthLinkBody = z.object({
+  provider: z.enum(oauthProviders),
+  token: z.string().min(1),
+});
+export type OAuthLinkBody = z.infer<typeof oauthLinkBody>;
 
 export const loginBody = z.object({
   mobile: z.string().regex(mobileRegex, { message: 'Must be a valid E.164 mobile number (+91...)' }),

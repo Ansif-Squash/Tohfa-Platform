@@ -156,6 +156,8 @@ export const authPalette = {
   twRed500: '#ef4444',
   // Blue / Sky
   blue50: '#e3f2fd',
+  blue100: '#bbdefb',
+  blue200: '#90caf9',
   blue700: '#1976d2',
   lightBlue50: '#e1f5fe',
   lightBlue700: '#0288d1',
@@ -310,6 +312,28 @@ export const authPalette = {
   coralRed: '#e24b4a',
   tanBrown: '#d4a373',
   stoneMuted: '#8a927f',
+  // Weather scene and alert palette tokens (Screen 33)
+  weatherSceneMorningTop: '#0288D1',
+  weatherSceneMorningBottom: '#01579B',
+  weatherSceneAfternoonTop: '#1E88E5',
+  weatherSceneAfternoonBottom: '#0D47A1',
+  weatherSceneEveningTop: '#E65100',
+  weatherSceneEveningBottom: '#4A148C',
+  weatherSceneNightTop: '#0F172A',
+  weatherSceneNightBottom: '#020617',
+  frostAlertBg: '#FEF3E2',
+  frostAlertBgEnd: '#FDE4C4',
+  frostAlertBorder: '#F0562A',
+  frostAlertText: '#7A2E0E',
+  frostAlertSub: '#9A4E28',
+  frostAlertDetail: '#7A3E1E',
+  rainAlertBorder: '#2E93D9',
+  rainAlertIcon: '#1E6FB8',
+  weatherSunGold: '#FFD54F',
+  weatherSunCore: '#FFA000',
+  weatherSunGlow: '#FFF9C4',
+  weatherCloudWhite: '#FFFFFF',
+  weatherCloudShadow: '#CFD8DC',
 } as const;
 
 export const theme = {

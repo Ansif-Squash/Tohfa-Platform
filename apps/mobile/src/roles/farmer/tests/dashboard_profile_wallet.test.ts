@@ -8,6 +8,8 @@ import {
   type FarmerProfile,
 } from '../api/farmer';
 import { buildWalletQueryUrl, formatMoneyAmount } from '../api/wallet';
+import { getGreetingKey } from '../utils/greeting';
+import { setLocale, t } from '../../../i18n/farmer';
 
 describe('User Story 44 (S-44) Farmer Dashboard, Profile, Certifications and Wallet Tests', () => {
   describe('BR-01: Expired certificate blocks market listings', () => {
@@ -137,4 +139,40 @@ describe('User Story 44 (S-44) Farmer Dashboard, Profile, Certifications and Wal
       expect(zeroFormatted).toBe('₹0.00');
     });
   });
+
+  describe('Dashboard: Dynamic Time-of-Day Greeting', () => {
+    it('returns morning greeting between 05:00 and 11:59', () => {
+      const morningDate = new Date('2026-09-18T08:30:00');
+      expect(getGreetingKey(morningDate)).toBe('farmer.dashboard.greeting.morning');
+    });
+
+    it('returns afternoon greeting between 12:00 and 16:59', () => {
+      const afternoonDate = new Date('2026-09-18T14:15:00');
+      expect(getGreetingKey(afternoonDate)).toBe('farmer.dashboard.greeting.afternoon');
+    });
+
+    it('returns evening greeting from 17:00 to 04:59', () => {
+      const eveningDate = new Date('2026-09-18T19:45:00');
+      expect(getGreetingKey(eveningDate)).toBe('farmer.dashboard.greeting.evening');
+
+      const nightDate = new Date('2026-09-18T02:00:00');
+      expect(getGreetingKey(nightDate)).toBe('farmer.dashboard.greeting.evening');
+    });
+
+    it('resolves localized greeting strings in both English and Tamil', () => {
+      setLocale('en');
+      expect(t('farmer.dashboard.greeting.morning')).toBe('Good morning');
+      expect(t('farmer.dashboard.greeting.afternoon')).toBe('Good afternoon');
+      expect(t('farmer.dashboard.greeting.evening')).toBe('Good evening');
+
+      setLocale('ta');
+      expect(t('farmer.dashboard.greeting.morning')).toBe('காலை வணக்கம்');
+      expect(t('farmer.dashboard.greeting.afternoon')).toBe('மதிய வணக்கம்');
+      expect(t('farmer.dashboard.greeting.evening')).toBe('மாலை வணக்கம்');
+
+      // Reset back to English
+      setLocale('en');
+    });
+  });
 });
+
