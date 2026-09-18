@@ -297,7 +297,8 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   photoText: {
-    fontSize: 8,
+    fontSize: 11,
+    lineHeight: 15,
     color: '#9e9e9e',
     fontWeight: '700',
     marginTop: 4,
@@ -323,7 +324,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   gradeBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     color: '#2e7d32',
   },
@@ -418,12 +420,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pricingBoxTitleGreen: {
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     color: '#2e7d32',
   },
   pricingBoxTitleGray: {
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     color: '#757575',
   },
@@ -472,7 +476,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   saleValueTitle: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     color: 'rgba(255,255,255,0.8)',
     marginBottom: 4,

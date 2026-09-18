@@ -583,11 +583,13 @@ const styles = StyleSheet.create({
   },
   zoneBadgeTitle: {
     fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     color: P.nearBlack,
   },
   zoneBadgeSub: {
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 15,
     color: P.grey600,
   },
   areaBadge: {
@@ -603,11 +605,13 @@ const styles = StyleSheet.create({
   areaBadgeTitle: {
     color: colors.white,
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: '800',
   },
   areaBadgeSub: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     marginTop: 2,
   },
   scaleBarContainer: {
@@ -619,6 +623,7 @@ const styles = StyleSheet.create({
   scaleBarText: {
     color: colors.white,
     fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
     marginBottom: 2,
     textShadowColor: 'rgba(0,0,0,0.5)',
@@ -647,18 +652,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 16,
     color: P.grey600,
     fontWeight: '700',
     marginBottom: 4,
   },
   statValue: {
     fontSize: 16,
+    lineHeight: 22,
     fontWeight: '800',
     color: P.nearBlack,
   },
   statSub: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     color: P.grey600,
     marginTop: 2,
   },

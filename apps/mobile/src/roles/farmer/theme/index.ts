@@ -41,24 +41,100 @@ export const colors = {
 
 /** Values are px, which map 1:1 to React Native `dp`. */
 export const typography = {
-  caption: tokens.typeScale.caption,
-  footnote: tokens.typeScale.caption,
-  bodySmall: tokens.typeScale.small,
-  body: tokens.typeScale.body,
-  bodyLarge: tokens.typeScale.bodyLarge,
-  title: tokens.typeScale.h2,
-  headline: tokens.typeScale.h1,
-  display: tokens.typeScale.display,
+  display: {
+    fontSize: 36,
+    lineHeight: 44,
+    fontWeight: '800' as const,
+  },
+  h1: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '700' as const,
+  },
+  h2: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '700' as const,
+  },
+  h3: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '600' as const,
+  },
+  bodyLarge: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400' as const,
+  },
+  body: {
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '400' as const,
+  },
+  button: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '600' as const,
+  },
+  label: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600' as const,
+  },
+  helper: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '400' as const,
+  },
+  caption: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '400' as const,
+  },
+  badge: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600' as const,
+  },
 } as const;
+
+export const fontSizes = {
+  display: 36,
+  h1: 26,
+  h2: 20,
+  h3: 16,
+  bodyLarge: 16,
+  body: 14,
+  button: 15,
+  label: 13,
+  helper: 12,
+  caption: 11,
+  badge: 11,
+} as const;
+
+export const typeScale = fontSizes;
 
 export const weights = {
-  regular: String(tokens.fontWeight.regular) as '400',
-  medium: String(tokens.fontWeight.medium) as '500',
-  semibold: String(tokens.fontWeight.semibold) as '600',
-  bold: String(tokens.fontWeight.bold) as '700',
+  regular: '400' as const,
+  medium: '500' as const,
+  semibold: '600' as const,
+  bold: '700' as const,
+  extrabold: '800' as const,
 } as const;
 
-export const lineHeights = tokens.lineHeight;
+export const lineHeights = {
+  display: 44,
+  h1: 32,
+  h2: 26,
+  h3: 22,
+  bodyLarge: 24,
+  body: 21,
+  button: 20,
+  label: 18,
+  helper: 17,
+  caption: 15,
+  badge: 15,
+} as const;
 export const spacing = tokens.spacing;
 // card/sm/md/lg used to be patched in here by hand; the design system now names
 // every step, so the whole map comes straight from the tokens.

@@ -298,7 +298,8 @@ const styles = StyleSheet.create({
   },
   protoToggleActiveText: {
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
   },
   protoToggleInactive: {
@@ -307,7 +308,8 @@ const styles = StyleSheet.create({
   },
   protoToggleInactiveText: {
     color: '#9e9e9e',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
   },
   alertBanner: {
@@ -328,12 +330,14 @@ const styles = StyleSheet.create({
   },
   alertTitle: {
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: '800',
     color: '#5d4037',
     marginBottom: 4,
   },
   alertSub: {
     fontSize: 13,
+    lineHeight: 18,
     color: '#d84315',
   },
   alertChevron: {
@@ -365,7 +369,8 @@ const styles = StyleSheet.create({
   },
   heroChipText: {
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     letterSpacing: 0.5,
   },

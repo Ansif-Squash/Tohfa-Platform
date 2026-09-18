@@ -283,9 +283,9 @@ const styles = StyleSheet.create({
   contextIconBox: { width: 32, alignItems: 'center' },
   contextIcon: { fontSize: 18 },
   contextInfo: { flex: 1, marginLeft: 8 },
-  contextLabel: { fontSize: 10, fontWeight: 'bold', color: P.slate400, marginBottom: 2 },
-  contextValue: { fontSize: 13, fontWeight: '600', color: P.slate800 },
-  contextAction: { fontSize: 13, fontWeight: '600', color: P.primary },
+  contextLabel: { fontSize: 11, lineHeight: 15, fontWeight: 'bold', color: P.slate400, marginBottom: 2 },
+  contextValue: { fontSize: 13, lineHeight: 18, fontWeight: '600', color: P.slate800 },
+  contextAction: { fontSize: 13, lineHeight: 18, fontWeight: '600', color: P.primary },
 
   uploadBox: {
     borderWidth: 1,

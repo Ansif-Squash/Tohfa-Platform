@@ -1120,7 +1120,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   autoBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
     color: P.twGray500,
   },

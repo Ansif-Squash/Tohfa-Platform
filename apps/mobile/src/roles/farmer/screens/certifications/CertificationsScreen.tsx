@@ -294,7 +294,7 @@ const C = StyleSheet.create({
   },
   stripTxt: { fontSize: 13, fontWeight: '500', flex: 1 },
   datesRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2 },
-  dateLabel: { fontSize: 10, fontWeight: '700', color: P.twGray400, letterSpacing: 0.5, marginBottom: 2 },
+  dateLabel: { fontSize: 11, lineHeight: 15, fontWeight: '700', color: P.twGray400, letterSpacing: 0.5, marginBottom: 2 },
   dateVal: { fontSize: 14, fontWeight: '600', color: P.twGray900 },
   actRow: { flexDirection: 'row', gap: 10, marginTop: 2 },
   outBtn: {

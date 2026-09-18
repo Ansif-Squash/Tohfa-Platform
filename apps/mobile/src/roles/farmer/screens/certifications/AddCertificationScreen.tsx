@@ -15,6 +15,7 @@ import { t } from '../../../../i18n/farmer';
 import {
   MIN_TOUCH_TARGET,
   colors,
+  fontSizes,
   radius,
   spacing,
   typography,
@@ -211,12 +212,14 @@ const styles = StyleSheet.create({
   scrollContent: { padding: spacing.lg, gap: spacing.lg },
   header: { gap: spacing.xs },
   title: {
-    fontSize: typography.headline,
+    fontSize: fontSizes.h1,
+    lineHeight: typography.h1.lineHeight,
     fontWeight: weights.bold,
     color: colors.onSurface,
   },
   notice: {
-    fontSize: typography.caption,
+    fontSize: fontSizes.caption,
+    lineHeight: typography.caption.lineHeight,
     color: colors.onSurfaceVariant,
   },
   errorBox: {
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.card,
   },
-  errorText: { color: colors.danger, fontSize: typography.body },
+  errorText: { color: colors.danger, fontSize: fontSizes.body, lineHeight: typography.body.lineHeight },
   formCard: {
     backgroundColor: colors.white,
     borderRadius: radius.cardMax,
@@ -234,8 +237,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   label: {
-    fontSize: typography.body,
-    fontWeight: weights.medium,
+    fontSize: fontSizes.label,
+    lineHeight: typography.label.lineHeight,
+    fontWeight: weights.semibold,
     color: colors.onSurface,
   },
   typeRow: { flexDirection: 'row', gap: spacing.md },

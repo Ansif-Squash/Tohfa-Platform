@@ -973,7 +973,8 @@ const styles = StyleSheet.create({
   },
   featuredBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     letterSpacing: 0.6,
   },
@@ -1072,7 +1073,8 @@ const styles = StyleSheet.create({
   },
   videoDurationText: {
     color: '#FFFFFF',
-    fontSize: 9.5,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
   },
   videoDetails: {
@@ -1417,7 +1419,8 @@ const styles = StyleSheet.create({
   },
   playerHdBadge: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     backgroundColor: 'rgba(0,0,0,0.4)',
     paddingHorizontal: 4,

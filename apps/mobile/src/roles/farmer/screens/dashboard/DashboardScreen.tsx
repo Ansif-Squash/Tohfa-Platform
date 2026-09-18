@@ -1139,7 +1139,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: 'bold',
   },
   gridTitle: {
@@ -1270,7 +1271,8 @@ const styles = StyleSheet.create({
   },
   tipBadgeText: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: 'bold',
   },
   tipTitle: {

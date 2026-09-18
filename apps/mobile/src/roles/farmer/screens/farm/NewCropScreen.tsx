@@ -1232,7 +1232,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   fromZonePillText: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
     color: P.twGray700,
     letterSpacing: 0.5,

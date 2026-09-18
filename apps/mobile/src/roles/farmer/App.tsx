@@ -112,7 +112,7 @@ import {
   updateCertificationLocally,
   deleteCertificationLocally,
 } from './api/farmer';
-import { authPalette, colors, spacing, typography, weights } from './theme';
+import { authPalette, colors, fontSizes, spacing, typography, weights } from './theme';
 import { CustomerMainApp } from '../customer/CustomerMainApp';
 
 export type ScreenName =
@@ -1324,7 +1324,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     color: colors.white,
-    fontSize: typography.title,
+    fontSize: fontSizes.h2,
+    lineHeight: typography.h2.lineHeight,
     fontWeight: weights.bold,
   },
   localeRow: { flexDirection: 'row', gap: 6 },
@@ -1335,8 +1336,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   localeChipActive: { backgroundColor: colors.white },
-  localeText: { color: colors.white, fontSize: 12, fontWeight: '600' },
-  localeTextActive: { color: colors.primaryPressed, fontSize: 12, fontWeight: '700' },
+  localeText: { color: colors.white, fontSize: fontSizes.helper, lineHeight: typography.helper.lineHeight, fontWeight: '600' },
+  localeTextActive: { color: colors.primaryPressed, fontSize: fontSizes.helper, lineHeight: typography.helper.lineHeight, fontWeight: '700' },
   content: { flex: 1 },
   mainTabsContainer: { flex: 1 },
   tabScreenContainer: { flex: 1 },
@@ -1357,7 +1358,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   tabItemText: {
-    fontSize: typography.caption,
+    fontSize: fontSizes.caption,
+    lineHeight: typography.caption.lineHeight,
     color: colors.onSurfaceVariant,
     fontWeight: weights.medium,
   },
@@ -1388,6 +1390,6 @@ const styles = StyleSheet.create({
     borderColor: colors.white,
   },
   unsupportedContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  unsupportedText: { fontSize: typography.body, color: colors.onSurface, textAlign: 'center' },
+  unsupportedText: { fontSize: fontSizes.body, lineHeight: typography.body.lineHeight, color: colors.onSurface, textAlign: 'center' },
 });
 
