@@ -12,7 +12,7 @@ import { useTheme } from '../../theme';
 import { ErrorState, Icon } from '@tohfa/mobile-ui';
 import { validateStep } from './validation';
 import type { Step1PersonalData } from '../../storage/registrationDraft';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar } from 'react-native-calendars';
 
 interface Step1Props {
   initialData?: Step1PersonalData | undefined;
@@ -26,18 +26,23 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
 
   // Extract or default values from initial data
   const [fullName, setFullName] = useState(initialData?.fullName ?? 'Kumar');
-  
-  const initialDobStr = initialData?.dob ?? '12 / 06 / 1985';
-  const initialDobParts = initialDobStr.split(' / ');
-  const initialDate = initialDobParts.length === 3 
-    ? new Date(parseInt(initialDobParts[2]!), parseInt(initialDobParts[1]!) - 1, parseInt(initialDobParts[0]!))
-    : new Date(1985, 5, 12);
-    
-  const [dateValue, setDateValue] = useState<Date>(initialDate);
+
+  const [dob, setDob] = useState(initialData?.dob ?? '12 / 06 / 1985');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [otp, setOtp] = useState('');
 
-  const dob = `${dateValue.getDate().toString().padStart(2, '0')} / ${(dateValue.getMonth() + 1).toString().padStart(2, '0')} / ${dateValue.getFullYear()}`;
+  const currentCalendarDate = (() => {
+    const parts = dob.split(/[\/\-\.]/).map((p) => p.trim());
+    if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      if (year.length === 4) {
+        return `${year}-${month}-${day}`;
+      }
+    }
+    return '1985-06-12';
+  })();
 
   const [gender, setGender] = useState(initialData?.gender ?? 'Male');
   const [showGenderMenu, setShowGenderMenu] = useState(false);
@@ -129,9 +134,7 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
             <Text style={[styles.label, { color: colors.textBody }]}>
               Date of Birth <Text style={{ color: colors.requiredRed }}>*</Text>
             </Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setShowDatePicker(true)}
+            <View
               style={[
                 styles.input,
                 {
@@ -139,27 +142,78 @@ export const Step1Personal: React.FC<Step1Props> = ({ initialData, onSave }) => 
                   backgroundColor: colors.white,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  paddingRight: 8,
                 },
               ]}
             >
-              <Text style={{ color: colors.textDark, fontSize: 15 }}>{dob}</Text>
-              <Icon name="calendar_today" size={20} color={colors.textSubtle} />
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={dateValue}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (event.type === 'set' && selectedDate) {
-                    setDateValue(selectedDate);
-                  }
+              <TextInput
+                style={{
+                  flex: 1,
+                  color: colors.textDark,
+                  fontSize: 15,
+                  padding: 0,
                 }}
+                value={dob}
+                onChangeText={setDob}
+                placeholder="DD / MM / YYYY"
+                placeholderTextColor={colors.textPlaceholder}
+                keyboardType="numbers-and-punctuation"
               />
-            )}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setShowDatePicker(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Open calendar"
+              >
+                <Icon name="calendar_today" size={20} color={colors.textSubtle} />
+              </TouchableOpacity>
+            </View>
+
+            <Modal
+              visible={showDatePicker}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <TouchableOpacity
+                  activeOpacity={1}
+                  style={[styles.calendarContainer, { backgroundColor: colors.white }]}
+                >
+                  <Calendar
+                    current={currentCalendarDate}
+                    maxDate={new Date().toISOString().slice(0, 10)}
+                    onDayPress={(day: { dateString: string; day: number; month: number; year: number }) => {
+                      const formatted = `${day.day.toString().padStart(2, '0')} / ${day.month.toString().padStart(2, '0')} / ${day.year}`;
+                      setDob(formatted);
+                      setShowDatePicker(false);
+                    }}
+                    markedDates={{
+                      [currentCalendarDate]: {
+                        selected: true,
+                        selectedColor: colors.brandGreen,
+                      },
+                    }}
+                    theme={{
+                      selectedDayBackgroundColor: colors.brandGreen,
+                      todayTextColor: colors.brandGreen,
+                      arrowColor: colors.brandGreen,
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={styles.closeCalendarBtn}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={[styles.closeCalendarText, { color: colors.brandGreen }]}>Close</Text>
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Modal>
           </View>
 
           <View style={styles.gridCol}>
@@ -490,7 +544,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: 'rgba(0, 0, 0, 0.25)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,

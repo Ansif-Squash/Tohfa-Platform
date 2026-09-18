@@ -1,13 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  FlatList,
+  Image,
+  Modal,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  TextInput,
   TouchableOpacity,
-  Image,
+  View,
 } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import {
@@ -72,15 +75,13 @@ interface DashboardScreenProps {
   onNavigateToTohfaCalendar?: () => void;
   onNavigateToInventory?: () => void;
   onNavigateToLearningHub?: () => void;
+  onNavigateToProduceCalendar?: () => void;
+  onNavigateToCropDetail?: (cropName: string) => void;
 }
 
 export function DashboardScreen({
   onNavigateToListings,
   onNavigateToCreateListing,
-  // No grid tile or tab currently routes to Wallet in this redesign (the
-  // bottom tab bar's own Wallet entry was dropped along with it) -- kept as
-  // an accepted prop so the parent's existing wiring stays valid, but this
-  // screen has nothing to call it from right now.
   onNavigateToWallet: _onNavigateToWallet,
   onNavigateToProfile,
   onNavigateToCertifications,
@@ -96,6 +97,8 @@ export function DashboardScreen({
   onNavigateToTohfaCalendar,
   onNavigateToInventory,
   onNavigateToLearningHub,
+  onNavigateToProduceCalendar,
+  onNavigateToCropDetail,
 }: DashboardScreenProps): React.JSX.Element {
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -103,6 +106,267 @@ export function DashboardScreen({
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSearch, setShowSearch] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const searchItems = useMemo(() => [
+    {
+      id: 'produce-calendar',
+      title: 'Produce Calendar',
+      subtitle: '3 crops actively growing · Harvest schedules & due actions',
+      category: 'Feature',
+      icon: 'calendar-today',
+      iconBg: P.twEmerald100,
+      iconColor: P.twGreen800,
+      keywords: ['produce calendar', 'calendar', 'produce', 'harvest', 'crops', 'carrot', 'tomato', 'cabbage', 'vegetables'],
+      action: () => {
+        setShowSearch(false);
+        if (onNavigateToProduceCalendar) {
+          onNavigateToProduceCalendar();
+        } else {
+          onNavigateToFarmManagement?.();
+        }
+      },
+    },
+    {
+      id: 'crops',
+      title: 'Crop Management',
+      subtitle: 'Manage active crops, fields, and zones',
+      category: 'Feature',
+      icon: 'eco',
+      iconBg: P.paleMintBg,
+      iconColor: colors.brandGreen,
+      keywords: ['crops', 'crop management', 'plants', 'farming', 'zones', 'vegetables', 'yield'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToFarmManagement?.();
+      },
+    },
+    {
+      id: 'crop-tomato',
+      title: 'Tomato (Zone A)',
+      subtitle: '62 days old · Harvest in 8 days',
+      category: 'Crop',
+      icon: 'agriculture',
+      iconBg: P.palePeachBg,
+      iconColor: P.deepOrange600,
+      keywords: ['tomato', 'tomatoes', 'zone a', 'harvest', 'active crop', 'vegetables'],
+      action: () => {
+        setShowSearch(false);
+        (onNavigateToActiveCrops ?? onNavigateToFarmManagement)?.();
+      },
+    },
+    {
+      id: 'crop-carrot',
+      title: 'Carrot (Zone B)',
+      subtitle: '34 days old · Harvest in 41 days',
+      category: 'Crop',
+      icon: 'agriculture',
+      iconBg: P.paleCreamBg,
+      iconColor: P.orange700,
+      keywords: ['carrot', 'carrots', 'zone b', 'harvest', 'active crop', 'vegetables'],
+      action: () => {
+        setShowSearch(false);
+        (onNavigateToActiveCrops ?? onNavigateToFarmManagement)?.();
+      },
+    },
+    {
+      id: 'certifications',
+      title: 'Certifications',
+      subtitle: 'Organic certification, standards, and renewal status',
+      category: 'Feature',
+      icon: 'shield',
+      iconBg: P.paleLavenderBg,
+      iconColor: P.green700,
+      keywords: ['cert', 'certifications', 'organic', 'certificate', 'compliance', 'standards', 'renewal', 'valid'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToCertifications?.();
+      },
+    },
+    {
+      id: 'weather',
+      title: 'Weather & Forecast',
+      subtitle: 'Ooty, Nilgiris · 7-day rain, humidity, temperature',
+      category: 'Feature',
+      icon: 'wb_sunny',
+      iconBg: P.amber50,
+      iconColor: P.orange500,
+      keywords: ['weather', 'forecast', 'rain', 'humidity', 'climate', 'sun', 'temperature', 'ooty', 'nilgiris'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToWeather?.();
+      },
+    },
+    {
+      id: 'listings',
+      title: 'Market & Produce Listings',
+      subtitle: 'Browse your listings, buyer bids, and pending counter-offers',
+      category: 'Feature',
+      icon: 'shopping_cart',
+      iconBg: P.palePeachBg,
+      iconColor: P.deepOrange600,
+      keywords: ['market', 'listings', 'produce', 'counter-offer', 'sell', 'orders', 'buyers', 'price', 'rates'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToListings?.();
+      },
+    },
+    {
+      id: 'create-listing',
+      title: 'List Produce for Sale',
+      subtitle: 'Post harvested tomatoes, carrots, or vegetables to buyers',
+      category: 'Action',
+      icon: 'assignment',
+      iconBg: P.green100,
+      iconColor: colors.brandGreen,
+      keywords: ['create listing', 'list produce', 'sell', 'add produce', 'post produce', 'offer'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToCreateListing?.();
+      },
+    },
+    {
+      id: 'farm-diary',
+      title: 'Log Farm Diary',
+      subtitle: 'Record daily irrigation, fertilization, pesticide, or harvest activities',
+      category: 'Action',
+      icon: 'edit_note',
+      iconBg: P.paleMintBg,
+      iconColor: colors.brandGreen,
+      keywords: ['diary', 'log diary', 'farm diary', 'entry', 'irrigation', 'fertilizer', 'spray', 'activities', 'notes'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToFarmManagement?.();
+      },
+    },
+    {
+      id: 'notifications',
+      title: 'Notifications & Alerts',
+      subtitle: 'Counter-offers, certificate alerts, and market updates',
+      category: 'Feature',
+      icon: 'notifications',
+      iconBg: P.palePinkBg,
+      iconColor: P.red600,
+      keywords: ['notifications', 'alerts', 'messages', 'counter offer', 'updates', 'bell'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToNotifications?.();
+      },
+    },
+    {
+      id: 'profile',
+      title: 'Profile & Farm Details',
+      subtitle: 'Personal info, Aadhaar, bank details, and farm land',
+      category: 'Feature',
+      icon: 'person',
+      iconBg: P.paleLavenderBg,
+      iconColor: P.violetAccent,
+      keywords: ['profile', 'account', 'kumar', 'personal details', 'farmer id', 'aadhaar', 'settings', 'phone', 'address'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToProfile?.();
+      },
+    },
+    {
+      id: 'wallet',
+      title: 'Wallet & Payouts',
+      subtitle: 'Payment balance, past payouts, and bank settlement',
+      category: 'Feature',
+      icon: 'account_balance_wallet',
+      iconBg: P.paleSkyBg,
+      iconColor: P.blue700,
+      keywords: ['wallet', 'payouts', 'money', 'earnings', 'bank', 'balance', 'rupees', 'settlement'],
+      action: () => {
+        setShowSearch(false);
+        _onNavigateToWallet ? _onNavigateToWallet() : onNavigateToProfile?.();
+      },
+    },
+    {
+      id: 'audits',
+      title: 'Farm Audits & Inspections',
+      subtitle: 'Upcoming inspection in 12 days · Rating 82/100',
+      category: 'Feature',
+      icon: 'calendar_today',
+      iconBg: P.paleCreamBg,
+      iconColor: P.amber600,
+      keywords: ['audit', 'audits', 'inspection', 'rating', 'score', 'inspector', 'compliance'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToProfile?.();
+      },
+    },
+    {
+      id: 'inventory',
+      title: 'Inventory & Equipment',
+      subtitle: 'Tractor service due · Seeds, tools, and supplies',
+      category: 'Feature',
+      icon: 'inventory_2',
+      iconBg: P.paleSkyBg,
+      iconColor: P.blue700,
+      keywords: ['inventory', 'tractor', 'equipment', 'tools', 'machinery', 'service', 'supplies', 'seeds'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToFarmManagement?.();
+      },
+    },
+    {
+      id: 'calendar',
+      title: 'TOHFA Calendar',
+      subtitle: 'Market day tomorrow · Harvest schedules & reminders',
+      category: 'Feature',
+      icon: 'calendar_month',
+      iconBg: P.paleCreamBg,
+      iconColor: P.amber600,
+      keywords: ['calendar', 'events', 'market day', 'schedule', 'reminders', 'dates'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToFarmManagement?.();
+      },
+    },
+    {
+      id: 'learning',
+      title: 'Learning Hub',
+      subtitle: '4 new farming tutorials & organic farming guides',
+      category: 'Feature',
+      icon: 'menu_book',
+      iconBg: P.palePinkBg,
+      iconColor: P.red600,
+      keywords: ['learning', 'tutorials', 'hub', 'guides', 'articles', 'education', 'training', 'organic'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToProfile?.();
+      },
+    },
+    {
+      id: 'counter-offer',
+      title: 'Counter-Offer: Tomatoes',
+      subtitle: 'Admin offered ₹42/kg · Respond within 24 hours',
+      category: 'Action',
+      icon: 'warning',
+      iconBg: P.palePeachBg,
+      iconColor: P.orange900,
+      keywords: ['counter-offer', 'offer', 'tomatoes', 'admin', 'review offer', 'deal', 'bid', '42'],
+      action: () => {
+        setShowSearch(false);
+        onNavigateToListings?.();
+      },
+    },
+  ], [onNavigateToFarmManagement, onNavigateToCertifications, onNavigateToWeather, onNavigateToListings, onNavigateToCreateListing, onNavigateToNotifications, onNavigateToProfile, _onNavigateToWallet]);
+
+  const filteredSearchItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return searchItems;
+    return searchItems.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.subtitle.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q) ||
+        item.keywords.some((k) => k.toLowerCase().includes(q))
+    );
+  }, [searchItems, searchQuery]);
+
+  const popularSearches = ['Tomato', 'Certifications', 'Weather', 'Listings', 'Log Diary', 'Audits'];
 
   const loadData = useCallback(async () => {
     try {
@@ -195,16 +459,12 @@ export function DashboardScreen({
               </View>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.headerIconButton}
-                onPress={() => {
-                  import('react-native').then(({ Alert }) => {
-                    Alert.alert('Search', 'Search functionality is coming soon.');
-                  });
-                }}
+                onPress={() => setShowSearch(true)}
                 activeOpacity={0.75}
                 accessibilityRole="button"
-                accessibilityLabel="Search"
+                accessibilityLabel={t('farmer.dashboard.header.search')}
               >
                 <HeaderSearchIcon size={19} color={colors.white} />
               </TouchableOpacity>
@@ -346,8 +606,8 @@ export function DashboardScreen({
 
           {/* Grid Menu */}
           <View style={styles.gridContainer}>
-            <TouchableOpacity 
-              style={styles.gridCard} 
+            <TouchableOpacity
+              style={styles.gridCard}
               onPress={onNavigateToCropManagement || onNavigateToFarmManagement}
               activeOpacity={0.8}
               accessibilityRole="button"
@@ -367,6 +627,7 @@ export function DashboardScreen({
               <Text style={styles.gridTitle}>Certifications</Text>
               <Text style={styles.gridSubtitle}>Cert renewal in 24 days</Text>
             </TouchableOpacity>
+
 
             <TouchableOpacity style={styles.gridCard} onPress={onNavigateToListings}>
               <View style={[styles.gridIconCircle, { backgroundColor: P.palePeachBg }]}>
@@ -395,7 +656,7 @@ export function DashboardScreen({
               <Text style={styles.gridSubtitle}>Market day tomorrow</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.gridCard}
               onPress={onNavigateToLearningHub}
               activeOpacity={0.8}
@@ -416,7 +677,7 @@ export function DashboardScreen({
           {/* Active Crops */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Active Crops</Text>
-            <TouchableOpacity onPress={onNavigateToActiveCrops} activeOpacity={0.75}>
+            <TouchableOpacity onPress={onNavigateToActiveCrops ?? onNavigateToProduceCalendar} activeOpacity={0.75}>
               <Text style={styles.viewAllText}>View all {'>'}</Text>
             </TouchableOpacity>
           </View>
@@ -426,51 +687,53 @@ export function DashboardScreen({
             style={styles.cropsScroll}
             contentContainerStyle={styles.cropsScrollContent}
           >
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.cropCard}
               activeOpacity={0.85}
-              onPress={onNavigateToActiveCrops}
+              onPress={() => (onNavigateToCropDetail ? onNavigateToCropDetail('Tomato') : (onNavigateToProduceCalendar ?? onNavigateToActiveCrops)?.())}
             >
-              <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&q=80' }} 
+              <Image
+                source={{ uri: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&q=80' }}
                 style={styles.cropImagePlaceholder}
                 resizeMode="cover"
               />
               <View style={styles.cropInfo}>
                 <Text style={styles.cropName}>Tomato</Text>
-                <Text style={styles.cropDetail}>Zone A · 62 days</Text>
-                <Text style={[styles.cropHarvest, { color: colors.brandGreen }]}>Harvest in 8d</Text>
+                <Text style={styles.cropDetail}>Zone 2 · 45 days</Text>
+                <Text style={[styles.cropHarvest, { color: colors.brandGreen }]}>Harvest in 30d</Text>
                 <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '80%', backgroundColor: colors.brandGreen }]} />
+                  <View style={[styles.progressBarFill, { width: '60%', backgroundColor: colors.brandGreen }]} />
                 </View>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.cropCard}
               activeOpacity={0.85}
-              onPress={onNavigateToActiveCrops}
+              onPress={() => (onNavigateToCropDetail ? onNavigateToCropDetail('Carrot') : (onNavigateToProduceCalendar ?? onNavigateToActiveCrops)?.())}
             >
-              <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400&q=80' }} 
+              <Image
+                source={{ uri: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400&q=80' }}
                 style={styles.cropImagePlaceholder}
                 resizeMode="cover"
               />
               <View style={styles.cropInfo}>
                 <Text style={styles.cropName}>Carrot</Text>
-                <Text style={styles.cropDetail}>Zone B · 34 days</Text>
-                <Text style={[styles.cropHarvest, { color: P.orange700 }]}>Harvest in 41d</Text>
+                <Text style={styles.cropDetail}>Zone 1 · 88 days</Text>
+                <Text style={[styles.cropHarvest, { color: colors.brandGreen }]}>Ready in 3d</Text>
                 <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '40%', backgroundColor: P.orange700 }]} />
+                  <View style={[styles.progressBarFill, { width: '95%', backgroundColor: colors.brandGreen }]} />
                 </View>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.cropCard}
               activeOpacity={0.85}
-              onPress={onNavigateToActiveCrops}
+              onPress={() => (onNavigateToCropDetail ? onNavigateToCropDetail('Wheat') : (onNavigateToProduceCalendar ?? onNavigateToActiveCrops)?.())}
             >
-              <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&q=80' }} 
+              <Image
+                source={{ uri: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&q=80' }}
                 style={styles.cropImagePlaceholder}
                 resizeMode="cover"
               />
@@ -511,6 +774,110 @@ export function DashboardScreen({
           </View>
         </View>
       </ScrollView>
+
+      {/* Search Modal */}
+      <Modal
+        visible={showSearch}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowSearch(false)}
+      >
+        <SafeAreaView style={styles.searchModalScreen}>
+          {/* Search Header */}
+          <View style={styles.searchHeader}>
+            <View style={styles.searchInputContainer}>
+              <Icon name="search" size={20} color={P.twGray400} />
+              <TextInput
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t('farmer.dashboard.header.search') + ' crops, tasks, tools...'}
+                placeholderTextColor={P.twGray400}
+                autoFocus={true}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Clear search"
+                >
+                  <Icon name="close" size={18} color={P.twGray500} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.searchCancelBtn}
+              onPress={() => {
+                setShowSearch(false);
+                setSearchQuery('');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel search"
+            >
+              <Text style={styles.searchCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Quick Suggestions when query is empty */}
+          {searchQuery.trim().length === 0 && (
+            <View style={styles.searchSuggestionsRow}>
+              <Text style={styles.searchSuggestionsLabel}>Popular:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.searchPillsContainer}>
+                {popularSearches.map((term) => (
+                  <TouchableOpacity
+                    key={term}
+                    style={styles.searchPill}
+                    onPress={() => setSearchQuery(term)}
+                  >
+                    <Text style={styles.searchPillText}>{term}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Search Results List */}
+          <FlatList
+            data={filteredSearchItems}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.searchResultsList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.searchResultItem}
+                onPress={item.action}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.searchResultIconCircle, { backgroundColor: item.iconBg }]}>
+                  <Icon name={item.icon} size={22} color={item.iconColor} />
+                </View>
+                <View style={styles.searchResultContent}>
+                  <View style={styles.searchResultTitleRow}>
+                    <Text style={styles.searchResultTitle}>{item.title}</Text>
+                    <View style={styles.searchCategoryBadge}>
+                      <Text style={styles.searchCategoryText}>{item.category}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.searchResultSubtitle}>{item.subtitle}</Text>
+                </View>
+                <Icon name="chevron_right" size={20} color={P.twGray400} />
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={
+              <View style={styles.searchEmptyContainer}>
+                <View style={styles.searchEmptyIconCircle}>
+                  <Icon name="search_off" size={36} color={P.twGray400} />
+                </View>
+                <Text style={styles.searchEmptyTitle}>No matching results</Text>
+                <Text style={styles.searchEmptySub}>
+                  We could not find anything matching "{searchQuery}". Try searching for crops, weather, or certifications.
+                </Text>
+              </View>
+            }
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -915,6 +1282,156 @@ const styles = StyleSheet.create({
   tipText: {
     fontSize: 13,
     color: colors.brandGreen,
+    lineHeight: 20,
+  },
+
+  /* Search Modal Styles */
+  searchModalScreen: {
+    flex: 1,
+    backgroundColor: P.lightSurfaceAlt,
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: P.twGray200,
+    gap: 12,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: P.twGray100,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 42,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: P.twGray900,
+    fontSize: 15,
+    paddingVertical: 0,
+  },
+  searchCancelBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  searchCancelText: {
+    color: colors.brandGreen,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  searchSuggestionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: P.twGray100,
+  },
+  searchSuggestionsLabel: {
+    fontSize: 13,
+    color: P.twGray500,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  searchPillsContainer: {
+    gap: 8,
+    paddingRight: 16,
+  },
+  searchPill: {
+    backgroundColor: P.twGreen50,
+    borderWidth: 1,
+    borderColor: P.twGreen100,
+    borderRadius: 16,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  searchPillText: {
+    color: colors.brandGreen,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  searchResultsList: {
+    padding: 16,
+    gap: 10,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: P.twGray200,
+    gap: 12,
+  },
+  searchResultIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchResultContent: {
+    flex: 1,
+  },
+  searchResultTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  searchResultTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: P.twGray900,
+  },
+  searchCategoryBadge: {
+    backgroundColor: P.twGray100,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+  },
+  searchCategoryText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: P.twGray600,
+  },
+  searchResultSubtitle: {
+    fontSize: 13,
+    color: P.twGray500,
+  },
+  searchEmptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 30,
+  },
+  searchEmptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: P.twGray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  searchEmptyTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: P.twGray800,
+    marginBottom: 8,
+  },
+  searchEmptySub: {
+    fontSize: 14,
+    color: P.twGray500,
+    textAlign: 'center',
     lineHeight: 20,
   },
 });

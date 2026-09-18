@@ -1,495 +1,674 @@
 import React, { useState } from 'react';
 import {
+  Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Svg, { Path, Circle, Rect, Polyline } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { authPalette as P } from '../../theme';
+import type { CropItem } from './ProduceCalendarScreen';
 
-// --- Icons ---
-function ArrowBackIcon({ size = 20, color = P.twGreen700 }: { size?: number; color?: string }) {
+// ─────────────────────────────────────────────
+// Inline Vector Icons (strictly no emoji, no raw hex)
+// ─────────────────────────────────────────────
+
+function ArrowBackIcon({ size = 20, color = P.twGray800 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M19 12H5M5 12L12 19M5 12L12 5"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
-function ArrowRightIcon({ size = 18, color = P.white }: { size?: number; color?: string }) {
+function ChevronDownIcon({ size = 18, color = P.twGray500 }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 12h14M12 5l7 7-7 7" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M6 9l6 6 6-6"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
-function CheckCircleIcon({ size = 14, color = P.twGreen700 }: { size?: number; color?: string }) {
+function LeafIcon({ size = 18, color = P.deepGreen }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" />
-      <Path d="M8 12l3 3 5-6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M12 22C6 22 4 17 4 12 4 6.5 8.5 2 12 2c3.5 0 8 4.5 8 10 0 5-2 10-8 10z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M12 22V10M12 14c3-1.5 5-1.5 5-1.5"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
-// Category Icons
-function LandPrepIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M16 18l-4-5-4 5M21 18l-7-9-7 9" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M2 18h20" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    </Svg>
-  );
-}
+// ─────────────────────────────────────────────
+// Activity Types Mapping by Category
+// ─────────────────────────────────────────────
 
-function SowingIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 18V8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M8 12c0-2 2-4 4-4s4 2 4 4" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M4 18h16" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function NutrientsIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 21a9 9 0 100-18 9 9 0 000 18z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M8 12c0-2 2-4 4-4s4 2 4 4" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M12 16v-8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function WaterMgmtIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 22a7 7 0 007-7c0-2-3-7.5-7-11-4 3.5-7 9-7 11a7 7 0 007 7z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function WeedMgmtIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="5" y="4" width="14" height="16" rx="2" stroke={color} strokeWidth="2" />
-      <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="2" />
-      <Path d="M12 15v3 M12 6v3" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function PestMgmtIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 20a6 6 0 006-6V9a6 6 0 10-12 0v5a6 6 0 006 6z M12 3v1 M7 6l-2-2 M17 6l2-2 M3 11h2 M19 11h2 M5 16l-2 2 M19 16l2 2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function CropCareIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="6" cy="6" r="3" stroke={color} strokeWidth="2" />
-      <Circle cx="6" cy="18" r="3" stroke={color} strokeWidth="2" />
-      <Path d="M20 4L8.12 15.88 M14.47 14.48L20 20 M8.12 8.12L12 12" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function MonitoringIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="11" cy="11" r="8" stroke={color} strokeWidth="2" />
-      <Path d="M21 21l-4.35-4.35" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function HarvestingIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="7" cy="16" r="3" stroke={color} strokeWidth="2" />
-      <Circle cx="17" cy="16" r="3" stroke={color} strokeWidth="2" />
-      <Path d="M4 16H2V9h5v7M9 16h5 M14 9h7v7 M9 9h5v7 M14 12h7 M14 9l2-4h3l2 4" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function PostHarvestIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="4" y="6" width="16" height="14" rx="1" stroke={color} strokeWidth="2" />
-      <Path d="M4 10h16 M10 14h4" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function MaintenanceIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function LivestockIcon({ size = 24, color = P.twGray600 }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 21a9 9 0 009-9V8l-4-3H7L3 8v4a9 9 0 009 9z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx="8" cy="11" r="1.5" fill={color} />
-      <Circle cx="16" cy="11" r="1.5" fill={color} />
-      <Path d="M10 16h4" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-// --- Data ---
-const CATEGORIES = [
-  { id: 'land_prep', label: 'Land Prep', Icon: LandPrepIcon },
-  { id: 'sowing', label: 'Sowing', Icon: SowingIcon },
-  { id: 'nutrients', label: 'Nutrients', Icon: NutrientsIcon },
-  { id: 'water_mgmt', label: 'Water Mgmt', Icon: WaterMgmtIcon },
-  { id: 'weed_mgmt', label: 'Weed Mgmt', Icon: WeedMgmtIcon },
-  { id: 'pest_mgmt', label: 'Pest Mgmt', Icon: PestMgmtIcon },
-  { id: 'crop_care', label: 'Crop Care', Icon: CropCareIcon },
-  { id: 'monitoring', label: 'Monitoring', Icon: MonitoringIcon },
-  { id: 'harvesting', label: 'Harvesting', Icon: HarvestingIcon },
-  { id: 'post_harvest', label: 'Post-Harvest', Icon: PostHarvestIcon },
-  { id: 'maintenance', label: 'Maintenance', Icon: MaintenanceIcon },
-  { id: 'livestock', label: 'Livestock', Icon: LivestockIcon },
-];
-
-const SUB_ACTIVITIES = {
-  water_mgmt: [
-    { id: 'irrigation', label: 'Irrigation (drip / sprinkler / flood)' },
-    { id: 'water_source', label: 'Water source check' },
-    { id: 'rainwater', label: 'Rainwater harvesting activity' },
-  ],
+const ACTIVITY_MAP: Record<string, string[]> = {
+  'Crop Care': ['Watering', 'Weeding', 'Staking / Training', 'Pruning', 'Mulching'],
+  'Land Prep': ['Ploughing', 'Tilling', 'Bed Preparation', 'Basal Application'],
+  Sowing: ['Direct Seeding', 'Transplanting', 'Nursery Sowing'],
+  Nutrients: ['Fertilizer', 'Foliar Spray', 'Organic Manure', 'Compost'],
+  Monitoring: ['Pest Scouting', 'Growth Check', 'Soil Moisture'],
+  Harvesting: ['Primary Harvest', 'Sorting / Grading', 'Packing'],
+  Maintenance: ['Fence Repair', 'Irrigation Maintenance', 'Tool Servicing'],
+  Other: ['General Inspection', 'Weather Note'],
 };
 
-// --- Component ---
-interface NewFarmDiaryEntryStep2ScreenProps {
+const METHODS = ['Drip', 'Sprinkler', 'Flood', 'Manual'];
+
+// ─────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────
+
+export interface NewFarmDiaryEntryStep2ScreenProps {
+  crop?: CropItem | null;
+  category?: string;
+  onChangeCategory?: () => void;
   onBack?: () => void;
-  onNext?: () => void;
+  onNext?: (entryData?: any) => void;
 }
 
 export function NewFarmDiaryEntryStep2Screen({
+  crop,
+  category = 'Crop Care',
+  onChangeCategory,
   onBack,
   onNext,
 }: NewFarmDiaryEntryStep2ScreenProps): React.JSX.Element {
-  const [selectedCategory, setSelectedCategory] = useState<string>('water_mgmt');
-  const [selectedSub, setSelectedSub] = useState<string>('irrigation');
+  const cropName = crop?.name ?? 'Carrot';
+  const cropVariety = crop?.variety ?? 'Nantes';
+  const cropZone = crop?.zoneShort ?? 'Zone 1';
+  const subtitle = `${cropName} — ${cropVariety} · ${cropZone}`;
 
-  const currentSubActivities = SUB_ACTIVITIES[selectedCategory as keyof typeof SUB_ACTIVITIES] || [];
+  const availableActivities: string[] = ACTIVITY_MAP[category] || ACTIVITY_MAP['Crop Care'] || ['Watering', 'Weeding'];
+  const [selectedActivity, setSelectedActivity] = useState<string>(availableActivities[0] ?? 'Watering');
+  const [dateTimeText, setDateTimeText] = useState('17 Sep 2026, 09:15 AM');
+  const [zoneText, setZoneText] = useState(`${cropZone} — ${cropName} (${cropVariety})`);
+  const [method, setMethod] = useState('Drip');
+  const [durationMinutes, setDurationMinutes] = useState('30');
+  const [notes, setNotes] = useState('');
+
+  // Dropdown Modals
+  const [showMethodModal, setShowMethodModal] = useState(false);
+  const [showZoneModal, setShowZoneModal] = useState(false);
+
+  const zoneOptions = [
+    `${cropZone} — ${cropName} (${cropVariety})`,
+    'Zone 1 — Upper Field',
+    'Zone 2 — Lower Slope',
+    'Zone 3 — Terrace Field',
+  ];
+
+  const handleSave = () => {
+    onNext?.({
+      category,
+      activity: selectedActivity,
+      dateTime: dateTimeText,
+      zone: zoneText,
+      method,
+      duration: durationMinutes,
+      notes,
+    });
+  };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={P.white} />
 
-      {/* --- Header --- */}
+      {/* ── Top Header ── */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-            <ArrowBackIcon size={20} color={P.twGreen700} />
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={onBack}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <ArrowBackIcon size={18} color={P.twGray800} />
           </TouchableOpacity>
-          <View style={styles.headerTitleCol}>
-            <Text style={styles.headerTitle}>New Entry</Text>
-            <Text style={styles.headerSubtitle}>Step 2 of 3 · Activity Type</Text>
-          </View>
-          <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Progress Bar */}
-        <View style={styles.progressRow}>
-          <View style={[styles.progressSegment, styles.progressSegmentActive]} />
-          <View style={[styles.progressSegment, styles.progressSegmentActive]} />
-          <View style={styles.progressSegment} />
+          <View style={styles.headerTitleGroup}>
+            <Text style={styles.headerTitle}>Add Diary Entry</Text>
+            <Text style={styles.headerSubtitle}>{subtitle}</Text>
+          </View>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* --- Category Grid --- */}
-        <Text style={styles.sectionLabel}>CATEGORY</Text>
-        <View style={styles.gridContainer}>
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <TouchableOpacity
-                key={cat.id}
-                style={[styles.gridCard, isSelected && styles.gridCardSelected]}
-                activeOpacity={0.7}
-                onPress={() => setSelectedCategory(cat.id)}
-              >
-                <cat.Icon size={24} color={isSelected ? P.twGreen700 : P.twGray500} />
-                <Text style={[styles.gridCardLabel, isSelected && styles.gridCardLabelSelected]}>
-                  {cat.label}
-                </Text>
-                {isSelected && (
-                  <View style={styles.gridCardCheck}>
-                    <CheckCircleIcon size={16} color={P.twGreen700} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Category Pill Banner ── */}
+        <View style={styles.categoryBanner}>
+          <View style={styles.categoryBannerLeft}>
+            <View style={styles.categoryIconBadge}>
+              <LeafIcon size={18} color={P.deepGreen} />
+            </View>
+            <Text style={styles.categoryBannerTitle}>{category}</Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={onChangeCategory ?? onBack}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Change category"
+          >
+            <Text style={styles.changeBtnText}>Change</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* --- Sub-Activities --- */}
-        {currentSubActivities.length > 0 && (
-          <View style={styles.subActivitySection}>
-            <Text style={styles.sectionLabel}>
-              SUB-ACTIVITY · {CATEGORIES.find((c) => c.id === selectedCategory)?.label.toUpperCase()}
-            </Text>
-            <View style={styles.radioList}>
-              {currentSubActivities.map((sub) => {
-                const isSubSelected = selectedSub === sub.id;
-                return (
-                  <TouchableOpacity
-                    key={sub.id}
-                    style={[styles.radioItem, isSubSelected && styles.radioItemSelected]}
-                    activeOpacity={0.8}
-                    onPress={() => setSelectedSub(sub.id)}
-                  >
-                    <View style={[styles.radioOuter, isSubSelected && styles.radioOuterSelected]}>
-                      {isSubSelected && <View style={styles.radioInner} />}
-                    </View>
-                    <Text style={[styles.radioLabel, isSubSelected && styles.radioLabelSelected]}>
-                      {sub.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+        {/* ── 1. Activity Type ── */}
+        <View style={styles.fieldSection}>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.fieldLabel}>ACTIVITY TYPE</Text>
+            <Text style={styles.asterisk}> *</Text>
           </View>
-        )}
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.activityPillsRow}
+          >
+            {availableActivities.map((act) => {
+              const isActive = selectedActivity === act;
+              return (
+                <TouchableOpacity
+                  key={act}
+                  style={[
+                    styles.activityPill,
+                    isActive ? styles.activityPillActive : styles.activityPillInactive,
+                  ]}
+                  onPress={() => setSelectedActivity(act)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.activityPillText,
+                      isActive ? styles.activityPillTextActive : styles.activityPillTextInactive,
+                    ]}
+                  >
+                    {act}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* ── 2. Date & Time ── */}
+        <View style={styles.fieldSection}>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.fieldLabel}>DATE & TIME</Text>
+            <Text style={styles.asterisk}> *</Text>
+          </View>
+
+          <View style={styles.inputBox}>
+            <TextInput
+              style={styles.textInput}
+              value={dateTimeText}
+              onChangeText={setDateTimeText}
+              placeholder="e.g. 17 Sep 2026, 09:15 AM"
+              placeholderTextColor={P.twGray400}
+            />
+          </View>
+          <Text style={styles.helperText}>Entered manually — no auto-timestamping</Text>
+        </View>
+
+        {/* ── 3. Zone / Plot ── */}
+        <View style={styles.fieldSection}>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.fieldLabel}>ZONE / PLOT</Text>
+            <Text style={styles.asterisk}> *</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.dropdownBox}
+            onPress={() => setShowZoneModal(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.dropdownText} numberOfLines={1}>
+              {zoneText}
+            </Text>
+            <ChevronDownIcon size={18} color={P.twGray500} />
+          </TouchableOpacity>
+        </View>
+
+        {/* ── 4. Method ── */}
+        <View style={styles.fieldSection}>
+          <Text style={styles.fieldLabel}>METHOD</Text>
+
+          <TouchableOpacity
+            style={styles.dropdownBox}
+            onPress={() => setShowMethodModal(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.dropdownText}>{method}</Text>
+            <ChevronDownIcon size={18} color={P.twGray500} />
+          </TouchableOpacity>
+        </View>
+
+        {/* ── 5. Duration (Minutes) ── */}
+        <View style={styles.fieldSection}>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.fieldLabel}>DURATION (MINUTES)</Text>
+            <Text style={styles.asterisk}> *</Text>
+          </View>
+
+          <View style={styles.inputBox}>
+            <TextInput
+              style={styles.textInput}
+              value={durationMinutes}
+              onChangeText={setDurationMinutes}
+              keyboardType="numeric"
+              placeholder="30"
+              placeholderTextColor={P.twGray400}
+            />
+          </View>
+        </View>
+
+        {/* ── 6. Notes ── */}
+        <View style={styles.fieldSection}>
+          <Text style={styles.fieldLabel}>NOTES</Text>
+
+          <TextInput
+            style={styles.notesInput}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            numberOfLines={3}
+            placeholder="Optional notes for this entry"
+            placeholderTextColor={P.twGray400}
+            textAlignVertical="top"
+          />
+        </View>
+
+        {/* ── Bottom Action Buttons ── */}
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={onBack}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSave}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            <Text style={styles.saveButtonText}>Save Entry</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
-      {/* --- Bottom Action --- */}
-      <View style={styles.bottomBar}>
-        <View style={styles.bottomBarRow}>
-          <TouchableOpacity style={styles.backBottomBtn} onPress={onBack} activeOpacity={0.8}>
-            <Text style={styles.backBottomBtnText}>Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.nextBtn} onPress={onNext} activeOpacity={0.85}>
-            <Text style={styles.nextBtnText}>Next · Details</Text>
-            <ArrowRightIcon size={18} color={P.white} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* ── Zone Selection Modal ── */}
+      <Modal visible={showZoneModal} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowZoneModal(false)}
+        >
+          <View style={styles.pickerModalContent}>
+            <Text style={styles.pickerModalTitle}>Select Zone / Plot</Text>
+            {zoneOptions.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.pickerOption,
+                  zoneText === opt && styles.pickerOptionSelected,
+                ]}
+                onPress={() => {
+                  setZoneText(opt);
+                  setShowZoneModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.pickerOptionText,
+                    zoneText === opt && styles.pickerOptionTextSelected,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Method Selection Modal ── */}
+      <Modal visible={showMethodModal} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowMethodModal(false)}
+        >
+          <View style={styles.pickerModalContent}>
+            <Text style={styles.pickerModalTitle}>Select Method</Text>
+            {METHODS.map((m) => (
+              <TouchableOpacity
+                key={m}
+                style={[
+                  styles.pickerOption,
+                  method === m && styles.pickerOptionSelected,
+                ]}
+                onPress={() => {
+                  setMethod(m);
+                  setShowMethodModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.pickerOptionText,
+                    method === m && styles.pickerOptionTextSelected,
+                  ]}
+                >
+                  {m}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-// --- Styles ---
+// ─────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  screen: {
+  safeArea: {
     flex: 1,
-    backgroundColor: P.lightSurfaceAlt, // #F8F9F3
+    backgroundColor: P.white,
   },
   header: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 10,
     backgroundColor: P.white,
-    paddingTop: 16,
     borderBottomWidth: 1,
-    borderBottomColor: P.twGray200,
+    borderBottomColor: P.twGray100,
   },
-  headerTopRow: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    gap: 12,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: P.twGray200,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    backgroundColor: P.twGray50,
+    borderWidth: 1,
+    borderColor: P.twGray200,
   },
-  headerTitleCol: {
+  headerTitleGroup: {
     flex: 1,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: P.twGray900,
+    letterSpacing: -0.2,
   },
   headerSubtitle: {
     fontSize: 12,
+    fontWeight: '500',
     color: P.twGray500,
-    marginTop: 2,
+    marginTop: 1,
   },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: P.twGray500,
-  },
-  progressRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 6,
-    marginBottom: -1,
-  },
-  progressSegment: {
+  scrollContainer: {
     flex: 1,
-    height: 3,
-    backgroundColor: P.twGray200,
-    borderRadius: 1.5,
-  },
-  progressSegmentActive: {
-    backgroundColor: P.twGreen700,
+    backgroundColor: P.white,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 32,
   },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: P.twGray500,
-    letterSpacing: 0.5,
+  categoryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: P.mintTintBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: P.twGreen100,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     marginBottom: 16,
   },
-  gridContainer: {
+  categoryBannerLeft: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 32,
+    alignItems: 'center',
+    gap: 10,
   },
-  gridCard: {
-    width: '30%',
-    aspectRatio: 1.1,
-    backgroundColor: P.white,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    borderRadius: 12,
+  categoryIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    backgroundColor: P.twGreen100,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
-    shadowColor: P.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
   },
-  gridCardSelected: {
-    backgroundColor: '#EBF4EC', // light green
-    borderColor: P.twGreen700,
-  },
-  gridCardLabel: {
-    fontSize: 11,
+  categoryBannerTitle: {
+    fontSize: 15,
     fontWeight: '700',
-    color: P.twGray600,
-    marginTop: 8,
-    textAlign: 'center',
+    color: P.twGreen900,
   },
-  gridCardLabelSelected: {
-    color: P.twGreen800,
+  changeBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: P.deepGreen,
   },
-  gridCardCheck: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
+  fieldSection: {
+    marginBottom: 20,
   },
-  subActivitySection: {
-    marginTop: 8,
-  },
-  radioList: {
-    gap: 12,
-  },
-  radioItem: {
+  fieldLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: P.twGray700,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  asterisk: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: P.red600,
+  },
+  activityPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  activityPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityPillActive: {
+    backgroundColor: P.deepGreen,
+  },
+  activityPillInactive: {
     backgroundColor: P.white,
-    borderWidth: 1.5,
+    borderWidth: 1,
+    borderColor: P.twGray200,
+  },
+  activityPillText: {
+    fontSize: 13,
+  },
+  activityPillTextActive: {
+    fontWeight: '700',
+    color: P.white,
+  },
+  activityPillTextInactive: {
+    fontWeight: '500',
+    color: P.twGray700,
+  },
+  inputBox: {
+    backgroundColor: P.white,
+    borderWidth: 1,
     borderColor: P.twGray200,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 14,
+    height: 48,
+    justifyContent: 'center',
   },
-  radioItemSelected: {
-    backgroundColor: '#EBF4EC', // light green
-    borderColor: P.twGreen700,
+  textInput: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: P.twGray900,
+    padding: 0,
   },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
+  helperText: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: P.twGray500,
+    marginTop: 6,
+  },
+  dropdownBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: P.white,
+    borderWidth: 1,
+    borderColor: P.twGray200,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: P.twGray900,
+    flex: 1,
+    marginRight: 8,
+  },
+  notesInput: {
+    backgroundColor: P.white,
+    borderWidth: 1,
+    borderColor: P.twGray200,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: P.twGray900,
+    minHeight: 80,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 14,
+  },
+  cancelButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: P.white,
+    borderWidth: 1,
     borderColor: P.twGray300,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
-  radioOuterSelected: {
-    borderColor: P.twGreen700,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: P.twGreen700,
-  },
-  radioLabel: {
-    fontSize: 14,
+  cancelButtonText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: P.twGray700,
+    color: P.twGray800,
   },
-  radioLabelSelected: {
-    color: P.twGreen800,
-    fontWeight: '700',
-  },
-  bottomBar: {
-    backgroundColor: P.white,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: P.twGray200,
-  },
-  bottomBarRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  backBottomBtn: {
-    flex: 1,
+  saveButton: {
+    flex: 1.5,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: P.deepGreen,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: P.white,
-    borderWidth: 1.5,
-    borderColor: P.twGray200,
-    borderRadius: 12,
-    paddingVertical: 16,
   },
-  backBottomBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: P.twGray700,
-  },
-  nextBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: P.twGreen700,
-    borderRadius: 12,
-    paddingVertical: 16,
-    gap: 8,
-  },
-  nextBtnText: {
-    fontSize: 16,
+  saveButtonText: {
+    fontSize: 15,
     fontWeight: '700',
     color: P.white,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  pickerModalContent: {
+    backgroundColor: P.white,
+    borderRadius: 18,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    elevation: 5,
+  },
+  pickerModalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: P.twGray900,
+    marginBottom: 14,
+  },
+  pickerOption: {
+    paddingVertical: 13,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  pickerOptionSelected: {
+    backgroundColor: P.mintTintBg,
+  },
+  pickerOptionText: {
+    fontSize: 14,
+    color: P.twGray800,
+    fontWeight: '500',
+  },
+  pickerOptionTextSelected: {
+    color: P.deepGreen,
+    fontWeight: '700',
   },
 });

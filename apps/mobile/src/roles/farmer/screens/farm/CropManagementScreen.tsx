@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Alert,
+  BackHandler,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -171,6 +172,18 @@ export function CropManagementScreen({
   onNavigateToSoilManagement,
   onNavigateToPestManagement,
 }: CropManagementScreenProps): React.JSX.Element {
+  // Android hardware back handler
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (onBack) {
+        onBack();
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [onBack]);
+
   const handleModulePress = (module: ManagementModule) => {
     switch (module.id) {
       case 'input_mgmt':
