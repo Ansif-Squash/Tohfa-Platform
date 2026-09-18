@@ -67,39 +67,66 @@ const PlusIcon = () => (
   </Svg>
 );
 
+const EditPencilIcon = ({ size = 15, color = P.twGray600 }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 // ── Types & Data ─────────────────────────────────────────────────────────────
 
 type ItemStatus = 'Overdue' | 'Due soon' | 'OK';
 
-interface ToolItem {
+export interface ToolItem {
+  id?: string;
   name: string;
   purchaseDate: string;
   dueDate: string;
   dueNote: string;
   status: ItemStatus;
+  serviceInterval?: string;
 }
 
 const TOOLS: ToolItem[] = [
   {
+    id: 't1',
     name: 'Pruning Shears',
     purchaseDate: 'Purchased 18 Jun 2023',
     dueDate: 'Due 08 Jul 2026',
     dueNote: '12 days overdue',
     status: 'Overdue',
+    serviceInterval: '90',
   },
   {
+    id: 't2',
     name: 'Knapsack Sprayer',
     purchaseDate: 'Purchased 04 Jan 2025',
     dueDate: 'Due 25 Jul 2026',
     dueNote: '5 days away',
     status: 'Due soon',
+    serviceInterval: '90',
   },
   {
+    id: 't3',
     name: 'Sickle Set (5 pcs)',
     purchaseDate: 'Purchased 12 Mar 2024',
     dueDate: 'Due 28 Aug 2026',
     dueNote: '39 days away',
     status: 'OK',
+    serviceInterval: '90',
   },
 ];
 
@@ -134,12 +161,17 @@ function statusStyle(status: ItemStatus) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-interface ToolsListScreenProps {
+export interface ToolsListScreenProps {
   onNavigateBack: () => void;
   onNavigateToAddTool?: () => void;
+  onNavigateToEditTool?: (tool: ToolItem) => void;
 }
 
-export function ToolsListScreen({ onNavigateBack, onNavigateToAddTool }: ToolsListScreenProps): React.JSX.Element {
+export function ToolsListScreen({
+  onNavigateBack,
+  onNavigateToAddTool,
+  onNavigateToEditTool,
+}: ToolsListScreenProps): React.JSX.Element {
   return (
     <SafeAreaView style={styles.screen}>
       {/* Header */}
@@ -173,12 +205,28 @@ export function ToolsListScreen({ onNavigateBack, onNavigateToAddTool }: ToolsLi
         {TOOLS.map((tool) => {
           const cfg = statusStyle(tool.status);
           return (
-            <TouchableOpacity key={tool.name} style={[styles.card, { borderLeftColor: cfg.borderColor }]} activeOpacity={0.7}>
+            <TouchableOpacity
+              key={tool.name}
+              style={[styles.card, { borderLeftColor: cfg.borderColor }]}
+              activeOpacity={0.7}
+              onPress={() => onNavigateToEditTool?.(tool)}
+            >
               {/* Card Header */}
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>{tool.name}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: cfg.badgeBg }]}>
-                  <Text style={[styles.statusBadgeText, { color: cfg.badgeText }]}>{tool.status}</Text>
+                <View style={styles.cardHeaderRight}>
+                  <View style={[styles.statusBadge, { backgroundColor: cfg.badgeBg }]}>
+                    <Text style={[styles.statusBadgeText, { color: cfg.badgeText }]}>{tool.status}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => onNavigateToEditTool?.(tool)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${tool.name}`}
+                  >
+                    <EditPencilIcon size={14} color={P.twGray600} />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -311,15 +359,29 @@ const styles = StyleSheet.create({
     color: P.ink,
     flex: 1,
   },
+  cardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 8,
   },
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  editButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: P.paleMintBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: P.twGreen100,
   },
   cardSubtitle: {
     fontSize: 13,
